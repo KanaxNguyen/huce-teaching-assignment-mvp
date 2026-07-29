@@ -11,6 +11,8 @@ storage/**
 node_modules/
 .next/
 __pycache__/
+*.egg-info/
+*.tsbuildinfo
 .pytest_cache/
 .ruff_cache/
 coverage/
