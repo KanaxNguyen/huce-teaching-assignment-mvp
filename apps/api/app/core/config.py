@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     upload_dir: Path = Path("./storage/uploads")
     export_dir: Path = Path("./storage/exports")
     source_dir: Path = Path("./data/local/source")
-    cors_origins: str = "http://127.0.0.1:3000,http://localhost:3000"
+    cors_origins: str = (
+        "http://127.0.0.1:3000,http://localhost:3000,"
+        "http://127.0.0.1:3010,http://localhost:3010"
+    )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
