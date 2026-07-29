@@ -11,3 +11,4 @@
 - 2026-07-30: in-app browser connection could enumerate the browser but could not claim a session tab; browser visual QA was replaced by the automated Playwright test path.
 - 2026-07-30: Playwright E2E passed locally using the installed Chrome channel; CI installs Chromium explicitly.
 - 2026-07-30: Python ruff check passed after formatting.
+- 2026-07-30: created private GitHub repository `KanaxNguyen/huce-teaching-assignment-mvp`, set `main` as the default branch, and pushed the verified source.

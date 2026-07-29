@@ -91,6 +91,7 @@ Khi có asset chính thức, đặt SVG tại `apps/web/public/brand/huce-logo.s
 ## Tài liệu
 
 - [Figma source](https://www.figma.com/design/OdSLKDuaAwEoQePRugRIA1)
+- [GitHub repository (private)](https://github.com/KanaxNguyen/huce-teaching-assignment-mvp)
 - `docs/environment-audit.md`
 - `docs/figma-analysis.md`
 - `docs/data-analysis.md`
@@ -103,4 +104,3 @@ Khi có asset chính thức, đặt SVG tại `apps/web/public/brand/huce-logo.s
 - Nhận dạng văn bản nguyện vọng chỉ hỗ trợ các mẫu cơ bản và cố ý đưa trường hợp mơ hồ vào danh sách xác nhận.
 - Chưa có xác thực nhiều người dùng hay phân quyền.
 - Docker cần được cài để kiểm chứng build container local.
-
