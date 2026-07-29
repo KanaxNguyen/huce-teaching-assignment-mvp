@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-07-30T00:00:00+07:00",
+  "primary_schedule": "schedule-latest.xls",
+  "files": [
+    {
+      "original_name": "example.xls",
+      "original_path": "<WORKSPACE_INPUT_ROOT>/example.xls",
+      "copied_path": "data/local/source/schedule-latest.xls",
+      "detected_type": "schedule",
+      "extension": ".xls",
+      "size_bytes": 0,
+      "sha256": "<sha256>",
+      "sheet_names": ["Sheet1"],
+      "header_candidates": ["STT", "Mã học phần", "Tên môn học", "Mã lớp học"],
+      "imported_at": "2026-07-30T00:00:00+07:00"
+    }
+  ]
+}
+

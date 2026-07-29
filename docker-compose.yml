@@ -1,0 +1,31 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: infra/backend.Dockerfile
+    environment:
+      DATABASE_URL: sqlite:////app/storage/database/huce.db
+      CORS_ORIGINS: http://127.0.0.1:3000,http://localhost:3000
+    volumes:
+      - ./storage:/app/storage
+      - ./data/local:/app/data/local:ro
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+

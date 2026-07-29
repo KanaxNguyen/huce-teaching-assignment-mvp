@@ -1,0 +1,16 @@
+{
+  "lecturers": [
+    {"code": "GV001", "name": "Giảng viên An"},
+    {"code": "GV002", "name": "Giảng viên Bình"}
+  ],
+  "classes": [
+    {
+      "course_code": "TEST101",
+      "course_name": "Môn học mẫu",
+      "class_code": "TEST-A1",
+      "credits": 3,
+      "sessions": [{"weekday": 2, "start_period": 1, "end_period": 3, "room": "P.TEST-01"}]
+    }
+  ]
+}
+

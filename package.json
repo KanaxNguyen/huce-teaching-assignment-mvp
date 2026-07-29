@@ -1,0 +1,13 @@
+{
+  "name": "huce-teaching-assignment-mvp",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @huce/web dev",
+    "lint": "pnpm --filter @huce/web lint",
+    "typecheck": "pnpm --filter @huce/web typecheck",
+    "test": "pnpm --filter @huce/web test",
+    "build": "pnpm --filter @huce/web build",
+    "e2e": "pnpm --filter @huce/web e2e"
+  }
+}
