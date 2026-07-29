@@ -213,7 +213,13 @@ export function DashboardApp() {
                   setQuery={setQuery}
                   busy={busy}
                   onImportLocal={() => runAction("import", api.importLocal, "Đã nhập và chuẩn hóa dữ liệu Excel.")}
-                  onUpload={(files) => runAction("upload", () => api.upload(files), "Đã upload và chuẩn hóa workbook.")}
+                  onUpload={(scheduleFile, preferenceFile) =>
+                    runAction(
+                      "upload",
+                      () => api.uploadPair(scheduleFile, preferenceFile),
+                      "Đã nộp và chuẩn hóa hai file Excel.",
+                    )
+                  }
                 />
               )}
               {view === "constraints" && (
@@ -342,9 +348,12 @@ function DataView({
   setQuery: (value: string) => void;
   busy: string | null;
   onImportLocal: () => void;
-  onUpload: (files: File[]) => void;
+  onUpload: (scheduleFile: File, preferenceFile: File) => Promise<void>;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const scheduleInputRef = useRef<HTMLInputElement>(null);
+  const preferenceInputRef = useRef<HTMLInputElement>(null);
+  const [scheduleFile, setScheduleFile] = useState<File | null>(null);
+  const [preferenceFile, setPreferenceFile] = useState<File | null>(null);
   const filtered = classes.filter((item) =>
     `${item.course_code} ${item.course_name} ${item.class_code} ${item.lecturer ?? ""}`.toLocaleLowerCase("vi")
       .includes(query.toLocaleLowerCase("vi")),
@@ -357,25 +366,91 @@ function DataView({
           {busy === "import" ? <LoaderCircle className={styles.spin} size={17} /> : <Database size={17} />}Nhập dữ liệu mẫu cục bộ
         </button>
       </section>
-      <section
-        className={styles.dropzone}
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => {
-          event.preventDefault();
-          onUpload(Array.from(event.dataTransfer.files).filter((file) => /\.(xlsx?|xls)$/i.test(file.name)));
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept=".xls,.xlsx"
-          hidden
-          onChange={(event) => onUpload(Array.from(event.target.files ?? []))}
-        />
-        <span className={styles.dropIcon}>{busy === "upload" ? <LoaderCircle className={styles.spin} /> : <UploadCloud />}</span>
-        <div><strong>Thả file Excel vào đây</strong><p>Hỗ trợ `.xls` và `.xlsx` · lịch học, nguyện vọng hoặc phân công cũ</p></div>
-        <button className={styles.ghostButton} onClick={() => inputRef.current?.click()} disabled={!!busy}>Chọn file</button>
+      <section className={styles.uploadPanel}>
+        <div className={styles.uploadGrid}>
+          <div
+            className={`${styles.uploadCard} ${scheduleFile ? styles.uploadCardReady : ""}`}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              const file = Array.from(event.dataTransfer.files).find((item) => /\.(xlsx?|xls)$/i.test(item.name));
+              if (file) setScheduleFile(file);
+            }}
+          >
+            <input
+              ref={scheduleInputRef}
+              type="file"
+              accept=".xls,.xlsx"
+              hidden
+              onChange={(event) => setScheduleFile(event.target.files?.[0] ?? null)}
+            />
+            <div className={styles.uploadCardHeader}>
+              <span className={styles.fileNumber}>1</span>
+              <span><strong>Lịch học và phân công</strong><small>File lịch chính định dạng `.xls` hoặc `.xlsx`</small></span>
+            </div>
+            <div className={styles.fileChoice}>
+              <FileSpreadsheet size={21} />
+              <span>
+                <strong>{scheduleFile?.name ?? "Chưa chọn file lịch học"}</strong>
+                <small>{scheduleFile ? `${(scheduleFile.size / 1024).toFixed(1)} KB · Sẵn sàng nộp` : "Kéo file vào đây hoặc chọn từ máy"}</small>
+              </span>
+              {scheduleFile ? (
+                <button className={styles.clearFileButton} onClick={() => setScheduleFile(null)} aria-label="Bỏ file lịch học"><X size={16} /></button>
+              ) : (
+                <button className={styles.ghostButton} onClick={() => scheduleInputRef.current?.click()} disabled={!!busy}>Chọn file</button>
+              )}
+            </div>
+          </div>
+
+          <div
+            className={`${styles.uploadCard} ${preferenceFile ? styles.uploadCardReady : ""}`}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              const file = Array.from(event.dataTransfer.files).find((item) => /\.(xlsx?|xls)$/i.test(item.name));
+              if (file) setPreferenceFile(file);
+            }}
+          >
+            <input
+              ref={preferenceInputRef}
+              type="file"
+              accept=".xls,.xlsx"
+              hidden
+              onChange={(event) => setPreferenceFile(event.target.files?.[0] ?? null)}
+            />
+            <div className={styles.uploadCardHeader}>
+              <span className={styles.fileNumber}>2</span>
+              <span><strong>Nguyện vọng giảng viên</strong><small>File ràng buộc và nguyện vọng của thầy cô</small></span>
+            </div>
+            <div className={styles.fileChoice}>
+              <FileSpreadsheet size={21} />
+              <span>
+                <strong>{preferenceFile?.name ?? "Chưa chọn file nguyện vọng"}</strong>
+                <small>{preferenceFile ? `${(preferenceFile.size / 1024).toFixed(1)} KB · Sẵn sàng nộp` : "Kéo file vào đây hoặc chọn từ máy"}</small>
+              </span>
+              {preferenceFile ? (
+                <button className={styles.clearFileButton} onClick={() => setPreferenceFile(null)} aria-label="Bỏ file nguyện vọng"><X size={16} /></button>
+              ) : (
+                <button className={styles.ghostButton} onClick={() => preferenceInputRef.current?.click()} disabled={!!busy}>Chọn file</button>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className={styles.uploadFooter}>
+          <span>
+            {scheduleFile && preferenceFile
+              ? <><CircleCheck size={17} />Đã chọn đủ hai file</>
+              : "Chọn đúng loại file ở từng mục trước khi nộp."}
+          </span>
+          <button
+            className={styles.primaryButton}
+            onClick={() => scheduleFile && preferenceFile && void onUpload(scheduleFile, preferenceFile)}
+            disabled={!!busy || !scheduleFile || !preferenceFile}
+          >
+            {busy === "upload" ? <LoaderCircle className={styles.spin} size={18} /> : <UploadCloud size={18} />}
+            Nộp và chuẩn hóa 2 file
+          </button>
+        </div>
       </section>
       <section className={styles.card}>
         <div className={styles.tableToolbar}>

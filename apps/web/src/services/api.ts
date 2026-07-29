@@ -25,6 +25,12 @@ export const api = {
     files.forEach((file) => body.append("files", file));
     return request<Record<string, unknown>>("/imports/upload", { method: "POST", body });
   },
+  uploadPair: (scheduleFile: File, preferenceFile: File) => {
+    const body = new FormData();
+    body.append("schedule_file", scheduleFile);
+    body.append("preference_file", preferenceFile);
+    return request<Record<string, unknown>>("/imports/upload-pair", { method: "POST", body });
+  },
   createConstraint: (payload: Record<string, unknown>) =>
     request<{ id: number }>("/constraints", { method: "POST", body: JSON.stringify(payload) }),
   optimize: (confirmMerged: boolean) =>
@@ -34,4 +40,3 @@ export const api = {
     }),
   exportUrl: `${API_URL}/api/v1/exports/latest`,
 };
-

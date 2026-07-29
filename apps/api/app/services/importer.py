@@ -37,9 +37,15 @@ def _clear_imported_data(db: Session) -> None:
     db.flush()
 
 
-def import_files(db: Session, paths: list[Path]) -> dict:
-    schedule_paths = [path for path in paths if "schedule" in path.name.casefold()]
-    preference_paths = [path for path in paths if "preference" in path.name.casefold()]
+def import_files(
+    db: Session,
+    paths: list[Path],
+    *,
+    schedule_paths: list[Path] | None = None,
+    preference_paths: list[Path] | None = None,
+) -> dict:
+    schedule_paths = schedule_paths or [path for path in paths if "schedule" in path.name.casefold()]
+    preference_paths = preference_paths or [path for path in paths if "preference" in path.name.casefold()]
     if not schedule_paths:
         raise ValueError("Cần ít nhất một file lịch học")
     primary = sorted(schedule_paths)[-1]

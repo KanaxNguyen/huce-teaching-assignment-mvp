@@ -687,6 +687,141 @@
   font-size: 11px;
 }
 
+.uploadPanel {
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.uploadGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px;
+}
+
+.uploadCard {
+  min-width: 0;
+  padding: 18px;
+  background: color-mix(in srgb, var(--color-primary-soft) 28%, var(--color-surface));
+  border: 1.5px dashed color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
+  border-radius: var(--radius-md);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.uploadCard:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.uploadCardReady {
+  background: color-mix(in srgb, var(--color-success) 7%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-success) 62%, var(--color-border));
+  border-style: solid;
+}
+
+.uploadCardHeader,
+.fileChoice,
+.uploadFooter {
+  display: flex;
+  align-items: center;
+}
+
+.uploadCardHeader {
+  gap: 11px;
+  margin-bottom: 16px;
+}
+
+.uploadCardHeader > span:last-child,
+.fileChoice > span {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.uploadCardHeader small,
+.fileChoice small {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.fileNumber {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fileChoice {
+  min-height: 68px;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.fileChoice > svg {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+}
+
+.fileChoice strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clearFileButton {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.clearFileButton:hover {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+}
+
+.uploadFooter {
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 20px;
+  background: color-mix(in srgb, var(--color-canvas) 68%, var(--color-surface));
+  border-top: 1px solid var(--color-border);
+}
+
+.uploadFooter > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.uploadFooter > span svg {
+  color: var(--color-success);
+}
+
 .tableToolbar {
   justify-content: space-between;
   min-height: 74px;
@@ -1448,6 +1583,20 @@
     text-align: center;
   }
 
+  .uploadGrid {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .uploadFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .uploadFooter .primaryButton {
+    justify-content: center;
+  }
+
   .tableToolbar {
     align-items: stretch;
     flex-direction: column;
@@ -1478,4 +1627,3 @@
     display: none;
   }
 }
-

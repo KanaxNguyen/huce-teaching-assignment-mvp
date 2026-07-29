@@ -26,6 +26,17 @@ from app.services.importer import dashboard, import_files
 router = APIRouter(prefix="/api/v1")
 
 
+def _save_typed_upload(item: UploadFile, directory: Path) -> Path:
+    suffix = Path(item.filename or "").suffix.lower()
+    if suffix not in {".xls", ".xlsx"}:
+        raise HTTPException(415, f"Định dạng không hỗ trợ: {suffix}")
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / Path(item.filename or f"upload{suffix}").name
+    with path.open("wb") as handle:
+        shutil.copyfileobj(item.file, handle)
+    return path
+
+
 @router.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "HUCE Teaching Assignment API"}
@@ -56,6 +67,26 @@ def upload(files: list[UploadFile] = File(...), db: Session = Depends(get_db)) -
         paths.append(path)
     try:
         return import_files(db, paths)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@router.post("/imports/upload-pair", response_model=ImportResponse)
+def upload_pair(
+    schedule_file: UploadFile = File(...),
+    preference_file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    upload_dir = settings.resolve(settings.upload_dir)
+    schedule_path = _save_typed_upload(schedule_file, upload_dir / "schedule")
+    preference_path = _save_typed_upload(preference_file, upload_dir / "preference")
+    try:
+        return import_files(
+            db,
+            [schedule_path, preference_path],
+            schedule_paths=[schedule_path],
+            preference_paths=[preference_path],
+        )
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 
