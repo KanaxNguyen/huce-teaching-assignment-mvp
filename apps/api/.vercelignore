@@ -1,0 +1,12 @@
+.env*
+.agents
+skills-lock.json
+tests
+storage
+data
+build
+*.egg-info
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/*.pyc

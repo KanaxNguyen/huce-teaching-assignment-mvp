@@ -2,6 +2,23 @@
 
 Kho mã đã sẵn sàng đưa lên GitHub và triển khai bằng Docker. Dữ liệu Excel thật, SQLite và file xuất nằm trong các thư mục đã bị `.gitignore` loại bỏ.
 
+## Vercel production (đang sử dụng)
+
+- Frontend: project `huce-tkb`, root directory `apps/web`.
+- API: project `huce-tkb-api`, root directory `apps/api`.
+- Database: Neon PostgreSQL được cài từ Vercel Marketplace và tự cấp `DATABASE_URL`.
+- API dùng `/tmp/uploads`, `/tmp/exports` và `/tmp/source` cho file tạm; dữ liệu đã nhập, ràng buộc và kết quả tối ưu được lưu trong Neon.
+- `NEXT_PUBLIC_API_URL` trỏ tới URL production của API; `CORS_ORIGINS` chỉ cho phép URL production của frontend và địa chỉ local phục vụ phát triển.
+
+Triển khai lại bằng CLI từ thư mục repository:
+
+```powershell
+pnpm dlx vercel@latest deploy --prebuilt --prod --cwd apps/api
+pnpm dlx vercel@latest deploy --prod --yes --cwd apps/web
+```
+
+Sau mỗi lần triển khai cần kiểm tra health API, upload ba workbook, chạy tối ưu và thử các định dạng xuất trên URL công khai.
+
 ## Render Blueprint
 
 1. Push repository lên GitHub.

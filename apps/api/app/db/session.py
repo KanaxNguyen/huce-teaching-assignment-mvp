@@ -17,6 +17,10 @@ if database_url.startswith("sqlite:///./"):
     database_path = settings.resolve(Path(database_url.removeprefix("sqlite:///./")))
     database_path.parent.mkdir(parents=True, exist_ok=True)
     database_url = f"sqlite:///{database_path.as_posix()}"
+elif database_url.startswith("postgresql://"):
+    # Vercel Marketplace provides a standard PostgreSQL URL. Explicitly select
+    # psycopg 3 so SQLAlchemy does not look for the legacy psycopg2 package.
+    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
 connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
 engine_options = {"connect_args": connect_args}

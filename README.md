@@ -28,7 +28,7 @@
 ## Kiến trúc
 
 - `apps/web`: Next.js, React, TypeScript, CSS Modules.
-- `apps/api`: FastAPI, SQLAlchemy, SQLite, openpyxl/xlrd, OR-Tools.
+- `apps/api`: FastAPI, SQLAlchemy, SQLite khi chạy local, Neon PostgreSQL trên Vercel, openpyxl/xlrd, OR-Tools.
 - `data/local`: dữ liệu Excel thật, bị Git ignore.
 - `data/fixtures`: dữ liệu kiểm thử ẩn danh.
 - `storage`: database, upload và export cục bộ, bị Git ignore.
@@ -71,9 +71,9 @@ Docker chưa được cài trên máy phát triển hiện tại, nên cấu hì
 
 ## Đưa lên GitHub và triển khai
 
-Repository có sẵn CI, Dockerfile và `render.yaml`. Xem [hướng dẫn triển khai](docs/deployment.md) để deploy frontend Next.js, API FastAPI và ổ lưu trữ bền vững từ GitHub.
+Repository có sẵn CI, Dockerfile, cấu hình Vercel và `render.yaml`. Xem [hướng dẫn triển khai](docs/deployment.md) để deploy frontend Next.js và API FastAPI từ GitHub.
 
-Mô hình khuyến nghị cho bản MVP là frontend trên Vercel và API trên Render. SQLite, file upload và file xuất cần ổ đĩa bền vững nên không đặt API vào Vercel Function tạm thời.
+Bản production hiện dùng hai project Vercel: `huce-tkb` cho frontend và `huce-tkb-api` cho API. Dữ liệu nghiệp vụ được lưu bền vững trên Neon PostgreSQL; file upload và file xuất chỉ tồn tại tạm trong lúc xử lý rồi được trả trực tiếp cho người dùng.
 
 ## Kiểm thử
 

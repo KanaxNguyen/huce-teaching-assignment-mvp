@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["sin1"],
+  "functions": {
+    "app/main.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{.env*,tests/**,storage/**,data/**,build/**,.agents/**,**/*.egg-info/**,**/__pycache__/**,**/*.pyc}"
+    }
+  }
+}
