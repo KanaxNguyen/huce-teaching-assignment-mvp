@@ -6,7 +6,7 @@
 
 ## Chức năng MVP
 
-- Upload `.xls/.xlsx` hoặc nhập nguồn cục bộ.
+- Upload lịch học, nguyện vọng và file mẫu `.xls/.xlsx`, hoặc nhập nguồn cục bộ.
 - Tự tìm header, chỉ đọc A:N và loại vùng chữ ký/định dạng trống.
 - Bảo toàn chuỗi tuần học theo vị trí; lưu cả `raw_weeks` và `active_weeks`.
 - Gom nhiều dòng thành một lớp học phần.
@@ -16,13 +16,19 @@
 - Nhận dạng nguyện vọng thành ràng buộc mềm cần xác nhận.
 - Tạo ràng buộc cứng/mềm, trọng số 0–1.
 - Tối ưu CP-SAT: một giảng viên mỗi lớp, không trùng lịch, cân bằng tải.
-- Dashboard, bảng kết quả, lịch tuần, danh sách xung đột.
-- Xuất workbook gồm bảng phân công và TKB theo giảng viên.
+- Dashboard, bảng kết quả, lịch tuần theo trục 15 tiết, danh sách xung đột.
+- Giao diện sáng/tối, nhớ lựa chọn của người dùng và hỗ trợ responsive trên điện thoại.
+- Xuất workbook, ICS cho Google/Outlook/Apple Calendar, CSV và JSON tích hợp.
+- Chỉnh sửa, bật/tắt hoặc xóa ràng buộc trực tiếp trên giao diện.
+- Điều chỉnh độ cứng và trọng số seminar; xem phương án seminar được chọn.
+- Theo dõi lần nhập dữ liệu và các lần tối ưu gần nhất.
+- Cài đặt học kỳ, năm học, khoảng ngày, tên Calendar, múi giờ và giảng viên mặc định.
+- Mục **Hướng dẫn MVP** cung cấp checklist vận hành và bàn giao.
 
 ## Kiến trúc
 
 - `apps/web`: Next.js, React, TypeScript, CSS Modules.
-- `apps/api`: FastAPI, SQLAlchemy, SQLite, openpyxl/xlrd, OR-Tools.
+- `apps/api`: FastAPI, SQLAlchemy, SQLite khi chạy local, Neon PostgreSQL trên Vercel, openpyxl/xlrd, OR-Tools.
 - `data/local`: dữ liệu Excel thật, bị Git ignore.
 - `data/fixtures`: dữ liệu kiểm thử ẩn danh.
 - `storage`: database, upload và export cục bộ, bị Git ignore.
@@ -63,6 +69,12 @@ docker compose up --build
 
 Docker chưa được cài trên máy phát triển hiện tại, nên cấu hình đã được tạo nhưng chưa thể chạy xác minh tại đây.
 
+## Đưa lên GitHub và triển khai
+
+Repository có sẵn CI, Dockerfile, cấu hình Vercel và `render.yaml`. Xem [hướng dẫn triển khai](docs/deployment.md) để deploy frontend Next.js và API FastAPI từ GitHub.
+
+Bản production hiện dùng hai project Vercel: `huce-tkb` cho frontend và `huce-tkb-api` cho API. Dữ liệu nghiệp vụ được lưu bền vững trên Neon PostgreSQL; file upload và file xuất chỉ tồn tại tạm trong lúc xử lý rồi được trả trực tiếp cho người dùng.
+
 ## Kiểm thử
 
 ```powershell
@@ -76,9 +88,13 @@ pnpm e2e
 
 CI dùng fixture ẩn danh, không dùng Excel thật.
 
-## Xuất Excel
+## Xuất và kết nối
 
-Chạy tối ưu thành công, sau đó chọn **Xuất Excel** trên topbar. File được lưu dưới `storage/exports` và tải qua API `/api/v1/exports/latest`.
+Chạy tối ưu thành công, sau đó chọn **Xuất Excel** trên topbar. File `Thoi_Khoa_Bieu_To_Bo_Mon_2026_2027_Hoan_Chinh.xlsx` được lưu dưới `storage/exports` và tải qua API `/api/v1/exports/latest`.
+
+Trong mục **Thời khóa biểu**, có thể xuất `.ics` để nhập vào Google Calendar, Outlook hoặc Apple Calendar; `.csv` và `.json` dùng để kết nối với khoa, phòng đào tạo hoặc hệ thống khác. Lớp ghép được gộp thành một sự kiện Calendar nhưng vẫn giữ đủ mã lớp.
+
+Ở máy local, chọn **Tải ICS cho Google Calendar** rồi nhập tệp tại trang **Nhập và xuất** của Google Calendar. Sau khi deploy công khai, có thể dùng **Sao chép link ICS** để đăng ký bằng URL; khi đó Calendar sẽ định kỳ đọc lại lịch từ endpoint công khai.
 
 ## Thay logo HUCE
 
@@ -97,6 +113,7 @@ Khi có asset chính thức, đặt SVG tại `apps/web/public/brand/huce-logo.s
 - `docs/data-analysis.md`
 - `docs/architecture.md`
 - `docs/api.md`
+- `docs/mvp-handover.md`
 
 ## Giới hạn hiện tại
 

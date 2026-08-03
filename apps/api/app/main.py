@@ -12,7 +12,6 @@ from app.db.session import init_db
 async def lifespan(_: FastAPI):
     settings.resolve(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     settings.resolve(settings.export_dir).mkdir(parents=True, exist_ok=True)
-    settings.resolve(settings.project_root / "storage/database").mkdir(parents=True, exist_ok=True)
     init_db()
     yield
 

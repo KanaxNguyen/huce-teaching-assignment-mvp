@@ -12,6 +12,7 @@ from app.models.entities import (
     Constraint,
     Lecturer,
     OptimizationRun,
+    Seminar,
     ValidationIssue,
 )
 
@@ -46,6 +47,7 @@ def solve(db: Session, time_limit_seconds: int = 20, confirm_merged: bool = Fals
     ).all()
     lecturers = db.scalars(select(Lecturer).order_by(Lecturer.id)).all()
     constraints = db.scalars(select(Constraint).where(Constraint.active.is_(True))).all()
+    seminars = db.scalars(select(Seminar).order_by(Seminar.id)).all()
     if not classes or not lecturers:
         raise ValueError("Chưa có đủ lớp và giảng viên để tối ưu.")
 
@@ -100,14 +102,21 @@ def solve(db: Session, time_limit_seconds: int = 20, confirm_merged: bool = Fals
         weekday = constraint.target.get("weekday")
         periods = constraint.target.get("periods") or constraint.target.get("period_range") or []
         for class_item in classes:
-            violates = any(
-                (weekday is None or session.weekday == weekday)
-                and (
+            relevant_sessions = [
+                session for session in class_item.sessions if weekday is None or session.weekday == weekday
+            ]
+            if constraint.constraint_type == "prefer_period" and len(periods) >= 2:
+                preferred_start, preferred_end = min(periods), max(periods)
+                violates = any(
+                    session.start_period < preferred_start or session.end_period > preferred_end
+                    for session in relevant_sessions
+                )
+            else:
+                violates = any(
                     not periods
                     or any(session.start_period <= period <= session.end_period for period in periods)
+                    for session in relevant_sessions
                 )
-                for session in class_item.sessions
-            )
             if not violates:
                 continue
             variable = x[class_item.id, constraint.lecturer_id]
@@ -115,6 +124,47 @@ def solve(db: Session, time_limit_seconds: int = 20, confirm_merged: bool = Fals
                 model.add(variable == 0)
             else:
                 penalty_terms.append(int(round(constraint.weight * 100)) * variable)
+
+    seminar_choices: dict[int, list] = {}
+    for seminar in seminars:
+        choices = [
+            model.new_bool_var(f"seminar_{seminar.id}_{index}") for index in range(len(seminar.alternatives))
+        ]
+        if not choices:
+            continue
+        model.add(sum(choices) == 1)
+        seminar_choices[seminar.id] = choices
+        member_names = {name.casefold().strip() for name in seminar.members}
+        for lecturer in lecturers:
+            lecturer_names = {lecturer.canonical_name.casefold().strip()}
+            lecturer_names.update(alias.casefold().strip() for alias in lecturer.aliases or [])
+            is_member = any(
+                candidate == member or (len(candidate.split()) == 1 and member.endswith(f" {candidate}"))
+                for candidate in lecturer_names
+                for member in member_names
+            )
+            if not is_member:
+                continue
+            for class_item in classes:
+                for index, alternative in enumerate(seminar.alternatives):
+                    conflicts_with_slot = any(
+                        session.weekday == alternative.get("weekday")
+                        and session.start_period <= alternative.get("end_period", 0)
+                        and alternative.get("start_period", 99) <= session.end_period
+                        for session in class_item.sessions
+                    )
+                    if not conflicts_with_slot:
+                        continue
+                    violation = model.new_bool_var(
+                        f"seminar_conflict_{seminar.id}_{index}_{class_item.id}_{lecturer.id}"
+                    )
+                    model.add(violation <= choices[index])
+                    model.add(violation <= x[class_item.id, lecturer.id])
+                    model.add(violation >= choices[index] + x[class_item.id, lecturer.id] - 1)
+                    if seminar.hardness == "hard":
+                        model.add(violation == 0)
+                    else:
+                        penalty_terms.append(int(round(seminar.weight * 100)) * violation)
 
     max_load = model.new_int_var(0, 1000, "max_load")
     min_load = model.new_int_var(0, 1000, "min_load")
@@ -142,11 +192,26 @@ def solve(db: Session, time_limit_seconds: int = 20, confirm_merged: bool = Fals
             "hard_conflict_pairs": len(conflicts),
             "locked_overlap_exceptions": len(locked_overlap_exceptions),
             "merged_groups_confirmed": confirm_merged,
+            "seminar_slots": {},
         },
     )
     db.add(run)
     db.flush()
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        run.summary = {
+            **run.summary,
+            "seminar_slots": {
+                seminar.name: seminar.alternatives[
+                    next(
+                        index
+                        for index, choice in enumerate(seminar_choices[seminar.id])
+                        if solver.value(choice)
+                    )
+                ]
+                for seminar in seminars
+                if seminar.id in seminar_choices
+            },
+        }
         for class_item in classes:
             lecturer = next(item for item in lecturers if solver.value(x[class_item.id, item.id]))
             db.add(

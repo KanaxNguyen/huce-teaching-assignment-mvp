@@ -5,24 +5,30 @@ import {
   BarChart3,
   BookOpenCheck,
   CalendarDays,
-  ChevronDown,
+  CalendarCog,
   ChevronRight,
   CircleCheck,
+  CircleHelp,
   Database,
   Download,
   FileSpreadsheet,
   LayoutDashboard,
   LoaderCircle,
   Menu,
+  Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   Play,
   Plus,
+  Presentation,
   RefreshCw,
   Search,
   Settings2,
   ShieldCheck,
   Sparkles,
+  Sun,
+  Trash2,
   UploadCloud,
   Users,
   X,
@@ -30,22 +36,53 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { HuceWordmark } from "@/src/components/brand/huce-wordmark";
+import { CalendarView } from "@/src/features/calendar/calendar-view";
+import { GuideView } from "@/src/features/guide/guide-view";
+import { SeminarsView } from "@/src/features/seminars/seminars-view";
+import { SettingsView } from "@/src/features/settings/settings-view";
 import { api } from "@/src/services/api";
-import type { ClassItem, Constraint, DashboardMetrics, ValidationIssue } from "@/src/types/api";
+import type {
+  AppSettings,
+  ClassItem,
+  Constraint,
+  DashboardMetrics,
+  ImportBatch,
+  Lecturer,
+  OptimizationRun,
+  Seminar,
+  ValidationIssue,
+} from "@/src/types/api";
 
 import styles from "./dashboard.module.css";
 
-type View = "overview" | "data" | "constraints" | "optimize" | "results" | "calendar" | "conflicts";
+type View = "overview" | "data" | "constraints" | "seminars" | "optimize" | "results" | "calendar" | "conflicts" | "settings" | "guide";
+type Theme = "light" | "dark";
 
 const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
   { id: "data", label: "Dữ liệu đầu vào", icon: Database },
   { id: "constraints", label: "Ràng buộc", icon: Settings2 },
+  { id: "seminars", label: "Seminar", icon: Presentation },
   { id: "optimize", label: "Tự động phân công", icon: Sparkles },
   { id: "results", label: "Kết quả phân công", icon: BookOpenCheck },
   { id: "calendar", label: "Thời khóa biểu", icon: CalendarDays },
   { id: "conflicts", label: "Xung đột", icon: AlertTriangle },
+  { id: "settings", label: "Cài đặt học kỳ", icon: CalendarCog },
+  { id: "guide", label: "Hướng dẫn MVP", icon: CircleHelp },
 ];
+
+const defaultSettings: AppSettings = {
+  academic_year: "2026-2027",
+  semester: 1,
+  semester_start: null,
+  semester_end: null,
+  institution: "HUCE",
+  department: "Bộ môn Toán học",
+  calendar_name: "TKB Bộ môn Toán HUCE",
+  timezone_name: "Asia/Ho_Chi_Minh",
+  primary_lecturer: null,
+  updated_at: null,
+};
 
 const defaultMetrics: DashboardMetrics = {
   classes: 0,
@@ -77,8 +114,13 @@ export function DashboardApp() {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [metrics, setMetrics] = useState(defaultMetrics);
+  const [appSettings, setAppSettings] = useState(defaultSettings);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [constraints, setConstraints] = useState<Constraint[]>([]);
+  const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+  const [seminars, setSeminars] = useState<Seminar[]>([]);
+  const [latestImport, setLatestImport] = useState<ImportBatch | null>(null);
+  const [runs, setRuns] = useState<OptimizationRun[]>([]);
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -86,21 +128,33 @@ export function DashboardApp() {
   const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [constraintOpen, setConstraintOpen] = useState(false);
+  const [editingConstraint, setEditingConstraint] = useState<Constraint | null>(null);
+  const [theme, setTheme] = useState<Theme>("light");
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [dashboard, classRows, constraintRows, issueRows] = await Promise.all([
+      const [dashboard, settingsState, classRows, constraintRows, issueRows, lecturerRows, seminarRows, importState, runRows] = await Promise.all([
         api.dashboard(),
+        api.settings(),
         api.classes(),
         api.constraints(),
         api.conflicts(),
+        api.lecturers(),
+        api.seminars(),
+        api.latestImport(),
+        api.optimizationRuns(),
       ]);
       setMetrics(dashboard);
+      setAppSettings(settingsState);
       setClasses(classRows);
       setConstraints(constraintRows);
       setIssues(issueRows);
+      setLecturers(lecturerRows);
+      setSeminars(seminarRows);
+      setLatestImport(importState.batch);
+      setRuns(runRows);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể tải dữ liệu.");
     } finally {
@@ -111,6 +165,18 @@ export function DashboardApp() {
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+  }, []);
+
+  function toggleTheme() {
+    const nextTheme: Theme = theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
+    window.localStorage.setItem("huce-tkb-theme", nextTheme);
+    setTheme(nextTheme);
+  }
 
   async function runAction(name: string, action: () => Promise<unknown>, success: string) {
     setBusy(name);
@@ -165,7 +231,7 @@ export function DashboardApp() {
         <div className={styles.sidebarFooter}>
           <div className={styles.semesterPill}>
             <span className={styles.liveDot} />
-            {!collapsed && <span><small>Học kỳ hiện tại</small><strong>HK1 · 2026–2027</strong></span>}
+            {!collapsed && <span><small>Học kỳ hiện tại</small><strong>HK{appSettings.semester} · {appSettings.academic_year}</strong></span>}
           </div>
           {!collapsed && <p>Dữ liệu được lưu cục bộ và không đưa lên Git.</p>}
         </div>
@@ -182,6 +248,16 @@ export function DashboardApp() {
             </div>
           </div>
           <div className={styles.topbarActions}>
+            <button
+              className={styles.iconButton}
+              type="button"
+              aria-label={theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"}
+              aria-pressed={theme === "dark"}
+              title={theme === "dark" ? "Giao diện sáng" : "Giao diện tối"}
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <button className={styles.iconButton} onClick={() => void loadAll()} aria-label="Làm mới dữ liệu">
               <RefreshCw size={18} className={loading ? styles.spin : ""} />
             </button>
@@ -212,29 +288,45 @@ export function DashboardApp() {
                   query={query}
                   setQuery={setQuery}
                   busy={busy}
+                  latestImport={latestImport}
                   onImportLocal={() => runAction("import", api.importLocal, "Đã nhập và chuẩn hóa dữ liệu Excel.")}
-                  onUpload={(scheduleFile, preferenceFile) =>
+                  onUpload={(scheduleFile, preferenceFile, templateFile) =>
                     runAction(
                       "upload",
-                      () => api.uploadPair(scheduleFile, preferenceFile),
-                      "Đã nộp và chuẩn hóa hai file Excel.",
+                      () => api.uploadBundle(scheduleFile, preferenceFile, templateFile),
+                      "Đã nộp và chuẩn hóa bộ dữ liệu Excel.",
                     )
                   }
                 />
               )}
               {view === "constraints" && (
-                <ConstraintsView constraints={constraints} onCreate={() => setConstraintOpen(true)} />
+                <ConstraintsView
+                  constraints={constraints}
+                  busy={busy}
+                  onCreate={() => { setEditingConstraint(null); setConstraintOpen(true); }}
+                  onEdit={(item) => { setEditingConstraint(item); setConstraintOpen(true); }}
+                  onToggle={(item) => runAction("constraint", () => api.updateConstraint(item.id, { active: !item.active }), "Đã cập nhật trạng thái ràng buộc.")}
+                  onDelete={(item) => {
+                    if (window.confirm(`Xóa ràng buộc “${item.name}”?`)) {
+                      void runAction("constraint", () => api.deleteConstraint(item.id), "Đã xóa ràng buộc.");
+                    }
+                  }}
+                />
               )}
+              {view === "seminars" && <SeminarsView seminars={seminars} runs={runs} busy={busy} onUpdate={(id, payload) => void runAction("seminar", () => api.updateSeminar(id, payload), "Đã cập nhật seminar.")} />}
               {view === "optimize" && (
                 <OptimizeView
                   metrics={metrics}
+                  runs={runs}
                   busy={busy}
                   onRun={(merged) => runAction("optimize", () => api.optimize(merged), "Đã tạo phương án phân công mới.")}
                 />
               )}
               {view === "results" && <ResultsView classes={classes} query={query} setQuery={setQuery} />}
-              {view === "calendar" && <CalendarView classes={classes} />}
+              {view === "calendar" && <CalendarView classes={classes} settings={appSettings} />}
               {view === "conflicts" && <ConflictsView issues={issues} />}
+              {view === "settings" && <SettingsView settings={appSettings} lecturers={lecturers} busy={busy} onSave={(payload) => void runAction("settings", () => api.updateSettings(payload), "Đã lưu cài đặt học kỳ và Calendar.")} />}
+              {view === "guide" && <GuideView metrics={metrics} latestImport={latestImport} latestRun={runs[0] ?? null} />}
             </>
           )}
         </div>
@@ -243,10 +335,15 @@ export function DashboardApp() {
       {constraintOpen && (
         <ConstraintDialog
           busy={busy}
+          initial={editingConstraint}
+          lecturers={lecturers}
           onClose={() => setConstraintOpen(false)}
           onSubmit={(payload) =>
-            runAction("constraint", () => api.createConstraint(payload), "Đã thêm ràng buộc.")
-              .then(() => setConstraintOpen(false))
+            runAction(
+              "constraint",
+              () => editingConstraint ? api.updateConstraint(editingConstraint.id, payload) : api.createConstraint(payload),
+              editingConstraint ? "Đã cập nhật ràng buộc." : "Đã thêm ràng buộc.",
+            ).then(() => { setConstraintOpen(false); setEditingConstraint(null); })
           }
         />
       )}
@@ -340,6 +437,7 @@ function DataView({
   query,
   setQuery,
   busy,
+  latestImport,
   onImportLocal,
   onUpload,
 }: {
@@ -347,13 +445,16 @@ function DataView({
   query: string;
   setQuery: (value: string) => void;
   busy: string | null;
+  latestImport: ImportBatch | null;
   onImportLocal: () => void;
-  onUpload: (scheduleFile: File, preferenceFile: File) => Promise<void>;
+  onUpload: (scheduleFile: File, preferenceFile: File, templateFile: File | null) => Promise<void>;
 }) {
   const scheduleInputRef = useRef<HTMLInputElement>(null);
   const preferenceInputRef = useRef<HTMLInputElement>(null);
+  const templateInputRef = useRef<HTMLInputElement>(null);
   const [scheduleFile, setScheduleFile] = useState<File | null>(null);
   const [preferenceFile, setPreferenceFile] = useState<File | null>(null);
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
   const filtered = classes.filter((item) =>
     `${item.course_code} ${item.course_name} ${item.class_code} ${item.lecturer ?? ""}`.toLocaleLowerCase("vi")
       .includes(query.toLocaleLowerCase("vi")),
@@ -361,11 +462,19 @@ function DataView({
   return (
     <div className={styles.viewStack}>
       <section className={styles.sectionHeading}>
-        <div><span className={styles.eyebrow}>Excel ingestion</span><h2>Dữ liệu đầu vào</h2><p>Upload lịch học và nguyện vọng. File gốc được giữ nguyên để truy vết.</p></div>
+        <div><span className={styles.eyebrow}>Excel ingestion</span><h2>Dữ liệu đầu vào</h2><p>Tải lịch học, nguyện vọng và file mẫu đầu ra. File gốc được giữ nguyên để truy vết.</p></div>
         <button className={styles.secondaryButton} onClick={onImportLocal} disabled={!!busy}>
           {busy === "import" ? <LoaderCircle className={styles.spin} size={17} /> : <Database size={17} />}Nhập dữ liệu mẫu cục bộ
         </button>
       </section>
+      {latestImport && (
+        <div className={styles.infoStrip}>
+          <CircleCheck size={19} />
+          <span>
+            <strong>Lần nhập gần nhất:</strong> {latestImport.source_files.length} file · {latestImport.summary.classes ?? 0} lớp · {latestImport.summary.sessions ?? 0} buổi · {new Date(latestImport.created_at).toLocaleString("vi-VN")}
+          </span>
+        </div>
+      )}
       <section className={styles.uploadPanel}>
         <div className={styles.uploadGrid}>
           <div
@@ -435,20 +544,54 @@ function DataView({
               )}
             </div>
           </div>
+
+          <div
+            className={`${styles.uploadCard} ${templateFile ? styles.uploadCardReady : ""}`}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              const file = Array.from(event.dataTransfer.files).find((item) => /\.(xlsx?|xls)$/i.test(item.name));
+              if (file) setTemplateFile(file);
+            }}
+          >
+            <input
+              ref={templateInputRef}
+              type="file"
+              accept=".xls,.xlsx"
+              hidden
+              onChange={(event) => setTemplateFile(event.target.files?.[0] ?? null)}
+            />
+            <div className={styles.uploadCardHeader}>
+              <span className={styles.fileNumber}>3</span>
+              <span><strong>File mẫu đầu ra</strong><small>Tùy chọn · dùng để lưu và đối chiếu biểu mẫu mong muốn</small></span>
+            </div>
+            <div className={styles.fileChoice}>
+              <FileSpreadsheet size={21} />
+              <span>
+                <strong>{templateFile?.name ?? "Chưa chọn file mẫu"}</strong>
+                <small>{templateFile ? `${(templateFile.size / 1024).toFixed(1)} KB · Đã đính kèm` : "Có thể bỏ qua và dùng biểu mẫu chuẩn của app"}</small>
+              </span>
+              {templateFile ? (
+                <button className={styles.clearFileButton} onClick={() => setTemplateFile(null)} aria-label="Bỏ file mẫu"><X size={16} /></button>
+              ) : (
+                <button className={styles.ghostButton} onClick={() => templateInputRef.current?.click()} disabled={!!busy}>Chọn file</button>
+              )}
+            </div>
+          </div>
         </div>
         <div className={styles.uploadFooter}>
           <span>
             {scheduleFile && preferenceFile
-              ? <><CircleCheck size={17} />Đã chọn đủ hai file</>
-              : "Chọn đúng loại file ở từng mục trước khi nộp."}
+              ? <><CircleCheck size={17} />Đã đủ hai file bắt buộc{templateFile ? " và file mẫu" : ""}</>
+              : "Chọn hai file bắt buộc trước khi nộp; file mẫu là tùy chọn."}
           </span>
           <button
             className={styles.primaryButton}
-            onClick={() => scheduleFile && preferenceFile && void onUpload(scheduleFile, preferenceFile)}
+            onClick={() => scheduleFile && preferenceFile && void onUpload(scheduleFile, preferenceFile, templateFile)}
             disabled={!!busy || !scheduleFile || !preferenceFile}
           >
             {busy === "upload" ? <LoaderCircle className={styles.spin} size={18} /> : <UploadCloud size={18} />}
-            Nộp và chuẩn hóa 2 file
+            Nộp và chuẩn hóa dữ liệu
           </button>
         </div>
       </section>
@@ -487,7 +630,21 @@ function ClassTable({ items }: { items: ClassItem[] }) {
   );
 }
 
-function ConstraintsView({ constraints, onCreate }: { constraints: Constraint[]; onCreate: () => void }) {
+function ConstraintsView({
+  constraints,
+  busy,
+  onCreate,
+  onEdit,
+  onToggle,
+  onDelete,
+}: {
+  constraints: Constraint[];
+  busy: string | null;
+  onCreate: () => void;
+  onEdit: (item: Constraint) => void;
+  onToggle: (item: Constraint) => void;
+  onDelete: (item: Constraint) => void;
+}) {
   return (
     <div className={styles.viewStack}>
       <section className={styles.sectionHeading}>
@@ -498,10 +655,15 @@ function ConstraintsView({ constraints, onCreate }: { constraints: Constraint[];
       <section className={styles.card}>
         <div className={styles.tableToolbar}><div><h3>Danh sách quy tắc</h3><span>{constraints.length} ràng buộc đã nhận diện</span></div></div>
         {constraints.length ? <div className={styles.constraintList}>{constraints.map((item) => (
-          <article className={styles.constraintRow} key={item.id}>
+          <article className={`${styles.constraintRow} ${item.active === false ? styles.constraintInactive : ""}`} key={item.id}>
             <span className={`${styles.constraintIcon} ${item.hardness === "hard" ? styles.hard : styles.soft}`}><Settings2 size={18} /></span>
-            <div className={styles.constraintCopy}><div><strong>{item.name}</strong><StatusBadge tone={item.hardness === "hard" ? "danger" : "warning"}>{item.hardness === "hard" ? "Cứng" : "Mềm"}</StatusBadge>{!item.confirmed && <StatusBadge tone="neutral">Cần xác nhận</StatusBadge>}</div><p>{item.raw_text || `${item.constraint_type} · ${item.lecturer ?? "Toàn bộ giảng viên"}`}</p></div>
+            <div className={styles.constraintCopy}><div><strong>{item.name}</strong><StatusBadge tone={item.hardness === "hard" ? "danger" : "warning"}>{item.hardness === "hard" ? "Cứng" : "Mềm"}</StatusBadge>{!item.confirmed && <StatusBadge tone="neutral">Cần xác nhận</StatusBadge>}{item.active === false && <StatusBadge tone="neutral">Đã tắt</StatusBadge>}</div><p>{item.raw_text || `${item.constraint_type} · ${item.lecturer ?? "Toàn bộ giảng viên"}`}</p></div>
             <div className={styles.weight}><small>Trọng số</small><strong>{item.weight.toFixed(1)}</strong></div>
+            <div className={styles.constraintActions}>
+              <button className={styles.iconButton} onClick={() => onEdit(item)} disabled={!!busy} aria-label={`Sửa ${item.name}`}><Pencil size={15} /></button>
+              <button className={styles.iconButton} onClick={() => onToggle(item)} disabled={!!busy} aria-label={`${item.active === false ? "Bật" : "Tắt"} ${item.name}`}><CircleCheck size={15} /></button>
+              <button className={`${styles.iconButton} ${styles.deleteButton}`} onClick={() => onDelete(item)} disabled={!!busy} aria-label={`Xóa ${item.name}`}><Trash2 size={15} /></button>
+            </div>
           </article>
         ))}</div> : <EmptyState title="Chưa có ràng buộc" text="Nhập nguyện vọng hoặc thêm một quy tắc mới." />}
       </section>
@@ -509,8 +671,8 @@ function ConstraintsView({ constraints, onCreate }: { constraints: Constraint[];
   );
 }
 
-function OptimizeView({ metrics, busy, onRun }: { metrics: DashboardMetrics; busy: string | null; onRun: (merged: boolean) => void }) {
-  const [merged, setMerged] = useState(false);
+function OptimizeView({ metrics, runs, busy, onRun }: { metrics: DashboardMetrics; runs: OptimizationRun[]; busy: string | null; onRun: (merged: boolean) => void }) {
+  const [merged, setMerged] = useState(true);
   return (
     <div className={styles.viewStack}>
       <section className={styles.optimizerHero}>
@@ -540,6 +702,10 @@ function OptimizeView({ metrics, busy, onRun }: { metrics: DashboardMetrics; bus
         </article>
       </section>
       {metrics.validation_errors > 0 && <div className={styles.errorBanner}><AlertTriangle size={19} /><span><strong>Chưa thể chạy tối ưu.</strong>Hãy xử lý các lỗi nghiêm trọng trong mục Xung đột trước.</span></div>}
+      <section className={styles.card}>
+        <div className={styles.tableToolbar}><div><h3>Lịch sử tối ưu</h3><span>{runs.length} lần chạy gần nhất</span></div></div>
+        {runs.length ? <div className={styles.tableWrap}><table><thead><tr><th>Lần chạy</th><th>Thời gian</th><th>Trạng thái</th><th>Điểm phạt</th><th>Seminar đã chọn</th></tr></thead><tbody>{runs.map((run) => <tr key={run.id}><td><strong>#{run.id}</strong></td><td>{new Date(run.created_at).toLocaleString("vi-VN")}</td><td><StatusBadge tone={run.status.includes("optimal") ? "success" : "warning"}>{run.status}</StatusBadge></td><td>{run.score?.toFixed(1) ?? "—"}</td><td>{Object.entries(run.summary.seminar_slots ?? {}).map(([name, slot]) => <span className={styles.scheduleLine} key={name}>{name}: T{slot.weekday}, tiết {slot.start_period}–{slot.end_period}</span>)}</td></tr>)}</tbody></table></div> : <EmptyState title="Chưa có lần tối ưu" text="Chạy phân công để tạo phương án đầu tiên." />}
+      </section>
     </div>
   );
 }
@@ -556,33 +722,6 @@ function ResultsView({ classes, query, setQuery }: { classes: ClassItem[]; query
       <section className={styles.card}>
         <div className={styles.tableToolbar}><div><h3>Danh sách đã phân công</h3><span>{assigned.length}/{classes.length} lớp</span></div><label className={styles.searchBox}><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm nhanh…" /></label></div>
         <ClassTable items={filtered} />
-      </section>
-    </div>
-  );
-}
-
-function CalendarView({ classes }: { classes: ClassItem[] }) {
-  const assigned = classes.filter((item) => item.lecturer);
-  const lecturers = Array.from(new Set(assigned.map((item) => item.lecturer as string))).sort();
-  const [selected, setSelected] = useState(lecturers[0] ?? "");
-  const days = [2, 3, 4, 5, 6, 7, 8];
-  const events = assigned.filter((item) => item.lecturer === selected).flatMap((item) => item.sessions.map((session) => ({ item, session })));
-  return (
-    <div className={styles.viewStack}>
-      <section className={styles.sectionHeading}>
-        <div><span className={styles.eyebrow}>Lịch tuần</span><h2>Thời khóa biểu giảng viên</h2><p>Xem nhanh lịch đã phân công theo thứ và khung tiết.</p></div>
-        <label className={styles.selectBox}><Users size={17} /><select value={selected} onChange={(event) => setSelected(event.target.value)}><option value="">Chọn giảng viên</option>{lecturers.map((name) => <option key={name}>{name}</option>)}</select><ChevronDown size={16} /></label>
-      </section>
-      <section className={styles.calendarCard}>
-        <div className={styles.calendarHeader}>{days.map((day) => <div key={day}><span>{day === 8 ? "Chủ Nhật" : `Thứ ${day}`}</span><small>{events.filter((event) => event.session.weekday === day).length} buổi</small></div>)}</div>
-        <div className={styles.calendarGrid}>{days.map((day) => <div className={styles.dayColumn} key={day}>
-          {events.filter((event) => event.session.weekday === day).map(({ item, session }, index) => (
-            <article className={styles.calendarEvent} key={`${item.id}-${index}`}>
-              <span>Tiết {session.start_period}–{session.end_period}</span><strong>{item.course_name}</strong><small>{item.class_code} · {session.room}</small>
-            </article>
-          ))}
-        </div>)}</div>
-        {!selected && <EmptyState title="Chọn một giảng viên" text="Lịch tuần sẽ xuất hiện ở đây." />}
       </section>
     </div>
   );
@@ -606,28 +745,54 @@ function ConflictsView({ issues }: { issues: ValidationIssue[] }) {
 
 function ConstraintDialog({
   busy,
+  initial,
+  lecturers,
   onClose,
   onSubmit,
 }: {
   busy: string | null;
+  initial: Constraint | null;
+  lecturers: Lecturer[];
   onClose: () => void;
   onSubmit: (payload: Record<string, unknown>) => Promise<void>;
 }) {
-  const [hardness, setHardness] = useState<"soft" | "hard">("soft");
-  const [weight, setWeight] = useState(0.8);
-  const [name, setName] = useState("");
-  const [rawText, setRawText] = useState("");
+  const target = initial?.target ?? {};
+  const initialPeriods = (target.periods ?? target.period_range ?? []) as number[];
+  const [hardness, setHardness] = useState<"soft" | "hard">(initial?.hardness ?? "soft");
+  const [weight, setWeight] = useState(initial?.weight ?? 0.8);
+  const [name, setName] = useState(initial?.name ?? "");
+  const [rawText, setRawText] = useState(initial?.raw_text ?? "");
+  const [constraintType, setConstraintType] = useState(initial?.constraint_type ?? "unavailable");
+  const [lecturerId, setLecturerId] = useState(initial?.lecturer_id ? String(initial.lecturer_id) : "");
+  const [weekday, setWeekday] = useState(target.weekday ? String(target.weekday) : "");
+  const [startPeriod, setStartPeriod] = useState(initialPeriods.length ? String(Math.min(...initialPeriods)) : "");
+  const [endPeriod, setEndPeriod] = useState(initialPeriods.length ? String(Math.max(...initialPeriods)) : "");
+  const validPeriodRange = startPeriod && endPeriod && Number(startPeriod) <= Number(endPeriod);
+  const periodTarget = validPeriodRange
+    ? constraintType === "prefer_period"
+      ? { period_range: [Number(startPeriod), Number(endPeriod)] }
+      : { periods: Array.from({ length: Number(endPeriod) - Number(startPeriod) + 1 }, (_, index) => Number(startPeriod) + index) }
+    : {};
   return (
     <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-        <div className={styles.dialogHeader}><div><span className={styles.cardEyebrow}>Quy tắc mới</span><h3 id="dialog-title">Thêm ràng buộc</h3></div><button className={styles.iconButton} onClick={onClose}><X size={18} /></button></div>
+        <div className={styles.dialogHeader}><div><span className={styles.cardEyebrow}>{initial ? "Chỉnh sửa quy tắc" : "Quy tắc mới"}</span><h3 id="dialog-title">{initial ? "Cập nhật ràng buộc" : "Thêm ràng buộc"}</h3></div><button className={styles.iconButton} onClick={onClose}><X size={18} /></button></div>
         <div className={styles.formStack}>
           <label><span>Tên ràng buộc</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ví dụ: Cô Hồng không dạy thứ 2" /></label>
+          <div className={styles.formGrid}>
+            <label><span>Giảng viên</span><select value={lecturerId} onChange={(event) => setLecturerId(event.target.value)}><option value="">Toàn bộ / chưa ánh xạ</option>{lecturers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+            <label><span>Loại quy tắc</span><select value={constraintType} onChange={(event) => setConstraintType(event.target.value)}><option value="unavailable">Không thể dạy</option><option value="prefer_period">Ưu tiên khung tiết</option><option value="manual">Ghi chú thủ công</option></select></label>
+          </div>
+          {constraintType !== "manual" && <div className={styles.formGridThree}>
+            <label><span>Ngày</span><select value={weekday} onChange={(event) => setWeekday(event.target.value)}><option value="">Mọi ngày</option>{[2, 3, 4, 5, 6, 7, 8].map((day) => <option value={day} key={day}>{day === 8 ? "Chủ Nhật" : `Thứ ${day}`}</option>)}</select></label>
+            <label><span>Từ tiết</span><input type="number" min="1" max="15" value={startPeriod} onChange={(event) => setStartPeriod(event.target.value)} /></label>
+            <label><span>Đến tiết</span><input type="number" min="1" max="15" value={endPeriod} onChange={(event) => setEndPeriod(event.target.value)} /></label>
+          </div>}
           <label><span>Mô tả nguyên văn</span><textarea value={rawText} onChange={(event) => setRawText(event.target.value)} rows={4} placeholder="Nhập nội dung để người dùng khác có thể đối chiếu…" /></label>
-          <fieldset><legend>Mức độ</legend><div className={styles.segmented}><button className={hardness === "soft" ? styles.segmentActive : ""} onClick={() => setHardness("soft")}>Mềm</button><button className={hardness === "hard" ? styles.segmentActive : ""} onClick={() => setHardness("hard")}>Cứng</button></div></fieldset>
+          <fieldset><legend>Mức độ</legend><div className={styles.segmented}><button type="button" className={hardness === "soft" ? styles.segmentActive : ""} onClick={() => setHardness("soft")}>Mềm</button><button type="button" className={hardness === "hard" ? styles.segmentActive : ""} onClick={() => setHardness("hard")}>Cứng</button></div></fieldset>
           <label className={styles.rangeLabel}><span><span>Trọng số</span><strong>{weight.toFixed(1)}</strong></span><input type="range" min="0" max="1" step="0.1" value={weight} disabled={hardness === "hard"} onChange={(event) => setWeight(Number(event.target.value))} /></label>
         </div>
-        <div className={styles.dialogFooter}><button className={styles.ghostButton} onClick={onClose}>Hủy</button><button className={styles.primaryButton} disabled={!name.trim() || !!busy} onClick={() => onSubmit({ name, raw_text: rawText, hardness, weight: hardness === "hard" ? 1 : weight, constraint_type: "manual", target: {}, confirmed: true })}>{busy === "constraint" ? <LoaderCircle className={styles.spin} size={17} /> : <Plus size={17} />}Thêm ràng buộc</button></div>
+        <div className={styles.dialogFooter}><button className={styles.ghostButton} onClick={onClose}>Hủy</button><button className={styles.primaryButton} disabled={!name.trim() || !!busy} onClick={() => onSubmit({ name, raw_text: rawText, hardness, weight: hardness === "hard" ? 1 : weight, constraint_type: constraintType, lecturer_id: lecturerId ? Number(lecturerId) : null, target: { ...(weekday ? { weekday: Number(weekday) } : {}), ...periodTarget }, confirmed: true, active: initial?.active ?? true })}>{busy === "constraint" ? <LoaderCircle className={styles.spin} size={17} /> : initial ? <Pencil size={17} /> : <Plus size={17} />}{initial ? "Lưu thay đổi" : "Thêm ràng buộc"}</button></div>
       </div>
     </div>
   );

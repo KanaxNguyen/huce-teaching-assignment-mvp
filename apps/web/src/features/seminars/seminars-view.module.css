@@ -1,0 +1,42 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.cardTop,
+.chair,
+.selected,
+.controls,
+.controls label {
+  display: flex;
+  align-items: center;
+}
+
+.cardTop { gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--color-border); }
+.cardTop > div { min-width: 0; flex: 1; }
+.cardTop h3 { margin: 3px 0 0; font-size: 14px; }
+.icon { display: grid; width: 40px; height: 40px; place-items: center; color: var(--color-primary); background: var(--color-primary-soft); border-radius: 11px; }
+.body { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; }
+.chair { gap: 9px; color: var(--color-primary); }
+.chair span { display: flex; flex-direction: column; gap: 2px; }
+.chair small,
+.members small { color: var(--color-text-muted); font-size: 8px; text-transform: uppercase; }
+.chair strong { color: var(--color-text); font-size: 11px; }
+.members p { margin: 5px 0 0; color: var(--color-text-muted); font-size: 9px; line-height: 1.55; }
+.slots { display: flex; flex-wrap: wrap; gap: 6px; }
+.slots span { padding: 6px 8px; color: var(--color-text-muted); background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 999px; font-size: 8px; }
+.slots .selectedSlot { color: var(--color-success); background: var(--color-success-soft); border-color: color-mix(in srgb, var(--color-success) 30%, var(--color-border)); font-weight: 700; }
+.selected { gap: 8px; padding: 10px; color: var(--color-success); background: var(--color-success-soft); border-radius: 9px; font-size: 9px; }
+.controls { justify-content: space-between; gap: 12px; padding: 12px 20px; background: var(--color-surface-muted); border-top: 1px solid var(--color-border); }
+.controls label { gap: 7px; color: var(--color-text-muted); font-size: 9px; }
+.controls select { min-height: 32px; padding: 0 8px; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 540px) {
+  .controls { align-items: stretch; flex-direction: column; }
+  .controls label { justify-content: space-between; }
+}

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -297,27 +296,38 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
         grouped[key].sessions.append(parsed_session)
         accepted += 1
 
-    signature_groups: dict[tuple, list[ParsedClass]] = defaultdict(list)
-    for parsed_class in grouped.values():
-        full_signature = (
-            parsed_class.course_code,
-            tuple(sorted(session.signature() for session in parsed_class.sessions)),
-        )
-        signature_groups[full_signature].append(parsed_class)
+    classes = list(grouped.values())
+    pair_candidates = []
+    for left_index, left in enumerate(classes):
+        for right_index in range(left_index + 1, len(classes)):
+            right = classes[right_index]
+            if left.course_code != right.course_code:
+                continue
+            shared_sessions = sum(
+                sessions_overlap(left_session, right_session)
+                and bool(_room_tokens(left_session.room).intersection(_room_tokens(right_session.room)))
+                for left_session in left.sessions
+                for right_session in right.sessions
+            )
+            if shared_sessions:
+                pair_candidates.append(
+                    (-shared_sessions, left.class_code, right.class_code, left_index, right_index)
+                )
 
     merged_groups = []
-    counter = 1
-    for candidates in signature_groups.values():
-        if len(candidates) < 2:
+    used_indexes = set()
+    for _, _, _, left_index, right_index in sorted(pair_candidates):
+        if left_index in used_indexes or right_index in used_indexes:
             continue
-        group_id = f"MG-{counter:03d}"
-        counter += 1
+        group_id = f"MG-{len(merged_groups) + 1:03d}"
+        candidates = [classes[left_index], classes[right_index]]
+        used_indexes.update((left_index, right_index))
         for item in candidates:
             item.merged_group_id = group_id
         merged_groups.append(MergedGroup(group_id, sorted(item.key for item in candidates)))
 
     return ScheduleParseResult(
-        classes=list(grouped.values()),
+        classes=classes,
         merged_groups=merged_groups,
         issues=issues,
         rows_accepted=accepted,
@@ -338,3 +348,7 @@ def sessions_overlap(left: ParsedSession, right: ParsedSession) -> bool:
     if right.start_date and left.end_date and right.start_date > left.end_date:
         return False
     return True
+
+
+def _room_tokens(value: str) -> set[str]:
+    return {item.strip().casefold() for item in value.split(",") if item.strip()}

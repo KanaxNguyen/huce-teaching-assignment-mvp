@@ -28,6 +28,22 @@ class ImportBatch(Base):
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    academic_year: Mapped[str] = mapped_column(String(20), default="2026-2027")
+    semester: Mapped[int] = mapped_column(Integer, default=1)
+    semester_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    semester_end: Mapped[date | None] = mapped_column(Date, nullable=True)
+    institution: Mapped[str] = mapped_column(String(200), default="HUCE")
+    department: Mapped[str] = mapped_column(String(200), default="Bộ môn Toán học")
+    calendar_name: Mapped[str] = mapped_column(String(200), default="TKB Bộ môn Toán HUCE")
+    timezone_name: Mapped[str] = mapped_column(String(80), default="Asia/Ho_Chi_Minh")
+    primary_lecturer: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Lecturer(Base):
     __tablename__ = "lecturers"
 
