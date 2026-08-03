@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -37,5 +37,17 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     from app.models.entities import Base as ModelBase
+
+    if engine.dialect.name == "postgresql":
+        # Multiple Vercel cold starts can initialize the same Neon database at
+        # once. Serialize schema creation so concurrent workers cannot race on
+        # CREATE TABLE / CREATE SEQUENCE statements.
+        with engine.begin() as connection:
+            connection.execute(
+                text("SELECT pg_advisory_xact_lock(:lock_key)"),
+                {"lock_key": 20262027},
+            )
+            ModelBase.metadata.create_all(bind=connection)
+        return
 
     ModelBase.metadata.create_all(bind=engine)
