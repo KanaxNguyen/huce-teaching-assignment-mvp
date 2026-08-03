@@ -4,24 +4,36 @@ import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
 from app.db.session import get_db
 from app.exporters.excel import export_latest
+from app.exporters.integrations import export_csv_bytes, export_ics_bytes, export_json_bytes
 from app.models.entities import (
     Assignment,
     ClassSection,
     Constraint,
+    ImportBatch,
     Lecturer,
+    OptimizationRun,
     Seminar,
     ValidationIssue,
 )
 from app.optimization.solver import solve
-from app.schemas.api import ConstraintCreate, ImportResponse, MergedDecision, OptimizationRequest
+from app.schemas.api import (
+    AppSettingUpdate,
+    ConstraintCreate,
+    ConstraintUpdate,
+    ImportResponse,
+    MergedDecision,
+    OptimizationRequest,
+    SeminarUpdate,
+)
 from app.services.importer import dashboard, import_files
+from app.services.settings import get_app_settings, settings_payload
 
 router = APIRouter(prefix="/api/v1")
 
@@ -40,6 +52,32 @@ def _save_typed_upload(item: UploadFile, directory: Path) -> Path:
 @router.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "HUCE Teaching Assignment API"}
+
+
+@router.get("/settings")
+def get_settings(db: Session = Depends(get_db)) -> dict:
+    return settings_payload(get_app_settings(db))
+
+
+@router.put("/settings")
+def update_settings(payload: AppSettingUpdate, db: Session = Depends(get_db)) -> dict:
+    item = get_app_settings(db)
+    start = payload.semester_start
+    end = payload.semester_end
+    if start and end and start > end:
+        raise HTTPException(422, "Ngày bắt đầu học kỳ phải trước ngày kết thúc.")
+    item.academic_year = payload.academic_year.strip()
+    item.semester = payload.semester
+    item.semester_start = start
+    item.semester_end = end
+    item.institution = payload.institution.strip()
+    item.department = payload.department.strip()
+    item.calendar_name = payload.calendar_name.strip()
+    item.timezone_name = payload.timezone_name.strip()
+    item.primary_lecturer = payload.primary_lecturer.strip() if payload.primary_lecturer else None
+    db.commit()
+    db.refresh(item)
+    return settings_payload(item)
 
 
 @router.post("/imports/local", response_model=ImportResponse)
@@ -91,9 +129,51 @@ def upload_pair(
         raise HTTPException(422, str(error)) from error
 
 
+@router.post("/imports/upload-bundle", response_model=ImportResponse)
+def upload_bundle(
+    schedule_file: UploadFile = File(...),
+    preference_file: UploadFile = File(...),
+    template_file: UploadFile | None = File(default=None),
+    db: Session = Depends(get_db),
+) -> dict:
+    upload_dir = settings.resolve(settings.upload_dir)
+    schedule_path = _save_typed_upload(schedule_file, upload_dir / "schedule")
+    preference_path = _save_typed_upload(preference_file, upload_dir / "preference")
+    paths = [schedule_path, preference_path]
+    template_path = None
+    if template_file:
+        template_path = _save_typed_upload(template_file, upload_dir / "template")
+        paths.append(template_path)
+    try:
+        return import_files(
+            db,
+            paths,
+            schedule_paths=[schedule_path],
+            preference_paths=[preference_path],
+            template_paths=[template_path] if template_path else [],
+        )
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
 @router.get("/dashboard")
 def get_dashboard(db: Session = Depends(get_db)) -> dict:
     return dashboard(db)
+
+
+@router.get("/imports/latest")
+def get_latest_import(db: Session = Depends(get_db)) -> dict:
+    item = db.scalars(select(ImportBatch).order_by(ImportBatch.id.desc())).first()
+    if not item:
+        return {"batch": None}
+    return {
+        "batch": {
+            "id": item.id,
+            "created_at": item.created_at,
+            "source_files": item.source_files,
+            "summary": item.summary,
+        }
+    }
 
 
 @router.get("/lecturers")
@@ -194,6 +274,34 @@ def create_constraint(payload: ConstraintCreate, db: Session = Depends(get_db)) 
     return {"id": item.id, "created": True}
 
 
+@router.patch("/constraints/{constraint_id}")
+def update_constraint(
+    constraint_id: int,
+    payload: ConstraintUpdate,
+    db: Session = Depends(get_db),
+) -> dict:
+    item = db.get(Constraint, constraint_id)
+    if not item:
+        raise HTTPException(404, "Không tìm thấy ràng buộc.")
+    changes = payload.model_dump(exclude_unset=True)
+    for field, value in changes.items():
+        setattr(item, field, value)
+    if item.hardness == "hard":
+        item.weight = 1
+    db.commit()
+    return {"id": item.id, "updated": True}
+
+
+@router.delete("/constraints/{constraint_id}")
+def delete_constraint(constraint_id: int, db: Session = Depends(get_db)) -> dict:
+    item = db.get(Constraint, constraint_id)
+    if not item:
+        raise HTTPException(404, "Không tìm thấy ràng buộc.")
+    db.delete(item)
+    db.commit()
+    return {"id": constraint_id, "deleted": True}
+
+
 @router.post("/seminars")
 def create_seminar(payload: dict, db: Session = Depends(get_db)) -> dict:
     item = Seminar(
@@ -225,6 +333,19 @@ def get_seminars(db: Session = Depends(get_db)) -> list[dict]:
     ]
 
 
+@router.patch("/seminars/{seminar_id}")
+def update_seminar(seminar_id: int, payload: SeminarUpdate, db: Session = Depends(get_db)) -> dict:
+    item = db.get(Seminar, seminar_id)
+    if not item:
+        raise HTTPException(404, "Không tìm thấy seminar.")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+    if item.hardness == "hard":
+        item.weight = 1
+    db.commit()
+    return {"id": item.id, "updated": True}
+
+
 @router.post("/optimization/run")
 def run_optimization(payload: OptimizationRequest, db: Session = Depends(get_db)) -> dict:
     try:
@@ -232,6 +353,23 @@ def run_optimization(payload: OptimizationRequest, db: Session = Depends(get_db)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
     return {"run_id": run.id, "status": run.status, "score": run.score, "summary": run.summary}
+
+
+@router.get("/optimization/runs")
+def get_optimization_runs(limit: int = 10, db: Session = Depends(get_db)) -> list[dict]:
+    runs = db.scalars(
+        select(OptimizationRun).order_by(OptimizationRun.id.desc()).limit(min(max(limit, 1), 50))
+    ).all()
+    return [
+        {
+            "id": item.id,
+            "created_at": item.created_at,
+            "status": item.status,
+            "score": item.score,
+            "summary": item.summary,
+        }
+        for item in runs
+    ]
 
 
 @router.get("/assignments")
@@ -297,4 +435,49 @@ def download_export(db: Session = Depends(get_db)) -> FileResponse:
         path,
         filename=path.name,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@router.get("/exports/calendar.ics")
+def download_calendar(lecturer: str | None = None, db: Session = Depends(get_db)) -> Response:
+    try:
+        content = export_ics_bytes(db, lecturer)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    app_settings = get_app_settings(db)
+    filename = f"HUCE-TKB-HK{app_settings.semester}-{app_settings.academic_year}.ics"
+    return Response(
+        content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/exports/assignments.csv")
+def download_csv(lecturer: str | None = None, db: Session = Depends(get_db)) -> Response:
+    try:
+        content = export_csv_bytes(db, lecturer)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    app_settings = get_app_settings(db)
+    filename = f"HUCE-Phan-Cong-HK{app_settings.semester}-{app_settings.academic_year}.csv"
+    return Response(
+        content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/exports/schedule.json")
+def download_json(lecturer: str | None = None, db: Session = Depends(get_db)) -> Response:
+    try:
+        content = export_json_bytes(db, lecturer)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    app_settings = get_app_settings(db)
+    filename = f"HUCE-TKB-HK{app_settings.semester}-{app_settings.academic_year}.json"
+    return Response(
+        content,
+        media_type="application/json; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

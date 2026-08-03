@@ -1,0 +1,103 @@
+.settingsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+  gap: 18px;
+}
+
+.settingsCard {
+  padding: 22px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 17px;
+  color: var(--color-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cardTitle div { display: flex; flex-direction: column; gap: 3px; }
+.cardTitle strong { color: var(--color-text); font-size: 13px; }
+.cardTitle span { color: var(--color-text-muted); font-size: 9px; }
+
+.formGrid,
+.formStack {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.formGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.formStack { grid-template-columns: 1fr; }
+
+.formGrid label,
+.formStack label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--color-text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.formGrid input,
+.formGrid select,
+.formStack input,
+.formStack select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  outline: 0;
+}
+
+.hint {
+  margin: 16px 0 0;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.calendarStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 18px;
+  padding: 14px;
+  color: var(--color-success);
+  background: var(--color-success-soft);
+  border-radius: 10px;
+}
+
+.calendarStatus span { display: flex; align-items: center; gap: 8px; font-size: 9px; }
+
+.googleLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  margin-top: 14px;
+  padding: 0 13px;
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+  .settingsGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .formGrid { grid-template-columns: 1fr; }
+}

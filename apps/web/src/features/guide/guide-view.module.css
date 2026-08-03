@@ -1,0 +1,21 @@
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px; color: white; background: linear-gradient(135deg, var(--color-primary-strong), #184e87); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.hero h2 { margin: 5px 0 7px; font-size: 27px; }
+.hero p { max-width: 650px; margin: 0; color: rgb(255 255 255 / 76%); font-size: 11px; line-height: 1.55; }
+.hero :global(.eyebrow) { color: rgb(255 255 255 / 66%); }
+.readyBadge { display: flex; min-width: 170px; align-items: center; justify-content: center; flex-direction: column; gap: 4px; padding: 18px; color: #d1fae5; background: rgb(255 255 255 / 10%); border: 1px solid rgb(255 255 255 / 16%); border-radius: 14px; }
+.readyBadge strong { color: white; font-size: 12px; }.readyBadge small { font-size: 8px; }
+.stepGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.step { position: relative; min-height: 150px; padding: 16px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 13px; box-shadow: var(--shadow-card); }
+.step.done { border-color: color-mix(in srgb, var(--color-success) 25%, var(--color-border)); }
+.number { position: absolute; top: 11px; right: 11px; color: var(--color-text-muted); font-size: 9px; font-weight: 800; }
+.stepIcon { display: grid; width: 38px; height: 38px; place-items: center; color: var(--color-primary); background: var(--color-primary-soft); border-radius: 10px; }
+.step strong { display: block; margin-top: 13px; font-size: 10px; }.step p { margin: 5px 0 0; color: var(--color-text-muted); font-size: 8px; line-height: 1.5; }
+.check { position: absolute; right: 11px; bottom: 11px; color: var(--color-success); }
+.twoColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.links,.deployList { display: flex; flex-direction: column; padding: 8px 20px 18px; }
+.links a,.deployList span { display: flex; align-items: center; gap: 10px; padding: 12px 0; color: var(--color-text); text-decoration: none; border-bottom: 1px solid var(--color-border); }
+.links a:last-child,.deployList span:last-child { border-bottom: 0; }.links a:hover { color: var(--color-primary); }
+.links a > svg,.deployList span > svg { flex: 0 0 auto; color: var(--color-primary); }.deployList span > svg { color: var(--color-success); }
+.links span,.deployList span > span { display: flex; flex-direction: column; gap: 3px; }.links strong,.deployList strong { font-size: 10px; }.links small,.deployList small { color: var(--color-text-muted); font-size: 8px; }
+@media (max-width: 1050px) { .stepGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.twoColumns { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .hero { align-items: flex-start; flex-direction: column; }.readyBadge { width: 100%; }.stepGrid { grid-template-columns: 1fr; } }

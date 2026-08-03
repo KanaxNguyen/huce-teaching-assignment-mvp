@@ -155,7 +155,7 @@
   gap: 12px;
   padding: 0 12px;
   overflow: hidden;
-  color: #526678;
+  color: var(--color-text-muted);
   font-size: 13px;
   font-weight: 600;
   text-align: left;
@@ -174,7 +174,7 @@
 }
 
 .navActive {
-  color: var(--color-primary-strong);
+  color: var(--color-primary);
   background: var(--color-primary-soft);
 }
 
@@ -383,7 +383,7 @@
 
 .primaryButton {
   color: white;
-  background: var(--color-primary);
+  background: var(--color-primary-button);
   box-shadow: 0 6px 15px rgb(35 103 173 / 18%);
 }
 
@@ -483,11 +483,11 @@
   border-radius: 12px;
 }
 
-.metricIcon.blue { color: #2367ad; background: #e8f2fc; }
-.metricIcon.violet { color: #6941c6; background: #f2edff; }
-.metricIcon.amber { color: #a15c00; background: #fff5df; }
-.metricIcon.red { color: #b42318; background: #fff0ee; }
-.metricIcon.green { color: #18794e; background: #e8f6ef; }
+.metricIcon.blue { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 15%, var(--color-surface)); }
+.metricIcon.violet { color: #8b6ee8; background: color-mix(in srgb, #8b6ee8 15%, var(--color-surface)); }
+.metricIcon.amber { color: var(--color-warning); background: var(--color-warning-soft); }
+.metricIcon.red { color: var(--color-danger); background: var(--color-danger-soft); }
+.metricIcon.green { color: var(--color-success); background: var(--color-success-soft); }
 
 .twoColumns,
 .optimizerGrid {
@@ -697,7 +697,7 @@
 
 .uploadGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   padding: 20px;
 }
@@ -968,7 +968,7 @@
 .infoStrip {
   gap: 10px;
   padding: 13px 16px;
-  color: var(--color-primary-strong);
+  color: var(--color-info-text);
   font-size: 11px;
   line-height: 1.5;
   background: var(--color-primary-soft);
@@ -991,6 +991,21 @@
 
 .constraintRow:last-child {
   border: 0;
+}
+
+.constraintInactive {
+  opacity: .55;
+}
+
+.constraintActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.deleteButton:hover:not(:disabled) {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
 }
 
 .constraintIcon {
@@ -1438,6 +1453,8 @@
 
 .formStack input[type="text"],
 .formStack input:not([type]),
+.formStack input[type="number"],
+.formStack select,
 .formStack textarea {
   width: 100%;
   padding: 10px 12px;
@@ -1447,6 +1464,24 @@
   border-radius: 9px;
   outline: 0;
   resize: vertical;
+}
+
+.formStack select {
+  min-height: 39px;
+}
+
+.formGrid,
+.formGridThree {
+  display: grid;
+  gap: 12px;
+}
+
+.formGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formGridThree {
+  grid-template-columns: 1.4fr repeat(2, minmax(0, .8fr));
 }
 
 .segmented {
@@ -1495,6 +1530,10 @@
   .twoColumns,
   .optimizerGrid {
     grid-template-columns: 1fr;
+  }
+
+  .uploadGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1623,7 +1662,16 @@
     align-items: flex-start;
   }
 
+  .constraintActions {
+    flex-direction: column;
+  }
+
   .weight {
     display: none;
+  }
+
+  .formGrid,
+  .formGridThree {
+    grid-template-columns: 1fr;
   }
 }

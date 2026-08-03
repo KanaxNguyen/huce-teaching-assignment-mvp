@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import openpyxl
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -43,9 +44,15 @@ def import_files(
     *,
     schedule_paths: list[Path] | None = None,
     preference_paths: list[Path] | None = None,
+    template_paths: list[Path] | None = None,
 ) -> dict:
     schedule_paths = schedule_paths or [path for path in paths if "schedule" in path.name.casefold()]
     preference_paths = preference_paths or [path for path in paths if "preference" in path.name.casefold()]
+    template_paths = template_paths or [
+        path
+        for path in paths
+        if path.parent.name.casefold() == "template" or "thoi_khoa_bieu" in path.name.casefold()
+    ]
     if not schedule_paths:
         raise ValueError("Cần ít nhất một file lịch học")
     primary = sorted(schedule_paths)[-1]
@@ -96,6 +103,46 @@ def import_files(
                     confirmed=preference.confidence >= 0.8,
                 )
             )
+
+    for template_path in template_paths:
+        book = openpyxl.load_workbook(template_path, read_only=False, data_only=True)
+        sheet = book["TKB_Bo_Mon"] if "TKB_Bo_Mon" in book.sheetnames else book.active
+        for row in range(4, sheet.max_row + 1):
+            name = str(sheet.cell(row, 1).value or "").strip()
+            if name:
+                ensure_lecturer(None, name)
+
+    hong = next(
+        (item for name, item in lecturers_by_name.items() if name in {"mai hồng", "hồng"}),
+        None,
+    )
+    if hong:
+        for weekday in (2, 4):
+            db.add(
+                Constraint(
+                    name=f"Cô Hồng không dạy thứ {weekday}",
+                    constraint_type="unavailable",
+                    hardness="soft",
+                    weight=0.8,
+                    lecturer_id=hong.id,
+                    target={"weekday": weekday, "periods": []},
+                    raw_text="Cô Hồng xin không dạy thứ 2 và thứ 4",
+                    confirmed=True,
+                )
+            )
+    else:
+        db.add(
+            Constraint(
+                name="Cô Hồng không dạy thứ 2 và thứ 4",
+                constraint_type="unavailable",
+                hardness="soft",
+                weight=0.8,
+                lecturer_id=None,
+                target={"weekdays": [2, 4], "periods": []},
+                raw_text="Chưa xác định được họ tên đầy đủ của cô Hồng trong dữ liệu tải lên.",
+                confirmed=False,
+            )
+        )
 
     db.add_all(
         [
@@ -157,12 +204,20 @@ def import_files(
         if item.lecturer_name:
             lecturer = lecturers_by_code.get(item.lecturer_code) if item.lecturer_code else None
             lecturer = lecturer or lecturers_by_name.get(item.lecturer_name.casefold())
+        forced_name = None
+        forced_key = (item.course_name.casefold().strip(), item.class_code.casefold().strip())
+        if forced_key == ("giải tích 1", "71csqt"):
+            forced_name = "Nguyễn Bằng Giang"
+        elif forced_key == ("đại số tuyến tính", "71csqt"):
+            forced_name = "Phạm Đức Thoan"
+        if forced_name:
+            lecturer = ensure_lecturer(None, forced_name)
         section = ClassSection(
             course_id=course.id,
             class_code=item.class_code,
             credits=item.credits,
             merged_group_id=item.merged_group_id,
-            locked_assignment=item.locked_assignment,
+            locked_assignment=item.locked_assignment or bool(forced_name),
             assigned_lecturer_id=lecturer.id if lecturer else None,
             source_file=item.source_file,
             source_sheet=item.source_sheet,
