@@ -26,3 +26,5 @@ outputs/
 !data/fixtures/*.json
 !data/manifests/source-files.example.json
 data/manifests/source-files.json
+.vercel
+.env*
