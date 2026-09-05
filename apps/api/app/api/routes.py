@@ -18,6 +18,7 @@ from app.models.entities import (
     ClassSession,
     Constraint,
     Lecturer,
+    LecturerCourseCapability,
     OutputTemplateProfile,
     OptimizationRun,
     Semester,
@@ -290,8 +291,9 @@ def get_readiness(semester_id: int | None = Query(None), db: Session = Depends(g
     capability_rows = db.scalars(select(LecturerCourseCapability).where(LecturerCourseCapability.course_id.in_(course_ids))).all() if course_ids else []
     capable_courses = {item.course_id for item in capability_rows if item.allowed and item.confirmed}
     issues = db.scalars(select(ValidationIssue).where(ValidationIssue.semester_id == sid)).all()
+    constraints = db.scalars(select(Constraint).where(Constraint.semester_id == sid)).all()
     relevant_ids = {item.assigned_lecturer_id for item in classes if item.assigned_lecturer_id}
-    relevant_ids.update(item.lecturer_id for item in db.scalars(select(Constraint).where(Constraint.semester_id == sid)).all() if item.lecturer_id)
+    relevant_ids.update(item.lecturer_id for item in constraints if item.lecturer_id)
     relevant_ids.update(item.lecturer_id for item in capability_rows)
     lecturers = db.scalars(select(Lecturer).where(Lecturer.id.in_(relevant_ids))).all() if relevant_ids else []
     latest = db.scalar(select(OptimizationRun).where(OptimizationRun.semester_id == sid).order_by(OptimizationRun.id.desc()))
@@ -299,6 +301,9 @@ def get_readiness(semester_id: int | None = Query(None), db: Session = Depends(g
     for issue in issues:
         if issue.code in {"LECTURER_IDENTITY_AMBIGUOUS", "PARTIAL_MERGE_CANDIDATE"}:
             warnings.append({"code": issue.code, "message": issue.message})
+    review_constraints = [item for item in constraints if item.active and item.constraint_type.casefold() in {"raw_preference", "preferred_assignment", "compact_schedule"}]
+    if review_constraints:
+        warnings.append({"code": "MALFORMED_CONSTRAINT", "message": f"{len(review_constraints)} ràng buộc chưa chuẩn hóa cần trưởng bộ môn rà soát."})
     missing_rooms = sum(1 for item in classes for session in item.sessions if not session.room.strip())
     if missing_rooms:
         warnings.append({"code": "MISSING_ROOM", "message": f"{missing_rooms} meeting chưa có phòng; mặc định không ghép lớp."})

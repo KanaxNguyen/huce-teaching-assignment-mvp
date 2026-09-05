@@ -107,6 +107,29 @@ def test_shared_hard_seminar_blocks_participant_once_at_selected_slot():
         assert run.summary["seminars"][0]["scheduled"] is True
 
 
+def test_max_consecutive_blocks_hard_binds_but_soft_remains_violable():
+    with SessionLocal() as db:
+        s, c, a, b, items = setup(db, 2)
+        capability(db, a, c)
+        # Two adjacent teaching blocks on the same day, with no timetable
+        # overlap.  A HARD cap of one block must leave one group unassigned.
+        items[1].sessions[0].start_period = 7
+        items[1].sessions[0].end_period = 9
+        db.add(Constraint(
+            semester_id=s.id, name="one block", constraint_type="MAX_CONSECUTIVE_BLOCKS",
+            hardness="hard", weight=1, lecturer_id=a.id, target={"max": 1}, confirmed=True,
+        ))
+        db.commit()
+        hard_run = solve(db, 2, False, s.id)
+        assert len(db.scalars(select(Assignment).where(Assignment.run_id == hard_run.id)).all()) == 1
+
+        constraint = db.scalar(select(Constraint).where(Constraint.semester_id == s.id))
+        constraint.hardness = "soft"
+        db.commit()
+        soft_run = solve(db, 2, False, s.id)
+        assert len(db.scalars(select(Assignment).where(Assignment.run_id == soft_run.id)).all()) == 2
+
+
 def test_course_scoped_forbidden_assignment_applies_to_every_teaching_group():
     with SessionLocal() as db:
         s,c,a,b,items=setup(db, 2); capability(db,a,c); capability(db,b,c)
