@@ -29,7 +29,8 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
-  --font-sans: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-display: "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,4 +46,3 @@
     --shadow-card: none;
   }
 }
-

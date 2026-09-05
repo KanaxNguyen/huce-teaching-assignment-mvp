@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HUCE Teaching Assignment",
-  description: "Phân công giảng dạy có ràng buộc cho Bộ môn Toán học.",
+  title: "HUCE · Phân công giảng dạy",
+  description: "Không gian lập lịch và phân công giảng dạy dành cho trưởng bộ môn.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -13,4 +13,3 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     </html>
   );
 }
-

@@ -23,9 +23,38 @@ class ImportBatch(Base):
     __tablename__ = "import_batches"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     source_files: Mapped[list] = mapped_column(JSON, default=list)
     summary: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class Semester(Base):
+    __tablename__ = "semesters"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    department_name: Mapped[str] = mapped_column(String(200))
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
+    head_name: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(30), default="draft")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class OutputTemplateProfile(Base):
+    __tablename__ = "output_template_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
+    source_file: Mapped[str] = mapped_column(String(300))
+    source_sheet: Mapped[str] = mapped_column(String(100))
+    header_row: Mapped[int] = mapped_column(Integer)
+    mappings: Mapped[dict] = mapped_column(JSON, default=dict)
+    missing_fields: Mapped[list] = mapped_column(JSON, default=list)
+    preview: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class Lecturer(Base):
@@ -50,11 +79,24 @@ class Course(Base):
     name: Mapped[str] = mapped_column(String(300))
 
 
-class ClassSection(Base):
-    __tablename__ = "classes"
-    __table_args__ = (UniqueConstraint("course_id", "class_code"),)
+class LecturerCourseCapability(Base):
+    __tablename__ = "lecturer_course_capabilities"
+    __table_args__ = (UniqueConstraint("lecturer_id", "course_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    lecturer_id: Mapped[int] = mapped_column(ForeignKey("lecturers.id"))
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
+    allowed: Mapped[bool] = mapped_column(Boolean, default=True)
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    source: Mapped[str | None] = mapped_column(String(300), nullable=True)
+
+
+class ClassSection(Base):
+    __tablename__ = "classes"
+    __table_args__ = (UniqueConstraint("semester_id", "course_id", "class_code"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"))
     class_code: Mapped[str] = mapped_column(String(100))
     credits: Mapped[float] = mapped_column(Float, default=0)
@@ -62,6 +104,7 @@ class ClassSection(Base):
     merged_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
     locked_assignment: Mapped[bool] = mapped_column(Boolean, default=False)
     assigned_lecturer_id: Mapped[int | None] = mapped_column(ForeignKey("lecturers.id"), nullable=True)
+    assignment_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
     source_file: Mapped[str] = mapped_column(String(300))
     source_sheet: Mapped[str] = mapped_column(String(100))
     source_row: Mapped[int] = mapped_column(Integer)
@@ -96,6 +139,7 @@ class Constraint(Base):
     __tablename__ = "constraints"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
     name: Mapped[str] = mapped_column(String(200))
     constraint_type: Mapped[str] = mapped_column(String(50))
     hardness: Mapped[str] = mapped_column(String(10), default="soft")
@@ -113,6 +157,7 @@ class Seminar(Base):
     __tablename__ = "seminars"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
     name: Mapped[str] = mapped_column(String(200))
     chair_name: Mapped[str] = mapped_column(String(200))
     members: Mapped[list] = mapped_column(JSON, default=list)
@@ -125,6 +170,7 @@ class ValidationIssue(Base):
     __tablename__ = "validation_issues"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
     severity: Mapped[str] = mapped_column(String(20))
     code: Mapped[str] = mapped_column(String(60))
     message: Mapped[str] = mapped_column(Text)
@@ -140,6 +186,7 @@ class OptimizationRun(Base):
     __tablename__ = "optimization_runs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     status: Mapped[str] = mapped_column(String(30))
     score: Mapped[float | None] = mapped_column(Float)
@@ -151,10 +198,12 @@ class Assignment(Base):
     __table_args__ = (UniqueConstraint("run_id", "class_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
     run_id: Mapped[int] = mapped_column(ForeignKey("optimization_runs.id"))
     class_id: Mapped[int] = mapped_column(ForeignKey("classes.id"))
     lecturer_id: Mapped[int] = mapped_column(ForeignKey("lecturers.id"))
     locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    source: Mapped[str] = mapped_column(String(20), default="SOLVER")
     penalty: Mapped[float] = mapped_column(Float, default=0)
 
     class_section: Mapped[ClassSection] = relationship()

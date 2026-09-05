@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("renders the HUCE dashboard and navigates to input data", async ({ page }) => {
+test("renders the semester workflow and navigates to input data", async ({ page }) => {
   await page.route("http://127.0.0.1:8000/api/v1/**", async (route) => {
     const url = route.request().url();
     if (url.endsWith("/dashboard")) {
@@ -9,8 +9,7 @@ test("renders the HUCE dashboard and navigates to input data", async ({ page }) 
     return route.fulfill({ json: [] });
   });
   await page.goto("/");
-  await expect(page.getByText("Một nơi để biến dữ liệu Excel")).toBeVisible();
+  await expect(page.getByText("Thiết lập kỳ học")).toBeVisible();
   await page.getByRole("button", { name: "Dữ liệu đầu vào" }).click();
-  await expect(page.getByText("Thả file Excel vào đây")).toBeVisible();
+  await expect(page.getByText("Nhập dữ liệu học kỳ")).toBeVisible();
 });
-

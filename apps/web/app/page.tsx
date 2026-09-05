@@ -1,6 +1,5 @@
-import { DashboardApp } from "@/src/features/dashboard/dashboard-app";
+import { SemesterWorkflowApp } from "@/src/features/dashboard/semester-workflow-app";
 
 export default function Home() {
-  return <DashboardApp />;
+  return <SemesterWorkflowApp />;
 }
-

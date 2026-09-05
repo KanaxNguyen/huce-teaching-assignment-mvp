@@ -98,14 +98,56 @@ def clean_code(value: Any) -> str:
     return text[:-2] if re.fullmatch(r"\d+\.0", text) else text
 
 
+def is_unassigned_lecturer(value: Any) -> bool:
+    """Return true for common placeholders meaning that no teacher is assigned.
+
+    Source workbooks often contain a textual placeholder instead of an empty
+    lecturer cell. Treating it as a name locks the class to a fake lecturer and
+    prevents the optimiser from assigning a real person.
+    """
+    text = unicodedata.normalize("NFD", clean_text(value).casefold())
+    text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+    text = text.replace("đ", "d")
+    normalized = re.sub(r"[^a-z0-9]+", " ", text).strip()
+    compact = normalized.replace(" ", "")
+
+    placeholders = {
+        "",
+        "-",
+        "na",
+        "n a",
+        "none",
+        "null",
+        "tbd",
+        "chua phan cong",
+        "chua duoc phan cong",
+        "chua xep giang vien",
+        "chua xep gv",
+        "chua xep gvien",
+        "chua co giang vien",
+        "chua co gv",
+        "chua bo tri giang vien",
+        "dang phan cong",
+        "dang cap nhat",
+        "chua cap nhat",
+    }
+    if normalized in placeholders or compact in {"chuaphancong", "chuaxepgiangvien", "chuacogiangvien"}:
+        return True
+    return normalized.startswith("chua phan") or normalized.startswith("chua xep")
+
+
 def parse_lecturer(value: Any) -> tuple[str | None, str | None]:
     text = clean_text(value)
-    if not text:
+    if not text or is_unassigned_lecturer(text):
         return None, None
-    match = re.match(r"^\[([^\]]+)]\s*(.+)$", text)
+    # A few source rows contain co-teachers separated by a comma/newline.  The
+    # MVP keeps the first teacher as the class owner and surfaces later changes
+    # as a review warning instead of creating a fake combined lecturer name.
+    match = re.search(r"\[([^\]]+)]\s*([^,\[]+)", text)
     if match:
         return clean_code(match.group(1)), clean_text(match.group(2))
-    return None, re.sub(r"^(thầy|cô)\s+", "", text, flags=re.IGNORECASE)
+    primary = re.split(r"\s*,\s*", text, maxsplit=1)[0]
+    return None, re.sub(r"^(thầy|cô)\s+", "", primary, flags=re.IGNORECASE)
 
 
 def parse_periods(value: Any) -> tuple[int, int]:
@@ -192,7 +234,9 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
     rejected = 0
     accepted = 0
 
-    for index, row in enumerate(rows[header + 2 :], start=header + 3):
+    # Data may follow immediately after the header, or after a blank/helper
+    # row. Validate each row rather than unconditionally skipping one.
+    for index, row in enumerate(rows[header + 1 :], start=header + 2):
         padded = (row + [None] * 14)[:14]
         stt, course_code, course_name, class_code = padded[:4]
         if not clean_text(stt) and not any(clean_text(v) for v in padded[:4]):
@@ -240,6 +284,15 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
         class_id = clean_code(class_code)
         key = f"{code}::{class_id}"
         lecturer_code, lecturer_name = parse_lecturer(padded[13])
+        raw_lecturer = clean_text(padded[13])
+        co_teaching = bool(lecturer_name and ("," in raw_lecturer or "\n" in str(padded[13] or "")))
+        if co_teaching:
+            issues.append(ParseIssue(
+                "error", "CO_TEACHING_REQUIRES_REVIEW",
+                f"Lớp {class_id} có nhiều giảng viên trong ô nguồn; cần rà soát.",
+                path.name, sheet_name, index, "Giảng viên", raw_lecturer,
+                "Xác nhận chính sách đồng giảng trước khi phân công.",
+            ))
         credits_text = clean_text(padded[8])
         try:
             credits = float(credits_text) if credits_text else 0
@@ -264,7 +317,7 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
                 credits=credits,
                 lecturer_code=lecturer_code,
                 lecturer_name=lecturer_name,
-                locked_assignment=bool(lecturer_name),
+                locked_assignment=bool(lecturer_name) and not co_teaching,
                 source_file=path.name,
                 source_sheet=sheet_name,
                 source_row=index,
@@ -272,6 +325,14 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
             )
         else:
             current = grouped[key]
+            normalized_course_name = clean_text(course_name)
+            if normalized_course_name.casefold() != current.course_name.casefold() or credits != current.credits:
+                issues.append(ParseIssue(
+                    "error", "TEACHING_GROUP_INCONSISTENT",
+                    f"TeachingGroup {key} có tên môn hoặc số tín chỉ không nhất quán.",
+                    path.name, sheet_name, index, "Môn học/Số TC", str(padded[:4]),
+                    "Rà soát dữ liệu nguồn trước khi tối ưu.",
+                ))
             if (
                 lecturer_name
                 and current.lecturer_name
@@ -279,22 +340,23 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
             ):
                 issues.append(
                     ParseIssue(
-                        "error",
+                        "warning",
                         "multiple_lecturers_for_class",
-                        f"Lớp {class_id} có nhiều giảng viên khác nhau.",
+                        f"Lớp {class_id} có thay đổi hoặc đồng giảng viên giữa các buổi.",
                         path.name,
                         sheet_name,
                         index,
                         "Giảng viên",
                         lecturer_name,
-                        "Xác nhận một giảng viên áp dụng cho toàn bộ buổi.",
+                        "Tạm giữ giảng viên ở buổi đầu; trưởng bộ môn cần rà soát trước khi xuất.",
                     )
                 )
             elif lecturer_name and not current.lecturer_name:
                 current.lecturer_code = lecturer_code
                 current.lecturer_name = lecturer_name
                 current.locked_assignment = True
-        grouped[key].sessions.append(parsed_session)
+        if not any(existing.signature() == parsed_session.signature() for existing in grouped[key].sessions):
+            grouped[key].sessions.append(parsed_session)
         accepted += 1
 
     signature_groups: dict[tuple, list[ParsedClass]] = defaultdict(list)

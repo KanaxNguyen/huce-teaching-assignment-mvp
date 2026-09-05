@@ -185,7 +185,7 @@ export function DashboardApp() {
             <button className={styles.iconButton} onClick={() => void loadAll()} aria-label="Làm mới dữ liệu">
               <RefreshCw size={18} className={loading ? styles.spin : ""} />
             </button>
-            <a className={styles.secondaryButton} href={api.exportUrl}>
+            <a className={styles.secondaryButton} href={api.exportUrl()}>
               <Download size={17} /> <span>Xuất Excel</span>
             </a>
             <div className={styles.avatar} title="Quản trị viên">GK</div>
@@ -551,7 +551,7 @@ function ResultsView({ classes, query, setQuery }: { classes: ClassItem[]; query
     <div className={styles.viewStack}>
       <section className={styles.sectionHeading}>
         <div><span className={styles.eyebrow}>Kết quả</span><h2>Phân công giảng dạy</h2><p>Toàn bộ buổi của một lớp luôn thuộc cùng một giảng viên.</p></div>
-        <a className={styles.primaryButton} href={api.exportUrl}><Download size={18} />Tải file Excel</a>
+        <a className={styles.primaryButton} href={api.exportUrl()}><Download size={18} />Tải file Excel</a>
       </section>
       <section className={styles.card}>
         <div className={styles.tableToolbar}><div><h3>Danh sách đã phân công</h3><span>{assigned.length}/{classes.length} lớp</span></div><label className={styles.searchBox}><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm nhanh…" /></label></div>

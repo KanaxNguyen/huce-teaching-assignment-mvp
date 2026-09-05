@@ -1,4 +1,4 @@
-import type { ClassItem, Constraint, DashboardMetrics, ValidationIssue } from "@/src/types/api";
+import type { AssignmentCheck, AssignmentItem, Candidate, ClassItem, Constraint, DashboardMetrics, Lecturer, OptimizationResult, Problem, Semester, TemplateDetection, ValidationIssue } from "@/src/types/api";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -18,7 +18,25 @@ export const api = {
   dashboard: () => request<DashboardMetrics>("/dashboard"),
   classes: () => request<ClassItem[]>("/classes"),
   constraints: () => request<Constraint[]>("/constraints"),
+  lecturers: () => request<Lecturer[]>("/lecturers"),
   conflicts: () => request<ValidationIssue[]>("/conflicts"),
+  problems: (semesterId: number) => request<Problem[]>(`/problems?semester_id=${semesterId}`),
+  assignments: () => request<AssignmentItem[]>("/assignments"),
+  semesters: () => request<Semester[]>("/semesters"),
+  latestTemplate: () => request<TemplateDetection | null>("/templates/latest"),
+  createSemester: (payload: Omit<Semester, "id" | "status" | "is_active">) =>
+    request<{ id: number }>("/semesters", { method: "POST", body: JSON.stringify(payload) }),
+  detectTemplate: (file: File, semesterId?: number) => {
+    const body = new FormData();
+    body.append("template_file", file);
+    const query = semesterId ? `?semester_id=${semesterId}` : "";
+    return request<TemplateDetection>(`/templates/detect${query}`, { method: "POST", body });
+  },
+  updateTemplate: (profileId: number, mappings: TemplateDetection["mappings"], missingFields: string[]) =>
+    request<{ id: number; ready: boolean }>(`/templates/${profileId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ mappings, missing_fields: missingFields }),
+    }),
   importLocal: () => request<Record<string, unknown>>("/imports/local", { method: "POST" }),
   upload: (files: File[]) => {
     const body = new FormData();
@@ -33,10 +51,19 @@ export const api = {
   },
   createConstraint: (payload: Record<string, unknown>) =>
     request<{ id: number }>("/constraints", { method: "POST", body: JSON.stringify(payload) }),
+  updateConstraint: (id: number, payload: Partial<Constraint>) =>
+    request<{ id: number }>(`/constraints/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteConstraint: (id: number) =>
+    request<{ id: number }>(`/constraints/${id}`, { method: "DELETE" }),
   optimize: (confirmMerged: boolean) =>
-    request<{ run_id: number; status: string; score: number }>("/optimization/run", {
+    request<OptimizationResult>("/optimization/run", {
       method: "POST",
       body: JSON.stringify({ time_limit_seconds: 30, confirm_merged_suggestions: confirmMerged }),
     }),
-  exportUrl: `${API_URL}/api/v1/exports/latest`,
+  candidates: (classId: number, semesterId: number) => request<Candidate[]>(`/classes/${classId}/candidates?semester_id=${semesterId}`),
+  checkAssignment: (classId: number, lecturerId: number, semesterId: number) => request<AssignmentCheck>(`/classes/${classId}/assignment/check?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify({ lecturer_id: lecturerId }) }),
+  assign: (classId: number, lecturerId: number, lock: boolean, semesterId: number) => request<AssignmentCheck>(`/classes/${classId}/assignment?semester_id=${semesterId}`, { method: "PATCH", body: JSON.stringify({ lecturer_id: lecturerId, lock }) }),
+  lock: (classId: number, semesterId: number) => request<{ locked: boolean }>(`/classes/${classId}/lock?semester_id=${semesterId}`, { method: "POST" }),
+  unlock: (classId: number, semesterId: number) => request<{ locked: boolean }>(`/classes/${classId}/unlock?semester_id=${semesterId}`, { method: "POST" }),
+  exportUrl: (mode: "draft" | "final" = "draft", semesterId?: number) => `${API_URL}/api/v1/exports/latest?mode=${mode}${semesterId ? `&semester_id=${semesterId}` : ""}`,
 };
