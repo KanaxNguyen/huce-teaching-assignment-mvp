@@ -51,6 +51,19 @@ class MergedDecision(BaseModel):
     confirmed: bool
 
 
+class SeminarCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    chair_name: str = ""
+    members: list[int] = Field(default_factory=list)
+    alternatives: list[dict[str, Any]] = Field(default_factory=list)
+    hardness: Literal["hard", "soft"] = "soft"
+    weight: float = Field(default=0.8, ge=0, le=1)
+
+
+class AliasResolution(BaseModel):
+    alias: str = Field(min_length=1, max_length=200)
+
+
 class ImportResponse(BaseModel):
     batch_id: int
     files: list[str]

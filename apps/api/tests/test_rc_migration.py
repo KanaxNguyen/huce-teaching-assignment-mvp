@@ -12,7 +12,7 @@ from alembic.config import Config
 from test_phase1_migration import LEGACY_SQL
 
 ROOT = Path(__file__).resolve().parents[3]
-HEAD = "0003_human_in_loop"
+HEAD = "0004_v11_merge_status"
 
 
 def upgrade(path, revision="head"):
@@ -72,6 +72,7 @@ def test_0002_rows_defaults_and_foreign_keys_preserved(tmp_path):
     with sqlite3.connect(path) as db:
         assert db.execute('SELECT source FROM assignments').fetchall() == [('SOLVER',)]
         assert db.execute('SELECT assignment_source FROM classes').fetchall() == [(None,)]
+        assert db.execute('SELECT merge_status FROM classes').fetchall() == [('single',)]
         info = {r[1]: r for r in db.execute('PRAGMA table_info(assignments)')}
         assert info['source'][3] == 1
         assert info['source'][4] == "'SOLVER'"
@@ -128,7 +129,7 @@ for restart in range(2):
         assert response.status_code == 200, response.text
         assert response.json()['status'] == 'ok'
         with engine.connect() as db:
-            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '0003_human_in_loop'
+            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '0004_v11_merge_status'
             assert db.scalar(text('PRAGMA foreign_keys')) == 1
         assert client.get('/api/v1/semesters').status_code == 200
 print('STARTUP_AND_RESTART_HEALTH_PASS')

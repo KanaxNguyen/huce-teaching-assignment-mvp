@@ -95,15 +95,18 @@ def test_real_data_import_solve_problem_export_round_trip_and_persistence(tmp_pa
         db.commit()
 
         run = solve(db, 5, False, semester_id)
-        # The supplied real input contains two overlapping locked assignments.
-        # The important safety property is a deterministic block, not a fake
-        # reassignment of historical assignments.
-        assert run.status == "blocked"
-        assert run.summary["code"] == "LOCKED_ASSIGNMENT_CONFLICT"
+        # Imported teaching assignments are provenance only.  They remain
+        # editable until the department head explicitly locks one.
+        assert not db.scalars(select(ClassSection).where(
+            ClassSection.semester_id == semester_id,
+            ClassSection.assignment_source == "IMPORT",
+            ClassSection.locked_assignment.is_(True),
+        )).first()
+        assert run.status in {"optimal", "feasible"}
 
         # Find a real eligible manual case instead of naming a lecturer in the
-        # fixture.  It is then locked and re-solved; the pre-existing source
-        # conflict remains correctly blocked, but the manual state survives.
+        # fixture.  It is then locked and re-solved; the explicit manual lock
+        # survives while the rest of the imported schedule remains editable.
         manual_case = next(
             (
                 (group, lecturer)
@@ -131,7 +134,7 @@ def test_real_data_import_solve_problem_export_round_trip_and_persistence(tmp_pa
         assert validation["valid"]
 
         problems = get_problems(semester_id=semester_id, db=db)
-        assert any(item["code"] == "LOCKED_ASSIGNMENT_CONFLICT" for item in problems)
+        assert not any(item["code"] == "LOCKED_ASSIGNMENT_CONFLICT" for item in problems)
         assert len({(item["code"], item["entity_type"], item["entity_id"]) for item in problems}) == len(problems)
 
         source_book = load_workbook(schedule, data_only=False)

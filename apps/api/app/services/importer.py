@@ -59,6 +59,11 @@ def _import_files_impl(
         _clear_imported_data(db, semester_id)
     lecturers_by_name = {item.canonical_name.casefold(): item for item in db.scalars(select(Lecturer)).all()}
     lecturers_by_code = {item.code: item for item in db.scalars(select(Lecturer)).all() if item.code}
+    lecturers_by_alias = {
+        alias.casefold(): item
+        for item in lecturers_by_name.values()
+        for alias in (item.aliases or [])
+    }
 
     def ensure_lecturer(code: str | None, name: str, alias: str | None = None) -> Lecturer:
         lookup = lecturers_by_code.get(code) if code else None
@@ -79,6 +84,8 @@ def _import_files_impl(
         db.add(lecturer)
         db.flush()
         lecturers_by_name[name.casefold()] = lecturer
+        for item_alias in lecturer.aliases or []:
+            lecturers_by_alias[item_alias.casefold()] = lecturer
         if code:
             lecturers_by_code[code] = lecturer
         return lecturer
@@ -90,15 +97,15 @@ def _import_files_impl(
     unmatched = set()
     for preference_path in preference_paths:
         for preference in parse_preferences(preference_path):
-            lecturer = lecturers_by_name.get(preference.canonical_name.casefold())
+            lecturer = lecturers_by_name.get(preference.canonical_name.casefold()) or lecturers_by_alias.get(preference.lecturer_alias.casefold())
             if not lecturer:
                 lecturer = None
             if lecturer:
                 aliases = set(lecturer.aliases or [])
                 aliases.add(preference.lecturer_alias)
                 lecturer.aliases = sorted(aliases)
+                lecturers_by_alias[preference.lecturer_alias.casefold()] = lecturer
             else:
-                lecturer = ensure_lecturer(None, preference.canonical_name, preference.lecturer_alias)
                 unmatched.add(preference.lecturer_alias)
                 db.add(ValidationIssue(
                     semester_id=semester_id,
@@ -107,7 +114,7 @@ def _import_files_impl(
                     message=f"Không xác định chắc chắn giảng viên cho '{preference.lecturer_alias}'.",
                     source_file=preference_path.name,
                     source_row=preference.source_row,
-                    raw_value=preference.raw_text,
+                    raw_value=preference.lecturer_alias,
                     suggestion="Xác nhận mã hoặc tên đầy đủ trước khi tối ưu.",
                 ))
             db.add(
@@ -116,7 +123,7 @@ def _import_files_impl(
                     constraint_type=preference.constraint_type,
                     hardness="soft",
                     weight=0.8,
-                    lecturer_id=lecturer.id,
+                    lecturer_id=lecturer.id if lecturer else None,
                     target=preference.target,
                     raw_text=preference.raw_text,
                     confirmed=preference.confidence >= 0.8,
@@ -143,8 +150,13 @@ def _import_files_impl(
             class_code=item.class_code,
             credits=item.credits,
             merged_group_id=item.merged_group_id,
-            locked_assignment=item.locked_assignment,
+            merge_status="candidate" if item.merged_group_id else "single",
+            # A name imported from a workbook is provenance, not an implicit
+            # permanent lock.  The manager explicitly locks confirmed LOPNV
+            # assignments in the workspace.
+            locked_assignment=False,
             assigned_lecturer_id=lecturer.id if lecturer else None,
+            assignment_source="IMPORT" if lecturer else None,
             source_file=item.source_file,
             source_sheet=item.source_sheet,
             source_row=item.source_row,
@@ -162,7 +174,7 @@ def _import_files_impl(
                     lecturer_id=lecturer.id,
                     course_id=course.id,
                     allowed=True,
-                    confirmed=item.locked_assignment,
+                    confirmed=True,
                     source=primary.name,
                 ))
         if lecturer and item.locked_assignment:
@@ -280,6 +292,7 @@ def _summary(parsed: ScheduleParseResult) -> dict:
         "merged_pairs_suggested": sum(
             len(group.class_keys) * (len(group.class_keys) - 1) // 2 for group in parsed.merged_groups
         ),
+        "partial_merge_candidates": len(parsed.partial_merge_candidates),
         "locked_classes": sum(1 for item in parsed.classes if item.locked_assignment),
         "unassigned_classes": sum(1 for item in parsed.classes if not item.locked_assignment),
         "validation_errors": sum(1 for issue in parsed.issues if issue.severity == "error"),

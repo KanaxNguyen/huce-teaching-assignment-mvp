@@ -1,4 +1,4 @@
-import type { AssignmentCheck, AssignmentItem, Candidate, ClassItem, Constraint, DashboardMetrics, Lecturer, OptimizationResult, Problem, Semester, TemplateDetection, ValidationIssue } from "@/src/types/api";
+import type { AssignmentCheck, AssignmentItem, Candidate, ClassItem, Constraint, DashboardMetrics, Lecturer, MergeCandidate, OptimizationResult, Problem, Readiness, RunDiff, Seminar, Semester, TemplateDetection, ValidationIssue, Workload } from "@/src/types/api";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -20,6 +20,10 @@ export const api = {
   constraints: () => request<Constraint[]>("/constraints"),
   lecturers: () => request<Lecturer[]>("/lecturers"),
   conflicts: () => request<ValidationIssue[]>("/conflicts"),
+  readiness: (semesterId: number) => request<Readiness>(`/readiness?semester_id=${semesterId}`),
+  workload: (semesterId: number) => request<Workload[]>(`/workload?semester_id=${semesterId}`),
+  mergeCandidates: (semesterId: number) => request<MergeCandidate[]>(`/merge-candidates?semester_id=${semesterId}`),
+  decideMerge: (mergedGroupId: string, confirmed: boolean, semesterId: number) => request<{ merged_group_id: string; confirmed: boolean }>(`/merged-groups?semester_id=${semesterId}`, { method: "PATCH", body: JSON.stringify({ merged_group_id: mergedGroupId, confirmed }) }),
   problems: (semesterId: number) => request<Problem[]>(`/problems?semester_id=${semesterId}`),
   assignments: () => request<AssignmentItem[]>("/assignments"),
   semesters: () => request<Semester[]>("/semesters"),
@@ -60,6 +64,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ time_limit_seconds: 30, confirm_merged_suggestions: confirmMerged }),
     }),
+  runDiff: (runId: number, semesterId: number) => request<RunDiff>(`/optimization/runs/${runId}/diff?semester_id=${semesterId}`),
+  runs: (semesterId: number) => request<Array<{ id: number; status: string; score: number | null; summary: Record<string, unknown>; created_at: string }>>(`/optimization/runs?semester_id=${semesterId}`),
+  seminars: (semesterId: number) => request<Seminar[]>(`/seminars?semester_id=${semesterId}`),
+  createSeminar: (payload: Record<string, unknown>, semesterId: number) => request<{ id: number }>(`/seminars?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify(payload) }),
+  resolveAlias: (lecturerId: number, alias: string, semesterId: number) => request<{ resolved: boolean }>(`/lecturers/${lecturerId}/aliases?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify({ alias }) }),
   candidates: (classId: number, semesterId: number) => request<Candidate[]>(`/classes/${classId}/candidates?semester_id=${semesterId}`),
   checkAssignment: (classId: number, lecturerId: number, semesterId: number) => request<AssignmentCheck>(`/classes/${classId}/assignment/check?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify({ lecturer_id: lecturerId }) }),
   assign: (classId: number, lecturerId: number, lock: boolean, semesterId: number) => request<AssignmentCheck>(`/classes/${classId}/assignment?semester_id=${semesterId}`, { method: "PATCH", body: JSON.stringify({ lecturer_id: lecturerId, lock }) }),

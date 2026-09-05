@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from app.db.session import Base, SessionLocal, engine
-from app.models.entities import Assignment, ClassSection, ClassSession, Constraint, Course, Lecturer, LecturerCourseCapability, Semester
+from app.models.entities import Assignment, ClassSection, ClassSession, Constraint, Course, Lecturer, LecturerCourseCapability, Seminar, Semester
 from app.optimization.solver import eligible_teachers, solve
 
 
@@ -85,3 +85,43 @@ def test_unsupported_constraint_and_failed_run_preserves_previous_snapshot():
         assert blocked.status == "blocked" and before == [x.id for x in db.scalars(select(Assignment).where(Assignment.run_id==valid.id))]
         db.add(Constraint(semester_id=s.id,name="x",constraint_type="mystery",hardness="soft",weight=1,target={},confirmed=True)); db.commit()
         assert "mystery" in solve(db,2,False,s.id).summary["unsupported_constraints"]
+
+
+def test_hard_required_assignment_wins_and_soft_weight_never_makes_rule_hard():
+    with SessionLocal() as db:
+        s,c,a,b,items=setup(db); capability(db,a,c); capability(db,b,c)
+        db.add(Constraint(semester_id=s.id, name="must", constraint_type="REQUIRED_ASSIGNMENT", hardness="hard", weight=0, lecturer_id=b.id, target={"class_id": items[0].id}, confirmed=True))
+        db.add(Constraint(semester_id=s.id, name="soft avoid", constraint_type="FORBIDDEN_ASSIGNMENT", hardness="soft", weight=1, lecturer_id=a.id, target={"class_id": items[0].id}, confirmed=True))
+        db.commit()
+        run = solve(db, 2, False, s.id)
+        assert db.scalar(select(Assignment).where(Assignment.run_id == run.id)).lecturer_id == b.id
+
+
+def test_shared_hard_seminar_blocks_participant_once_at_selected_slot():
+    with SessionLocal() as db:
+        s,c,a,b,items=setup(db); capability(db,a,c)
+        db.add(Seminar(semester_id=s.id, name="Seminar", chair_name="", members=[a.id], alternatives=[{"weekday": 2, "periods": [4, 5, 6]}], hardness="hard", weight=0.8))
+        db.commit()
+        run = solve(db, 2, False, s.id)
+        assert run.summary["unassigned"]
+        assert run.summary["seminars"][0]["scheduled"] is True
+
+
+def test_course_scoped_forbidden_assignment_applies_to_every_teaching_group():
+    with SessionLocal() as db:
+        s,c,a,b,items=setup(db, 2); capability(db,a,c); capability(db,b,c)
+        db.add(Constraint(semester_id=s.id, name="no course", constraint_type="FORBIDDEN_ASSIGNMENT", hardness="hard", weight=0, lecturer_id=a.id, target={"course_id": c.id}, confirmed=True))
+        db.commit()
+        run = solve(db, 2, False, s.id)
+        assert {item.lecturer_id for item in db.scalars(select(Assignment).where(Assignment.run_id == run.id))} == {b.id}
+
+
+def test_calendar_constraint_date_scope_does_not_block_outside_its_range():
+    with SessionLocal() as db:
+        s,c,a,b,items=setup(db); capability(db,a,c)
+        items[0].sessions[0].start_date = date(2026, 2, 1)
+        items[0].sessions[0].end_date = date(2026, 2, 28)
+        db.add(Constraint(semester_id=s.id, name="January only", constraint_type="unavailable", hardness="hard", weight=0, lecturer_id=a.id, target={"weekday": 2, "periods": [4, 5, 6], "start_date": "2026-01-01", "end_date": "2026-01-31"}, confirmed=True))
+        db.commit()
+        run = solve(db, 2, False, s.id)
+        assert db.scalar(select(Assignment).where(Assignment.run_id == run.id)).lecturer_id == a.id

@@ -9,32 +9,6 @@ import openpyxl
 
 from app.parsers.schedule import clean_text
 
-ALIASES = {
-    "thoan": "Phạm Đức Thoan",
-    "bằng giang": "Nguyễn Bằng Giang",
-    "giang": "Nguyễn Bằng Giang",
-    "cường": "Lê Viết Cường",
-    "hùng": "Ngô Quang Hùng",
-    "hằng": "Trịnh Thị Minh Hằng",
-    "hương giang": "Vũ Thị Hương Giang",
-    "khiên": "Trần Văn Khiên",
-    "nam": "Nguyễn Hải Nam",
-    "nguyệt": "Nguyễn Minh Nguyệt",
-    "ngân": "Vũ Thị Ngân",
-    "thuỷ": "Vũ Thị Thủy",
-    "thủy": "Vũ Thị Thủy",
-    "trình": "Bùi Khánh Trình",
-    "tuyên": "Nguyễn Đặng Tuyên",
-    "tuyết": "Lương Thị Tuyết",
-    "x linh": "Nguyễn Xuân Linh",
-    "kiều linh": "Kiều Thị Thùy Linh",
-    "klinh": "Kiều Thị Thùy Linh",
-    "mai hồng": "Mai Thị Hồng",
-    "liễu": "Trần Thị Liễu",
-    "hải": "Nguyễn Thị Lệ Hải",
-}
-
-
 @dataclass
 class ParsedPreference:
     lecturer_alias: str
@@ -149,12 +123,14 @@ def parse_preferences(path: Path) -> list[ParsedPreference]:
         alias = clean_text(sheet.cell(row, 2).value)
         if not alias:
             continue
-        canonical = ALIASES.get(alias.casefold(), alias)
+        # Canonical identity is a semester/master-data decision, never a
+        # built-in name table.  The importer resolves this alias against the
+        # existing lecturer records or surfaces it for manager review.
         for column in range(3, 11):
             raw = clean_text(sheet.cell(row, column).value)
             if not raw:
                 continue
             weekday = column - 1 if column <= 9 else None
             kind, target, confidence = _infer(raw, weekday)
-            result.append(ParsedPreference(alias, canonical, weekday, kind, target, raw, confidence, row))
+            result.append(ParsedPreference(alias, alias, weekday, kind, target, raw, confidence, row))
     return result

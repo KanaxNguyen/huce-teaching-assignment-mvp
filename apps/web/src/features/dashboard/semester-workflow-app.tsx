@@ -33,14 +33,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HuceWordmark } from "@/src/components/brand/huce-wordmark";
 import { api } from "@/src/services/api";
 import type {
+  Candidate,
   ClassItem,
   Constraint,
   DashboardMetrics,
   Lecturer,
+  MergeCandidate,
   Problem,
+  Readiness,
+  RunDiff,
+  Seminar,
   Semester,
   TemplateDetection,
   ValidationIssue,
+  Workload,
 } from "@/src/types/api";
 
 import styles from "./semester-workflow.module.css";
@@ -94,8 +100,8 @@ export function SemesterWorkflowApp() {
   const [error, setError] = useState<string | null>(null);
   const [template, setTemplate] = useState<TemplateDetection | null>(null);
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  const loadAll = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const [semesterRows, dashboard, classRows, constraintRows, lecturerRows, issueRows, latestTemplate] = await Promise.all([
         api.semesters(),
@@ -119,7 +125,7 @@ export function SemesterWorkflowApp() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Không thể kết nối máy chủ.");
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, []);
 
@@ -136,7 +142,7 @@ export function SemesterWorkflowApp() {
     try {
       await action();
       setNotice(success);
-      await loadAll();
+      await loadAll(true);
       window.setTimeout(() => setNotice(null), 3600);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Thao tác chưa hoàn tất.");
@@ -407,7 +413,7 @@ function PreferenceRow({ item, lecturers, busy, onSave, onDelete }: { item: Cons
   </article>;
 }
 
-function ConstraintTypeSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <select value={value} onChange={(event) => onChange(event.target.value)}><option value="unavailable">Không xếp lịch</option><option value="available">Có thể dạy</option><option value="prefer_period">Ưu tiên khung giờ</option><option value="seminar">Seminar</option><option value="preferred_assignment">Đề nghị phân công</option><option value="compact_schedule">Ưu tiên lịch gọn</option><option value="raw_preference">Cần rà soát</option></select>; }
+function ConstraintTypeSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <select value={value} onChange={(event) => onChange(event.target.value)}><option value="unavailable">Không thể dạy</option><option value="avoid">Muốn tránh</option><option value="available">Ưu tiên dạy</option><option value="busy_event">Bận cố định</option><option value="raw_preference">Cần rà soát</option></select>; }
 function WeekdaySelect({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <select value={value} onChange={(event) => onChange(event.target.value)}><option value="">Mọi ngày</option>{[2, 3, 4, 5, 6, 7, 8].map((day) => <option key={day} value={day}>{day === 8 ? "Chủ Nhật" : `Thứ ${day}`}</option>)}</select>; }
 function periodLabel(target?: Record<string, unknown>) { const values = (target?.periods ?? target?.period_range ?? []) as number[]; return values.length ? `${Math.min(...values)}-${Math.max(...values)}` : ""; }
 function makeTarget(weekday: string, periodText: string, existing?: Record<string, unknown>) { const values = Array.from(new Set((periodText.match(/\d+/g) ?? []).map(Number).filter((item) => item >= 1 && item <= 15))); const periods = values.length === 2 ? Array.from({ length: values[1] - values[0] + 1 }, (_, index) => values[0] + index) : values; return { ...existing, weekday: weekday ? Number(weekday) : null, periods, analysis: { source: "manual" } }; }
@@ -427,14 +433,16 @@ type ConstraintDraft = {
   name: string;
   hardness: "hard" | "soft";
   weight: number;
+  startDate: string;
+  endDate: string;
 };
 
 function paintClass(type: string) {
-  return type === "unavailable" ? styles.slotUnavailable : type === "seminar" ? styles.slotSeminar : type === "available" ? styles.slotAvailable : type === "prefer_period" ? styles.slotPreferred : styles.slotOther;
+  return type === "unavailable" || type === "busy_event" ? styles.slotUnavailable : type === "available" ? styles.slotAvailable : type === "prefer_period" || type === "avoid" ? styles.slotPreferred : styles.slotOther;
 }
 
 function constraintTypeLabel(type: string) {
-  return type === "unavailable" ? "Không thể dạy" : type === "available" ? "Có thể dạy" : type === "prefer_period" ? "Ưu tiên" : type === "seminar" ? "Seminar" : "Ràng buộc khác";
+  return type === "unavailable" ? "Không thể dạy" : type === "busy_event" ? "Bận cố định" : type === "available" ? "Ưu tiên dạy" : type === "avoid" ? "Muốn tránh" : type === "prefer_period" ? "Ưu tiên" : "Ràng buộc khác";
 }
 
 function TimetableSlotPicker({ selected, painted, disabled, onEditDraft, onChange }: { selected: string[]; painted: PaintedSlot[]; disabled?: boolean; onEditDraft: (draftId: string) => void; onChange: (slots: string[]) => void }) {
@@ -450,12 +458,12 @@ function TimetableSlotPicker({ selected, painted, disabled, onEditDraft, onChang
   };
   return <div className={styles.slotPicker}>
     <div className={styles.slotPickerHeader}><div><strong>Chọn ô để tạo hoặc sửa ràng buộc</strong><small>{disabled ? "Chọn giảng viên trước khi thao tác trên lịch." : "Bấm một ô đã tô để sửa; chọn nhiều ô để gán cùng một trạng thái."}</small></div><span>{selected.length ? `${selected.length} ô đang chọn` : "Chưa chọn ô"}</span></div>
-    <div className={styles.slotLegend} aria-label="Chú giải trạng thái"><span className={styles.legendAvailable}>Có thể dạy</span><span className={styles.legendPreferred}>Ưu tiên</span><span className={styles.legendUnavailable}>Không thể dạy</span><span className={styles.legendSeminar}>Seminar</span></div>
+    <div className={styles.slotLegend} aria-label="Chú giải trạng thái"><span className={styles.legendAvailable}>Ưu tiên dạy</span><span className={styles.legendPreferred}>Muốn tránh</span><span className={styles.legendUnavailable}>Không thể dạy / Bận cố định</span></div>
     <div className={styles.slotGrid}><div className={styles.slotCorner}>BLOCK</div>{timetableDays.map((day) => <div key={day} className={styles.slotDay}>{day === 8 ? "CN" : `T${day}`}</div>)}{timetableBlocks.flatMap((block) => [<div className={styles.slotLabel} key={block.label}>{block.label}</div>, ...timetableDays.map((day) => { const slot = `${day}:${block.periods[0]}-${block.periods.at(-1)}`; const active = selected.includes(slot); const paintedType = paintedBySlot.get(slot)?.type; return <button type="button" key={slot} disabled={disabled} aria-pressed={active} aria-label={`${active ? "Bỏ chọn" : "Chọn"} ${day === 8 ? "Chủ Nhật" : `Thứ ${day}`}, ${block.label}${paintedType ? `, hiện là ${constraintTypeLabel(paintedType)}` : ""}`} className={`${styles.slotCell} ${paintedType ? paintClass(paintedType) : ""} ${active ? styles.slotCellActive : ""}`} onClick={() => toggle(slot)}>{active ? <Check size={15} /> : paintedType ? <span className={styles.slotStateDot} /> : null}</button>; })])}</div>
   </div>;
 }
 
-function slotsTarget(selected: string[]) {
+function slotsTarget(selected: string[], startDate = "", endDate = "") {
   return {
     slots: selected.map((slot) => {
       const [day, periodRange] = slot.split(":");
@@ -463,6 +471,8 @@ function slotsTarget(selected: string[]) {
       return { weekday: Number(day), periods: Array.from({ length: end - start + 1 }, (_, index) => start + index) };
     }),
     analysis: { source: "visual_timetable" },
+    ...(startDate ? { start_date: startDate } : {}),
+    ...(endDate ? { end_date: endDate } : {}),
   };
 }
 
@@ -488,13 +498,15 @@ function PreferenceComposer({ lecturers, constraints = [], busy, onCreate, onClo
   const [drafts, setDrafts] = useState<ConstraintDraft[]>([]);
   const [hardness, setHardness] = useState<"hard" | "soft">("soft");
   const [weight, setWeight] = useState(0.8);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const paintedSlots = [
     ...constraints.filter((item) => item.active && item.lecturer_id === Number(lecturerId)).flatMap((item) => preferenceSlots(item).map((slot) => ({ slot, type: item.constraint_type, draftId: `saved-${item.id}` }))),
     ...drafts.flatMap((draft) => draft.slots.map((slot) => ({ slot, type: draft.type, draftId: draft.id }))),
   ];
   const mergeDraft = (current: ConstraintDraft[]) => {
     const remaining = current.map((draft) => ({ ...draft, slots: draft.slots.filter((slot) => !selectedSlots.includes(slot)) })).filter((draft) => draft.slots.length);
-    return [...remaining, { id: globalThis.crypto.randomUUID(), slots: selectedSlots, type, name, hardness, weight: hardness === "hard" ? 1 : weight }];
+    return [...remaining, { id: globalThis.crypto.randomUUID(), slots: selectedSlots, type, name, hardness, weight: hardness === "hard" ? 1 : weight, startDate, endDate }];
   };
   const recordRegion = () => {
     if (!lecturerId || !selectedSlots.length) return;
@@ -508,11 +520,13 @@ function PreferenceComposer({ lecturers, constraints = [], busy, onCreate, onClo
     setName(draft.name);
     setHardness(draft.hardness);
     setWeight(draft.weight);
+    setStartDate(draft.startDate);
+    setEndDate(draft.endDate);
   };
   const finishPainting = async () => {
     const finalDrafts = selectedSlots.length ? mergeDraft(drafts) : drafts;
     for (const draft of finalDrafts) {
-      await onCreate({ name: draft.name, lecturer_id: Number(lecturerId), constraint_type: draft.type, hardness: draft.hardness, weight: draft.weight, target: slotsTarget(draft.slots), raw_text: "Ràng buộc do trưởng bộ môn chỉnh trực tiếp trên thời khoá biểu", confirmed: true });
+      await onCreate({ name: draft.name, lecturer_id: Number(lecturerId), constraint_type: draft.type, hardness: draft.hardness, weight: draft.weight, target: slotsTarget(draft.slots, draft.startDate, draft.endDate), raw_text: "Ràng buộc do trưởng bộ môn chỉnh trực tiếp trên thời khoá biểu", confirmed: true });
     }
     onClose();
   };
@@ -523,8 +537,9 @@ function PreferenceComposer({ lecturers, constraints = [], busy, onCreate, onClo
     <div className={`${styles.cellEditor} ${selectedSlots.length ? styles.cellEditorActive : ""}`}>
       <div><span className={styles.eyebrow}>THUỘC TÍNH Ô ĐANG CHỌN</span><strong>{selectedSlots.length ? `${selectedSlots.length} ô sẽ áp dụng cùng trạng thái` : "Chọn một hoặc nhiều ô trên lịch"}</strong></div>
       <div className={styles.constraintChoices} role="group" aria-label="Gán trạng thái cho ô đã chọn">
-        {[{ value: "available", label: "Có thể dạy" }, { value: "prefer_period", label: "Ưu tiên" }, { value: "unavailable", label: "Không thể dạy" }, { value: "seminar", label: "Seminar" }].map((choice) => <button type="button" key={choice.value} disabled={!selectedSlots.length} aria-pressed={type === choice.value} className={`${styles.constraintChoice} ${paintClass(choice.value)} ${type === choice.value ? styles.constraintChoiceActive : ""}`} onClick={() => setType(choice.value)}>{choice.label}</button>)}
+        {[{ value: "unavailable", label: "Không thể dạy" }, { value: "avoid", label: "Muốn tránh" }, { value: "available", label: "Ưu tiên dạy" }, { value: "busy_event", label: "Bận cố định" }].map((choice) => <button type="button" key={choice.value} disabled={!selectedSlots.length} aria-pressed={type === choice.value} className={`${styles.constraintChoice} ${paintClass(choice.value)} ${type === choice.value ? styles.constraintChoiceActive : ""}`} onClick={() => { setType(choice.value); setHardness(["unavailable", "busy_event"].includes(choice.value) ? "hard" : "soft"); }}>{choice.label}</button>)}
       </div>
+      <div className={styles.composerGrid}><label className={styles.field}><span>Từ ngày (tùy chọn)</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label><label className={styles.field}><span>Đến ngày (tùy chọn)</span><input type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label></div>
       <div className={styles.cellEditorSettings}><label className={styles.field}><span>Mức độ</span><select disabled={!selectedSlots.length} value={hardness} onChange={(event) => setHardness(event.target.value as "hard" | "soft")}><option value="soft">Ưu tiên mềm</option><option value="hard">Bắt buộc</option></select></label><label className={styles.switchLabel}><span>Trọng số {hardness === "hard" ? "1.0" : weight.toFixed(1)}</span><input type="range" min="0" max="1" step="0.1" disabled={!selectedSlots.length || hardness === "hard"} value={hardness === "hard" ? 1 : weight} onChange={(event) => setWeight(Number(event.target.value))} /></label><button type="button" className={styles.secondaryButton} disabled={!selectedSlots.length} onClick={() => setSelectedSlots([])}>Bỏ chọn</button><button type="button" className={styles.primaryButton} disabled={!name.trim() || !lecturerId || !selectedSlots.length} onClick={recordRegion}><Check size={16} />Ghi vào lịch</button></div>
     </div>
     <div className={styles.composerFooter}><span className={styles.currentPaintType}>{drafts.length ? <><strong>{drafts.length}</strong> vùng đã ghi tạm</> : "Chưa có vùng nào được ghi"}</span><div><button type="button" className={styles.ghostButton} onClick={onClose}>Hủy</button><button type="button" className={styles.primaryButton} disabled={!lecturerId || (!selectedSlots.length && !drafts.length) || busy} onClick={() => void finishPainting()}>{busy ? <LoaderCircle size={16} className={styles.spin} /> : <Check size={16} />}Chốt tất cả</button></div></div>
@@ -532,13 +547,28 @@ function PreferenceComposer({ lecturers, constraints = [], busy, onCreate, onClo
   </div>;
 }
 
-type WorkspaceTab = "overview" | "assignments" | "calendar" | "constraints" | "problems" | "runs" | "export";
+function WorkloadConstraintComposer({ lecturers, busy, onCreate }: { lecturers: Lecturer[]; busy: boolean; onCreate: (payload: Record<string, unknown>) => void }) {
+  const [lecturerId, setLecturerId] = useState(""); const [rule, setRule] = useState("MAX_CLASSES"); const [limit, setLimit] = useState(4); const [hardness, setHardness] = useState<"hard" | "soft">("hard"); const [weight, setWeight] = useState(0.8);
+  const min = rule === "MIN_CLASSES";
+  return <div className={styles.flatPanel}><span className={styles.eyebrow}>WORKLOAD CONSTRAINT</span><strong>Giới hạn tải là rule chuẩn, tách biệt với nguyện vọng theo lịch.</strong><div className={styles.composerGrid}><label className={styles.field}><span>Giảng viên</span><select value={lecturerId} onChange={(event) => setLecturerId(event.target.value)}><option value="">Chọn giảng viên…</option>{lecturers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className={styles.field}><span>Rule</span><select value={rule} onChange={(event) => setRule(event.target.value)}><option value="MIN_CLASSES">Min TeachingGroups</option><option value="MAX_CLASSES">Max TeachingGroups</option><option value="MAX_SESSIONS_PER_DAY">Max sessions/day</option><option value="MAX_DAYS_PER_WEEK">Max days/week</option><option value="MAX_CONSECUTIVE_BLOCKS">Avoid consecutive blocks</option></select></label><label className={styles.field}><span>Giới hạn</span><input type="number" min="1" value={limit} onChange={(event) => setLimit(Number(event.target.value))} /></label></div><div className={styles.inlineFields}><label className={styles.field}><span>Loại</span><select value={hardness} onChange={(event) => setHardness(event.target.value as "hard" | "soft")}><option value="hard">HARD — không được phép vi phạm</option><option value="soft">SOFT — có thể vi phạm nếu cần</option></select></label><label className={styles.field}><span>Weight (SOFT)</span><input type="number" min="0" max="1" step="0.1" disabled={hardness === "hard"} value={weight} onChange={(event) => setWeight(Number(event.target.value))} /></label></div><button type="button" className={styles.secondaryButton} disabled={!lecturerId || limit < 1 || busy} onClick={() => onCreate({ name: `${rule} · ${limit}`, lecturer_id: Number(lecturerId), constraint_type: rule, hardness, weight: hardness === "soft" ? weight : 0, target: min ? { min: limit } : { max: limit }, confirmed: true })}>Thêm workload rule</button></div>;
+}
+
+function CourseAssignmentConstraintComposer({ lecturers, classes, busy, onCreate }: { lecturers: Lecturer[]; classes: ClassItem[]; busy: boolean; onCreate: (payload: Record<string, unknown>) => void }) {
+  const [lecturerId, setLecturerId] = useState(""); const [courseId, setCourseId] = useState(""); const courses = Array.from(new Map(classes.map((item) => [item.course_code, item])).values());
+  return <div className={styles.flatPanel}><span className={styles.eyebrow}>COURSE ASSIGNMENT RULE</span><strong>Không cho một giảng viên dạy toàn bộ các TeachingGroup của một môn.</strong><div className={styles.composerGrid}><label className={styles.field}><span>Giảng viên</span><select value={lecturerId} onChange={(event) => setLecturerId(event.target.value)}><option value="">Chọn giảng viên…</option>{lecturers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className={styles.field}><span>Môn học</span><select value={courseId} onChange={(event) => setCourseId(event.target.value)}><option value="">Chọn môn…</option>{courses.map((item) => <option key={item.course_code} value={item.course_code}>{item.course_code} · {item.course_name}</option>)}</select></label></div><button type="button" className={styles.secondaryButton} disabled={!lecturerId || !courseId || busy} onClick={() => { const course = courses.find((item) => item.course_code === courseId); if (course) onCreate({ name: `Không phân ${course.course_code}`, lecturer_id: Number(lecturerId), constraint_type: "FORBIDDEN_ASSIGNMENT", hardness: "hard", weight: 0, target: { course_id: course.id }, confirmed: true }); }}>Không được dạy môn này</button></div>;
+}
+
+type WorkspaceTab = "overview" | "readiness" | "workload" | "assignments" | "calendar" | "constraints" | "seminars" | "merges" | "problems" | "runs" | "export";
 
 const workspaceItems: Array<{ id: WorkspaceTab; label: string; icon: typeof LayoutDashboard }> = [
   { id: "overview", label: "Tổng quan", icon: LayoutDashboard },
+  { id: "readiness", label: "Sẵn sàng", icon: ShieldCheck },
+  { id: "workload", label: "Tải giảng dạy", icon: Users },
   { id: "assignments", label: "Phân công", icon: Users },
   { id: "calendar", label: "Lịch", icon: CalendarRange },
   { id: "constraints", label: "Ràng buộc", icon: Settings2 },
+  { id: "seminars", label: "Seminar", icon: CalendarRange },
+  { id: "merges", label: "Lớp ghép", icon: Columns3 },
   { id: "problems", label: "Vấn đề", icon: AlertCircle },
   { id: "runs", label: "Phiên bản", icon: RefreshCw },
   { id: "export", label: "Xuất file", icon: Download },
@@ -568,10 +598,15 @@ function SchedulingWorkspace({ metrics, classes, constraints, lecturers, issues,
   const [tab, setTab] = useState<WorkspaceTab>("overview");
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
   const [selectedLecturerId, setSelectedLecturerId] = useState<number | null>(null);
-  const [candidateRows, setCandidateRows] = useState<Array<{ lecturer_id: number; status: string }>>([]);
+  const [candidateRows, setCandidateRows] = useState<Candidate[]>([]);
   const [candidateLoading, setCandidateLoading] = useState(false);
   const [candidateCheck, setCandidateCheck] = useState<{ lecturerId: number; valid: boolean; blocking_reasons: string[] } | null>(null);
   const [problemFilter, setProblemFilter] = useState<"all" | "critical" | "warning" | "info">("all");
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [workload, setWorkload] = useState<Workload[]>([]);
+  const [merges, setMerges] = useState<MergeCandidate[]>([]);
+  const [seminars, setSeminars] = useState<Seminar[]>([]);
+  const [runDiff, setRunDiff] = useState<RunDiff | null>(null);
   const assigned = classes.filter((item) => Boolean(item.lecturer)).length;
   const hardProblems = problems.filter((item) => item.severity === "critical").length;
   const finalReady = metrics.unassigned_classes === 0 && hardProblems === 0 && ["optimal", "feasible"].includes(metrics.optimization_status);
@@ -589,8 +624,22 @@ function SchedulingWorkspace({ metrics, classes, constraints, lecturers, issues,
     setSelectedClass((current) => current ? classes.find((item) => item.id === current.id) ?? null : null);
   }, [classes]);
 
+  useEffect(() => {
+    if (!semesterId) return;
+    void Promise.all([api.readiness(semesterId), api.workload(semesterId), api.mergeCandidates(semesterId), api.seminars(semesterId), api.runs(semesterId)])
+      .then(([nextReadiness, nextWorkload, nextMerges, nextSeminars, runs]) => {
+        setReadiness(nextReadiness); setWorkload(nextWorkload); setMerges(nextMerges); setSeminars(nextSeminars);
+        const latest = runs[0];
+        if (latest) void api.runDiff(latest.id, semesterId).then(setRunDiff).catch(() => setRunDiff(null));
+      }).catch(() => undefined);
+  }, [semesterId, classes, constraints, metrics.optimization_status]);
+
   const inspectClass = (item: ClassItem) => { setSelectedClass(item); setSelectedLecturerId(null); };
   const filteredProblems = problems.filter((item) => problemFilter === "all" || item.severity === problemFilter);
+  const decideMerge = (candidate: MergeCandidate, confirmed: boolean) => {
+    if (!semesterId || candidate.kind !== "FULL") return;
+    void api.decideMerge(candidate.id, confirmed, semesterId).then(() => setMerges((current) => current.map((item) => item.id === candidate.id ? { ...item, status: confirmed ? "confirmed" : "rejected" } : item)));
+  };
 
   return <section className={styles.schedulingShell}>
     <header className={styles.workspaceHeading}>
@@ -607,11 +656,15 @@ function SchedulingWorkspace({ metrics, classes, constraints, lecturers, issues,
           <div className={styles.readinessPanel}><div><span className={styles.eyebrow}>READINESS</span><strong>Draft: sẵn sàng · Final: {finalReady ? "sẵn sàng" : "chưa sẵn sàng"}</strong><p>{finalReady ? "Có thể xuất file Final." : `Cần xử lý ${hardProblems} vấn đề nghiêm trọng và ${metrics.unassigned_classes} TeachingGroup chưa phân trước khi xuất Final.`}</p></div><button type="button" className={styles.secondaryButton} onClick={() => setTab("export")}>Xem điều kiện xuất<ArrowRight size={16} /></button></div>
           <div className={styles.overviewSplit}><div className={styles.flatPanel}><div className={styles.panelHeader}><div><span>PHIÊN GẦN NHẤT</span><strong>{metrics.optimization_status === "not_run" ? "Chưa chạy solver" : metrics.optimization_status}</strong></div><ShieldCheck size={19} /></div><p>{metrics.optimization_status === "blocked" ? "Không thể tạo phương án mới vì có xung đột giữa các phân công đã khóa." : "Mỗi lần chạy tạo một snapshot độc lập; các phân công đã khóa được giữ nguyên."}</p></div><div className={styles.flatPanel}><div className={styles.panelHeader}><div><span>VẤN ĐỀ</span><strong>{problems.length} mục cần theo dõi</strong></div><ListChecks size={19} /></div>{problems.slice(0, 2).map((item) => <button type="button" key={`${item.code}-${item.entity_id}`} className={styles.problemPreview} onClick={() => { setTab("problems"); if (item.entity_type === "class_section") { const found = classes.find((row) => row.id === Number(item.entity_id)); if (found) inspectClass(found); } }}><AlertCircle size={16} /><span>{item.message}</span></button>)}</div></div>
         </> : null}
+        {tab === "readiness" ? <ReadinessPanel readiness={readiness} lecturers={lecturers} issues={issues} semesterId={semesterId} onProblems={() => setTab("problems")} /> : null}
+        {tab === "workload" ? <WorkloadPanel workload={workload} /> : null}
         {tab === "assignments" ? <div className={styles.assignmentTableWrap}><div className={styles.tableToolbar}><div><strong>Danh sách TeachingGroup</strong><small>Bấm một dòng để xem candidate và chỉnh phân công.</small></div><span>{classes.length} lớp</span></div><table className={styles.assignmentTable}><thead><tr><th>Mã lớp</th><th>Môn</th><th>Lịch</th><th>Giảng viên</th><th>Source</th><th>Lock</th><th>Status</th></tr></thead><tbody>{classes.map((item) => <tr key={item.id} className={selectedClass?.id === item.id ? styles.selectedRow : ""} onClick={() => inspectClass(item)}><td>{item.class_code}</td><td><strong>{item.course_name}</strong><small>{item.course_code}</small></td><td>{item.sessions.map((session) => `T${session.weekday} · ${session.start_period}–${session.end_period}`).join(" · ")}</td><td>{item.lecturer ?? "—"}</td><td>{item.assignment_source ?? (item.lecturer ? "IMPORT" : "—")}</td><td>{item.locked_assignment ? <Lock size={16} aria-label="Đã khóa" /> : "—"}</td><td><span className={`${styles.statusPill} ${styles[`status${statusFor(item)}`]}`}>{statusFor(item)}</span></td></tr>)}</tbody></table>{!classes.length ? <div className={styles.emptyPanel}><Users size={24} /><strong>Chưa có TeachingGroup</strong><span>Hãy hoàn tất bước nhập dữ liệu trước.</span></div> : null}</div> : null}
         {tab === "calendar" ? <div className={styles.flatPanel}><div className={styles.panelHeader}><div><span>LỊCH GIẢNG DẠY</span><strong>Thời khóa biểu theo giảng viên</strong></div><select value={selectedLecturerId ?? ""} onChange={(event) => setSelectedLecturerId(event.target.value ? Number(event.target.value) : null)}><option value="">Tất cả giảng viên</option>{lecturers.map((lecturer) => <option key={lecturer.id} value={lecturer.id}>{lecturer.name}</option>)}</select></div><CalendarPreview classes={selectedLecturer ? classes.filter((item) => item.lecturer_id === selectedLecturer.id) : classes} /></div> : null}
-        {tab === "constraints" ? <><div className={styles.workspaceSectionTitle}><div><span>RÀNG BUỘC</span><h3>Lịch nguyện vọng giảng viên</h3></div><span>{constraints.length} quy tắc</span></div><PreferenceComposer lecturers={lecturers} constraints={constraints} busy={busy === "new-constraint"} onCreate={async (payload) => onCreate(payload)} onClose={() => undefined} />{constraints.map((item) => <PreferenceRow key={item.id} item={item} lecturers={lecturers} busy={busy === `constraint-${item.id}`} onSave={onUpdateConstraint} onDelete={onDeleteConstraint} />)}</> : null}
-        {tab === "problems" ? <div className={styles.problemLog}><div className={styles.tableToolbar}><div><strong>Problem Log</strong><small>Thông báo từ backend; không suy diễn thêm ở giao diện.</small></div><div className={styles.problemFilters}>{(["all", "critical", "warning", "info"] as const).map((filter) => <button type="button" key={filter} aria-pressed={problemFilter === filter} onClick={() => setProblemFilter(filter)}>{filter === "all" ? "Tất cả" : filter}</button>)}</div></div>{filteredProblems.length ? filteredProblems.map((item) => <article className={`${styles.problemRow} ${styles[`problem${item.severity}`]}`} key={`${item.code}-${item.entity_type}-${item.entity_id}`}><AlertCircle size={18} /><div><strong>{item.code.replaceAll("_", " ")}</strong><p>{item.message}</p>{item.reasons.length ? <small>{item.reasons.map((reason) => String(reason.reason ?? "")).filter(Boolean).join(" · ")}</small> : null}</div>{item.entity_type === "class_section" ? <button type="button" className={styles.textButton} onClick={() => { const found = classes.find((row) => row.id === Number(item.entity_id)); if (found) { inspectClass(found); setTab("assignments"); } }}>Xem lớp<ArrowRight size={15} /></button> : null}</article>) : <div className={styles.emptyPanel}><CheckCircle2 size={24} /><strong>Không có vấn đề cần xử lý</strong><span>Backend chưa ghi nhận diagnostic cho kỳ học này.</span></div>}</div> : null}
-        {tab === "runs" ? <div className={styles.flatPanel}><span className={styles.eyebrow}>PHIÊN BẢN GẦN NHẤT</span><strong className={styles.runStatus}>{metrics.optimization_status}</strong><p>Mỗi lần chạy lưu một snapshot độc lập. Trạng thái và kết quả chính thức được lấy từ backend.</p></div> : null}
+        {tab === "constraints" ? <><div className={styles.workspaceSectionTitle}><div><span>RÀNG BUỘC</span><h3>Lịch nguyện vọng giảng viên</h3></div><span>{constraints.length} quy tắc</span></div><PreferenceComposer lecturers={lecturers} constraints={constraints} busy={busy === "new-constraint"} onCreate={async (payload) => onCreate(payload)} onClose={() => undefined} /><WorkloadConstraintComposer lecturers={lecturers} busy={busy === "new-constraint"} onCreate={onCreate} /><CourseAssignmentConstraintComposer lecturers={lecturers} classes={classes} busy={busy === "new-constraint"} onCreate={onCreate} />{constraints.map((item) => <PreferenceRow key={item.id} item={item} lecturers={lecturers} busy={busy === `constraint-${item.id}`} onSave={onUpdateConstraint} onDelete={onDeleteConstraint} />)}</> : null}
+        {tab === "seminars" ? <SeminarPanel lecturers={lecturers} seminars={seminars} semesterId={semesterId} /> : null}
+        {tab === "merges" ? <MergePanel candidates={merges} onDecide={decideMerge} /> : null}
+        {tab === "problems" ? <div className={styles.problemLog}><div className={styles.tableToolbar}><div><strong>Problem Log</strong><small>Thông báo từ backend; không suy diễn thêm ở giao diện.</small></div><div className={styles.problemFilters}>{(["all", "critical", "warning", "info"] as const).map((filter) => <button type="button" key={filter} aria-pressed={problemFilter === filter} onClick={() => setProblemFilter(filter)}>{filter === "all" ? "Tất cả" : filter}</button>)}</div></div>{filteredProblems.length ? filteredProblems.map((item) => <article className={`${styles.problemRow} ${styles[`problem${item.severity}`]}`} key={`${item.code}-${item.entity_type}-${item.entity_id}`}><AlertCircle size={18} /><div><strong>{item.code.replaceAll("_", " ")}</strong><p>{item.message}</p>{item.reasons.length ? <small>{item.reasons.map((reason) => String(reason.reason ?? "")).filter(Boolean).join(" · ")}</small> : null}{item.reasons.flatMap((reason) => Array.isArray(reason.class_ids) ? reason.class_ids : []).map((classId) => <button type="button" className={styles.textButton} key={String(classId)} onClick={() => { const found = classes.find((row) => row.id === Number(classId)); if (found) { inspectClass(found); setTab("assignments"); } }}>Mở lớp {classes.find((row) => row.id === Number(classId))?.class_code ?? classId}<ArrowRight size={14} /></button>)}</div>{item.entity_type === "class_section" ? <button type="button" className={styles.textButton} onClick={() => { const found = classes.find((row) => row.id === Number(item.entity_id)); if (found) { inspectClass(found); setTab("assignments"); } }}>Xem lớp<ArrowRight size={15} /></button> : null}</article>) : <div className={styles.emptyPanel}><CheckCircle2 size={24} /><strong>Không có vấn đề cần xử lý</strong><span>Backend chưa ghi nhận diagnostic cho kỳ học này.</span></div>}</div> : null}
+        {tab === "runs" ? <RunDiffPanel status={metrics.optimization_status} diff={runDiff} /> : null}
         {tab === "export" ? <ExportReadiness metrics={metrics} problems={problems} semesterId={semesterId ?? undefined} finalReady={finalReady} /> : null}
       </div>
       {selectedClass ? <aside className={styles.inspector} aria-label="Chi tiết TeachingGroup"><div className={styles.inspectorHeader}><div><span>TEACHINGGROUP</span><strong>{selectedClass.class_code}</strong><small>{selectedClass.course_name}</small></div><button type="button" className={styles.editIcon} onClick={() => setSelectedClass(null)} aria-label="Đóng inspector"><X size={16} /></button></div><div className={styles.inspectorCurrent}><span>Giảng viên hiện tại</span><strong>{selectedClass.lecturer ?? "Chưa phân công"}</strong>{selectedClass.locked_assignment ? <span className={styles.lockedLabel}><Lock size={14} />Đã khóa</span> : null}</div>{selectedClass.locked_assignment ? <button type="button" className={styles.secondaryButton} disabled={busy === `unlock-${selectedClass.id}`} onClick={() => onUnlock(selectedClass.id)}>Mở khóa</button> : null}<div className={styles.candidateList}><span>Ứng viên</span>{candidateLoading ? <div className={styles.candidateLoading}><LoaderCircle size={16} className={styles.spin} />Đang kiểm tra…</div> : candidateRows.map((candidate) => { const lecturer = lecturers.find((item) => item.id === candidate.lecturer_id); const chosen = candidateCheck?.lecturerId === candidate.lecturer_id; return <button type="button" key={candidate.lecturer_id} className={`${styles.candidateRow} ${candidate.status === "ELIGIBLE" ? styles.candidateEligible : ""} ${chosen ? styles.candidateSelected : ""}`} onClick={() => semesterId && void api.checkAssignment(selectedClass.id, candidate.lecturer_id, semesterId).then((result) => setCandidateCheck({ lecturerId: candidate.lecturer_id, valid: result.valid, blocking_reasons: result.blocking_reasons })).catch(() => setCandidateCheck({ lecturerId: candidate.lecturer_id, valid: false, blocking_reasons: ["Không thể kiểm tra candidate"] }))}><span><strong>{lecturer?.name ?? `Giảng viên #${candidate.lecturer_id}`}</strong><small>{candidateReason(candidate.status)}</small></span><span>{candidate.status === "ELIGIBLE" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}</span></button>; })}</div>{candidateCheck ? <div className={candidateCheck.valid ? styles.assignmentCheckOk : styles.assignmentCheckError}>{candidateCheck.valid ? <><CheckCircle2 size={16} />Có thể phân công.</> : <><AlertCircle size={16} />{candidateCheck.blocking_reasons.map(candidateReason).join(" · ")}</>} {candidateCheck.valid ? <div><button type="button" className={styles.secondaryButton} onClick={() => onManual(selectedClass.id, candidateCheck.lecturerId, false)}>Phân công</button><button type="button" className={styles.primaryButton} onClick={() => onManual(selectedClass.id, candidateCheck.lecturerId, true)}>Phân công & khóa</button></div> : null}</div> : null}</aside> : null}
@@ -623,6 +676,34 @@ function SchedulingWorkspace({ metrics, classes, constraints, lecturers, issues,
 function ExportReadiness({ metrics, problems, semesterId, finalReady }: { metrics: DashboardMetrics; problems: Problem[]; semesterId?: number; finalReady: boolean }) {
   const critical = problems.filter((item) => item.severity === "critical");
   return <div className={styles.exportReadiness}><div className={styles.flatPanel}><span className={styles.eyebrow}>DRAFT EXPORT</span><strong>Luôn giữ nguyên cấu trúc file nguồn</strong><p>Chỉ cập nhật ô giảng viên trong bản copy; các ô và thứ tự dòng khác được bảo toàn.</p><a className={styles.primaryButton} href={api.exportUrl("draft", semesterId)}><FileSpreadsheet size={17} />Xuất Draft Excel</a></div><div className={styles.flatPanel}><span className={styles.eyebrow}>FINAL EXPORT</span><strong>{finalReady ? "Sẵn sàng xuất Final" : "Final export chưa sẵn sàng"}</strong><p>{finalReady ? "Không còn điều kiện blocking theo dữ liệu backend." : `${critical.length} vấn đề nghiêm trọng · ${metrics.unassigned_classes} TeachingGroup chưa phân.`}</p>{!finalReady && critical.length ? <ul>{critical.map((item) => <li key={`${item.code}-${item.entity_id}`}>{item.message}</li>)}</ul> : null}{finalReady ? <a className={styles.primaryButton} href={api.exportUrl("final", semesterId)}><Download size={17} />Xuất Final Excel</a> : <button type="button" className={styles.secondaryButton} disabled><Lock size={16} />Cần xử lý trước khi xuất</button>}</div></div>;
+}
+
+function ReadinessPanel({ readiness, lecturers, issues, semesterId, onProblems }: { readiness: Readiness | null; lecturers: Lecturer[]; issues: ValidationIssue[]; semesterId: number | null; onProblems: () => void }) {
+  const [alias, setAlias] = useState(""); const [lecturerId, setLecturerId] = useState(""); const [resolved, setResolved] = useState(false);
+  if (!readiness) return <div className={styles.emptyPanel}><LoaderCircle size={20} className={styles.spin} />Đang kiểm tra dữ liệu…</div>;
+  const ambiguous = issues.filter((item) => item.code === "LECTURER_IDENTITY_AMBIGUOUS");
+  return <div className={styles.flatPanel}><span className={styles.eyebrow}>READY TO SOLVE</span><strong>{readiness.ready ? "Dữ liệu sẵn sàng chạy solver" : "Cần rà soát dữ liệu trước khi chạy solver"}</strong><div className={styles.metricGrid}><Metric label="Giảng viên" value={String(readiness.lecturers.total)} detail={`${readiness.lecturers.resolved} đã xác thực · ${readiness.lecturers.need_review} cần rà soát`} tone={readiness.lecturers.need_review ? "red" : "green"} /><Metric label="TeachingGroups" value={String(readiness.teaching_groups)} detail={`${readiness.meetings} meetings`} tone="blue" /><Metric label="Capability" value={String(readiness.groups_without_capability)} detail="lớp chưa có capability" tone={readiness.groups_without_capability ? "red" : "green"} /></div>{readiness.warnings.length ? <ul>{readiness.warnings.map((item) => <li key={`${item.code}-${item.message}`}><strong>{item.code}</strong> · {item.message}</li>)}</ul> : <p>✓ Lecturer identity, meeting và capability hiện không có cảnh báo blocking.</p>}{ambiguous.length ? <div className={styles.composerGrid}><label className={styles.field}><span>Alias cần map</span><select value={alias} onChange={(event) => setAlias(event.target.value)}><option value="">Chọn alias…</option>{ambiguous.map((item) => <option key={item.id} value={item.raw_value ?? ""}>{item.raw_value ?? item.message}</option>)}</select></label><label className={styles.field}><span>Giảng viên chuẩn</span><select value={lecturerId} onChange={(event) => setLecturerId(event.target.value)}><option value="">Chọn giảng viên…</option>{lecturers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button type="button" className={styles.secondaryButton} disabled={!alias || !lecturerId || !semesterId} onClick={() => semesterId && void api.resolveAlias(Number(lecturerId), alias, semesterId).then(() => setResolved(true))}>Xác nhận alias</button>{resolved ? <small>Đã lưu mapping alias. Làm mới readiness để xem trạng thái mới.</small> : null}</div> : null}<button type="button" className={styles.secondaryButton} onClick={onProblems}>Review Problems<ArrowRight size={16} /></button></div>;
+}
+
+function WorkloadPanel({ workload }: { workload: Workload[] }) {
+  const [descending, setDescending] = useState(true);
+  const rows = [...workload].sort((left, right) => descending ? right.periods - left.periods : left.periods - right.periods);
+  const average = rows.length ? rows.reduce((sum, item) => sum + item.periods, 0) / rows.length : 0;
+  return <div className={styles.flatPanel}><div className={styles.panelHeader}><div><span>WORKLOAD</span><strong>Tải giảng dạy theo giảng viên</strong></div><button type="button" className={styles.secondaryButton} onClick={() => setDescending(!descending)}>{descending ? "Nhiều → ít" : "Ít → nhiều"}</button></div><table className={styles.assignmentTable}><thead><tr><th>Giảng viên</th><th>Groups</th><th>Meetings</th><th>Periods</th><th>Credits</th><th>Trạng thái</th></tr></thead><tbody>{rows.map((item) => <tr key={item.lecturer_id}><td>{item.lecturer}</td><td>{item.teaching_groups}</td><td>{item.meetings}</td><td>{item.periods}</td><td>{item.credits}</td><td>{item.periods > average * 1.4 ? "HIGH LOAD" : item.periods < average * 0.6 ? "LOW LOAD" : "Cân bằng"}</td></tr>)}</tbody></table></div>;
+}
+
+function MergePanel({ candidates, onDecide }: { candidates: MergeCandidate[]; onDecide: (candidate: MergeCandidate, confirmed: boolean) => void }) {
+  return <div className={styles.flatPanel}><span className={styles.eyebrow}>MERGE REVIEW</span><strong>Chỉ ghép khi cùng môn, toàn bộ lịch tương ứng và cùng phòng.</strong>{candidates.length ? <table className={styles.assignmentTable}><thead><tr><th>Loại</th><th>Lớp</th><th>Trùng</th><th>Khác</th><th>Trạng thái</th></tr></thead><tbody>{candidates.map((item) => <tr key={item.id}><td>{item.kind === "PARTIAL" ? "PARTIAL · Review-only" : "FULL"}</td><td>{item.classes.map((row) => row.class_code).join(" ↔ ")}</td><td>{item.matched_meetings} meetings</td><td>{item.different_meetings} meetings</td><td>{item.status}{item.kind === "FULL" && item.status === "candidate" ? <span className={styles.inlineFields}><button type="button" className={styles.secondaryButton} onClick={() => onDecide(item, true)}>Xác nhận ghép</button><button type="button" className={styles.secondaryButton} onClick={() => onDecide(item, false)}>Không ghép</button></span> : null}</td></tr>)}</tbody></table> : <p>Không có merge candidate.</p>}<small>Partial merge chỉ được phát hiện, hiển thị số meeting trùng/khác và yêu cầu review; chưa tự thay đổi solver ở cấp Meeting.</small></div>;
+}
+
+function SeminarPanel({ lecturers, seminars, semesterId }: { lecturers: Lecturer[]; seminars: Seminar[]; semesterId: number | null }) {
+  const [name, setName] = useState(""); const [members, setMembers] = useState<number[]>([]); const [hardness, setHardness] = useState<"hard" | "soft">("soft"); const [weight, setWeight] = useState(0.8); const [slots, setSlots] = useState("4:4-6"); const [saved, setSaved] = useState(false);
+  const save = async () => { if (!semesterId || !name.trim() || !members.length) return; const [weekday, range] = slots.split(":"); const [start, end] = range.split("-").map(Number); await api.createSeminar({ name, members, hardness, weight, alternatives: [{ weekday: Number(weekday), periods: Array.from({ length: end - start + 1 }, (_, index) => start + index) }] }, semesterId); setSaved(true); setName(""); setMembers([]); };
+  return <div className={styles.flatPanel}><span className={styles.eyebrow}>SHARED SEMINAR EVENT</span><strong>Một event chung, nhiều người tham gia — không tạo constraint seminar lặp lại.</strong><div className={styles.composerGrid}><label className={styles.field}><span>Tên seminar</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className={styles.field}><span>Khung cho phép</span><select value={slots} onChange={(event) => setSlots(event.target.value)}>{["2:4-6", "3:4-6", "4:4-6", "5:4-6", "6:4-6", "2:10-12", "3:10-12", "4:10-12", "5:10-12", "6:10-12"].map((item) => <option key={item} value={item}>T{item.replace(":", " · ")}</option>)}</select></label></div><div className={styles.candidateList}><span>Giảng viên tham gia</span>{lecturers.map((item) => <label key={item.id} className={styles.switchLabel}><input type="checkbox" checked={members.includes(item.id)} onChange={() => setMembers((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />{item.name}</label>)}</div><div className={styles.inlineFields}><label className={styles.field}><span>Loại</span><select value={hardness} onChange={(event) => setHardness(event.target.value as "hard" | "soft")}><option value="soft">SOFT</option><option value="hard">HARD</option></select></label><label className={styles.field}><span>Weight (SOFT)</span><input type="number" min="0" max="1" step="0.1" disabled={hardness === "hard"} value={weight} onChange={(event) => setWeight(Number(event.target.value))} /></label></div><button type="button" className={styles.primaryButton} onClick={() => void save()} disabled={!name.trim() || !members.length}>Lưu seminar chung</button>{saved ? <small>Đã lưu shared seminar. Chạy lại solver để áp dụng.</small> : null}<div className={styles.problemLog}>{seminars.map((item) => <p key={item.id}><strong>{item.name}</strong> · {item.members.length} participants · {item.hardness.toUpperCase()} {item.hardness === "soft" ? `— ${item.weight.toFixed(1)}` : "— không được vi phạm"}</p>)}</div></div>;
+}
+
+function RunDiffPanel({ status, diff }: { status: string; diff: RunDiff | null }) {
+  return <div className={styles.flatPanel}><span className={styles.eyebrow}>RE-SOLVE RESULT</span><strong className={styles.runStatus}>{status}</strong>{diff ? <><p>Assigned: {diff.assigned} · Unassigned: {diff.unassigned} · Changed: {diff.changed_assignments} · New problems: {diff.new_problems} · Resolved: {diff.resolved_problems}</p>{diff.changes.length ? <table className={styles.assignmentTable}><thead><tr><th>TeachingGroup</th><th>Before</th><th>After</th><th>Source</th><th>Lock</th></tr></thead><tbody>{diff.changes.map((item) => <tr key={item.class_id}><td>{item.class_code}</td><td>{item.before_lecturer ?? "—"}</td><td>{item.after_lecturer ?? "—"}</td><td>{item.source ?? "—"}</td><td>{item.locked ? "Locked" : "—"}</td></tr>)}</tbody></table> : <p>Không có thay đổi so với phiên trước.</p>}</> : <p>Chưa có diff vì chưa có hai phiên solver liên tiếp.</p>}</div>;
 }
 
 // Retained only as a compatibility view while the scheduling workspace is

@@ -22,12 +22,14 @@ export type Session = {
 
 export type ClassItem = {
   id: number;
+  course_id: number;
   course_code: string;
   course_name: string;
   class_code: string;
   credits: number;
   merged_group_id: string | null;
   merged_confirmed: boolean;
+  merge_status?: "single" | "candidate" | "confirmed" | "rejected";
   locked_assignment: boolean;
   assignment_source?: string | null;
   lecturer_id: number | null;
@@ -46,7 +48,25 @@ export type AssignmentItem = {
   sessions: Array<{ weekday: number; periods: string; room: string }>;
 };
 
-export type Candidate = { lecturer_id: number; status: string };
+export type Candidate = { lecturer_id: number; status: string; workload?: { teaching_groups: number; credits: number } };
+
+export type Readiness = {
+  ready: boolean;
+  lecturers: { total: number; resolved: number; need_review: number };
+  teaching_groups: number;
+  meetings: number;
+  valid_meetings: boolean;
+  groups_without_capability: number;
+  warnings: Array<{ code: string; message: string }>;
+};
+
+export type Workload = { lecturer_id: number; lecturer: string; teaching_groups: number; meetings: number; periods: number; credits: number };
+
+export type MergeCandidate = { kind: "FULL" | "PARTIAL"; id: string; status: string; classes: Array<{ id: number; class_code: string; course: string }>; matched_meetings: number; different_meetings: number; review_only?: boolean; meeting_details?: unknown };
+
+export type RunDiff = { run_id: number; previous_run_id: number | null; assigned: number; unassigned: number; changed_assignments: number; changes: Array<{ class_id: number; class_code: string; before_lecturer: string | null; after_lecturer: string | null; source: string | null; locked: boolean }>; new_problems: number; resolved_problems: number };
+
+export type Seminar = { id: number; name: string; chair_name: string; members: number[]; alternatives: Array<Record<string, unknown>>; slots?: Array<Record<string, unknown>>; weight: number; hardness: "hard" | "soft" };
 
 export type AssignmentCheck = {
   valid: boolean;
@@ -106,6 +126,7 @@ export type ValidationIssue = {
   source_file?: string;
   source_row?: number;
   suggestion?: string;
+  raw_value?: string;
 };
 
 export type Semester = {

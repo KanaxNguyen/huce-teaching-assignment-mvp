@@ -45,7 +45,8 @@ def test_legacy_database_upgrades_to_phase1(tmp_path):
 
     migrated = create_engine(f"sqlite:///{database}")
     with migrated.connect() as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0003_human_in_loop"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0004_v11_merge_status"
+        assert "merge_status" in {column["name"] for column in inspect(db).get_columns("classes")}
         assert "lecturer_course_capabilities" in inspect(db).get_table_names()
         for table in ("classes", "constraints", "optimization_runs", "assignments", "import_batches", "output_template_profiles"):
             assert "semester_id" in {column["name"] for column in inspect(db).get_columns(table)}
@@ -70,5 +71,22 @@ def test_interrupted_human_in_loop_migration_resumes_safely(tmp_path):
     command.upgrade(config, "head")
     migrated = create_engine(f"sqlite:///{database}")
     with migrated.connect() as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0003_human_in_loop"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0004_v11_merge_status"
         assert "source" in {column["name"] for column in inspect(db).get_columns("assignments")}
+
+
+def test_merge_status_migration_backfills_existing_review_decisions(tmp_path):
+    database = tmp_path / "merge-status.db"
+    connection = sqlite3.connect(database)
+    connection.executescript(LEGACY_SQL)
+    connection.commit(); connection.close()
+    root = Path(__file__).resolve().parents[3]
+    config = Config(str(root / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", f"sqlite:///{database}")
+    command.upgrade(config, "0003_human_in_loop")
+    with sqlite3.connect(database) as db:
+        db.execute("UPDATE classes SET merged_group_id='M-1', merged_confirmed=1")
+    command.upgrade(config, "head")
+    with sqlite3.connect(database) as db:
+        assert db.execute("SELECT merge_status FROM classes").fetchone() == ("confirmed",)
+        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == ("0004_v11_merge_status",)

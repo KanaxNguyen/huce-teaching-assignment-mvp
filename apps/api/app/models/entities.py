@@ -102,6 +102,9 @@ class ClassSection(Base):
     credits: Mapped[float] = mapped_column(Float, default=0)
     merged_group_id: Mapped[str | None] = mapped_column(String(100))
     merged_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # candidate | confirmed | rejected.  `merged_confirmed` remains for v1
+    # compatibility with existing solver and exported data.
+    merge_status: Mapped[str] = mapped_column(String(20), default="single")
     locked_assignment: Mapped[bool] = mapped_column(Boolean, default=False)
     assigned_lecturer_id: Mapped[int | None] = mapped_column(ForeignKey("lecturers.id"), nullable=True)
     assignment_source: Mapped[str | None] = mapped_column(String(20), nullable=True)

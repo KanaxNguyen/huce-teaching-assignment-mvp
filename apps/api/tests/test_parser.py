@@ -67,6 +67,36 @@ def test_co_teaching_is_preserved_for_review(tmp_path):
     assert result.classes[0].locked_assignment is False
 
 
+def test_schedule_parser_only_suggests_full_merge_when_every_meeting_and_room_match(tmp_path):
+    path = tmp_path / "merge-golden.xlsx"
+    _schedule_book(path, [
+        [1, "M1", "Math", "L1", "", 2, "1-3", "P1", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+        [2, "M1", "Math", "L1", "", 4, "4-6", "P2", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+        [3, "M1", "Math", "L2", "", 2, "1-3", "P1", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+        [4, "M1", "Math", "L2", "", 4, "4-6", "P2", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+        [5, "M1", "Math", "L3", "", 2, "1-3", "P1", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+        [6, "M1", "Math", "L3", "", 5, "4-6", "P2", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+        [7, "M1", "Math", "L4", "", 2, "1-3", "OTHER", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+    ])
+    result = parse_schedule(path)
+    groups = [group.class_keys for group in result.merged_groups]
+    assert ["M1::L1", "M1::L2"] in groups
+    assert any({candidate.left_key, candidate.right_key} == {"M1::L1", "M1::L3"} for candidate in result.partial_merge_candidates)
+    assert not any({candidate.left_key, candidate.right_key} == {"M1::L1", "M1::L4"} for candidate in result.partial_merge_candidates)
+    assert any(issue.code == "PARTIAL_MERGE_CANDIDATE" for issue in result.issues)
+
+
+def test_schedule_parser_never_merges_when_a_room_is_missing(tmp_path):
+    path = tmp_path / "missing-room-golden.xlsx"
+    _schedule_book(path, [
+        [1, "M1", "Math", "L1", "", 2, "1-3", "", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+        [2, "M1", "Math", "L2", "", 2, "1-3", "", 3, "", "01/01/2026", "01/06/2026", "123", "Teacher One"],
+    ])
+    result = parse_schedule(path)
+    assert result.merged_groups == []
+    assert result.partial_merge_candidates == []
+
+
 def test_preference_normalization_extracts_unavailability_rule():
     constraint_type, target, confidence = _infer("Cô xin không dạy thứ 4 tiết 4 đến 6", None)
 
@@ -92,7 +122,7 @@ def test_parse_real_schedule_when_present():
     result = parse_schedule(path)
     assert result.rows_accepted > 300
     assert len(result.classes) > 170
-    assert sum(item.locked_assignment for item in result.classes) > 30
+    assert not any(item.locked_assignment for item in result.classes)
     assert result.merged_groups
 
 

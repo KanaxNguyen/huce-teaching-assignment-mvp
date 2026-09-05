@@ -89,6 +89,19 @@ def test_capability_is_preserved_and_ambiguous_preference_is_flagged(monkeypatch
         assert db.scalar(select(ValidationIssue.code).where(ValidationIssue.semester_id == a.id, ValidationIssue.code == "LECTURER_IDENTITY_AMBIGUOUS"))
 
 
+def test_confirmed_alias_matches_existing_lecturer_without_creating_a_duplicate(monkeypatch):
+    with SessionLocal() as db:
+        a = semester(db, "A")
+        run_import(monkeypatch, db, a.id, "A")
+        teacher = db.scalar(select(Lecturer).where(Lecturer.code == "GV01"))
+        teacher.aliases = ["T. One"]
+        db.commit()
+        monkeypatch.setattr(importer, "parse_preferences", lambda _: [ParsedPreference("T. One", "T. One", 2, "unavailable", {"weekday": 2, "periods": [1, 2, 3]}, "no Tuesday", .9, 4)])
+        importer.import_files(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
+        assert db.query(Lecturer).count() == 1
+        assert db.scalar(select(Constraint.lecturer_id).where(Constraint.semester_id == a.id)) == teacher.id
+
+
 def test_many_rows_form_one_teaching_group_and_many_meetings(monkeypatch):
     with SessionLocal() as db:
         a = semester(db, "A")
@@ -133,7 +146,9 @@ def test_solver_loads_constraints_only_from_target_semester(monkeypatch):
         b_constraint = db.scalar(select(Constraint).where(Constraint.semester_id == b.id))
         b_constraint.hardness = "hard"; b_constraint.target = {"weekday": 2, "periods": [1, 2, 3]}; db.commit()
         assert solve(db, 2, False, a.id).status in {"optimal", "feasible"}
-        assert solve(db, 2, False, b.id).status == "blocked"
+        run_b = solve(db, 2, False, b.id)
+        assert run_b.status in {"optimal", "feasible"}
+        assert run_b.summary["unassigned"]
 
 
 def test_run_assignment_and_template_isolation():

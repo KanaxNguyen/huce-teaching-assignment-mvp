@@ -64,6 +64,15 @@ class MergedGroup:
 
 
 @dataclass
+class PartialMergeCandidate:
+    left_key: str
+    right_key: str
+    matched_sessions: list[tuple]
+    left_only_sessions: list[tuple]
+    right_only_sessions: list[tuple]
+
+
+@dataclass
 class ParseIssue:
     severity: str
     code: str
@@ -84,6 +93,7 @@ class ScheduleParseResult:
     rows_accepted: int
     rows_rejected: int
     header_row: int
+    partial_merge_candidates: list[PartialMergeCandidate] = field(default_factory=list)
 
 
 def clean_text(value: Any) -> str:
@@ -317,7 +327,9 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
                 credits=credits,
                 lecturer_code=lecturer_code,
                 lecturer_name=lecturer_name,
-                locked_assignment=bool(lecturer_name) and not co_teaching,
+                # Imported teacher is an existing assignment, but only an
+                # explicit manager action may lock it for future re-solves.
+                locked_assignment=False,
                 source_file=path.name,
                 source_sheet=sheet_name,
                 source_row=index,
@@ -354,13 +366,17 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
             elif lecturer_name and not current.lecturer_name:
                 current.lecturer_code = lecturer_code
                 current.lecturer_name = lecturer_name
-                current.locked_assignment = True
+                current.locked_assignment = False
         if not any(existing.signature() == parsed_session.signature() for existing in grouped[key].sessions):
             grouped[key].sessions.append(parsed_session)
         accepted += 1
 
     signature_groups: dict[tuple, list[ParsedClass]] = defaultdict(list)
     for parsed_class in grouped.values():
+        # A blank room is insufficient evidence for a merge.  It is common in
+        # source exports and must remain a standalone class until reviewed.
+        if not parsed_class.sessions or not all(session.room.strip() for session in parsed_class.sessions):
+            continue
         full_signature = (
             parsed_class.course_code,
             tuple(sorted(session.signature() for session in parsed_class.sessions)),
@@ -378,6 +394,34 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
             item.merged_group_id = group_id
         merged_groups.append(MergedGroup(group_id, sorted(item.key for item in candidates)))
 
+    partial_merge_candidates: list[PartialMergeCandidate] = []
+    by_course: dict[str, list[ParsedClass]] = defaultdict(list)
+    for item in grouped.values():
+        by_course[item.course_code].append(item)
+    for items in by_course.values():
+        for index, left in enumerate(items):
+            left_sessions = {session.signature() for session in left.sessions if session.room.strip()}
+            if not left_sessions:
+                continue
+            for right in items[index + 1:]:
+                right_sessions = {session.signature() for session in right.sessions if session.room.strip()}
+                matched = left_sessions.intersection(right_sessions)
+                if not matched or left_sessions == right_sessions:
+                    continue
+                candidate = PartialMergeCandidate(
+                    left_key=left.key,
+                    right_key=right.key,
+                    matched_sessions=sorted(matched),
+                    left_only_sessions=sorted(left_sessions - right_sessions),
+                    right_only_sessions=sorted(right_sessions - left_sessions),
+                )
+                partial_merge_candidates.append(candidate)
+                issues.append(ParseIssue(
+                    "warning", "PARTIAL_MERGE_CANDIDATE",
+                    f"{left.class_code} và {right.class_code} chỉ trùng một phần lịch; không tự ghép.",
+                    path.name, sheet_name, suggestion="Mở mục Merge review để xác nhận từng buổi trùng.",
+                ))
+
     return ScheduleParseResult(
         classes=list(grouped.values()),
         merged_groups=merged_groups,
@@ -385,6 +429,7 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
         rows_accepted=accepted,
         rows_rejected=rejected,
         header_row=header + 1,
+        partial_merge_candidates=partial_merge_candidates,
     )
 
 
