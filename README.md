@@ -2,7 +2,7 @@
 
 Ứng dụng web hỗ trợ Bộ môn Toán học nhập lịch học từ Excel, chuẩn hóa dữ liệu, quản lý ràng buộc cứng/mềm, nhận diện lớp ghép, tự động phân công bằng OR-Tools CP-SAT và xuất thời khóa biểu có định dạng.
 
-**Release status:** MVP v1 release-ready và đã đóng băng phạm vi tính năng.
+**Release status:** MVP v1.1 release-ready và đã đóng băng phạm vi tính năng.
 
 > Thiết kế hướng tới **Option 02 — Minimal SaaS**. Kết nối Figma có mặt nhưng file được cung cấp trả về `INVALID_ARGUMENT`, vì vậy chưa có frame/node hoặc asset nào được tuyên bố là đã trích xuất. Wordmark chữ HUCE hiện là fallback, không phải logo chính thức.
 
@@ -24,6 +24,12 @@
 - Dashboard, bảng kết quả, lịch tuần, danh sách xung đột.
 - Bàn phân công gồm dashboard tổng quan, log kiểm tra, lịch preview và trình sửa ràng buộc realtime.
 - Xuất workbook gồm bảng phân công và TKB theo giảng viên.
+
+## MVP v1.1
+
+MVP v1.1 bổ sung semantics Hard/Soft rõ ràng; lecturer identity và Data Readiness; trạng thái Imported/Manual/Locked; merge review; shared seminar; workload view và workload constraints; `MAX_CONSECUTIVE_BLOCKS`; Problem Log có action; giữ workspace context sau mutation; và re-solve diff.
+
+Partial merge hiện chỉ hỗ trợ **REVIEW-ONLY**. True partial merge ở Meeting level chưa được hỗ trợ.
 
 ## Kiến trúc
 
@@ -126,8 +132,7 @@ Khi có asset chính thức, đặt SVG tại `apps/web/public/brand/huce-logo.s
 
 ## Giới hạn hiện tại
 
-- Sau mutation, workspace quay về Tổng quan thay vì giữ tab/inspector đang mở.
-- Problem Log của locked conflict chưa liên kết trực tiếp tới từng TeachingGroup.
+- True partial merge ở Meeting level chưa được hỗ trợ; các trường hợp partial merge chỉ được đưa vào review.
 - Figma chưa đọc được do connector trả `INVALID_ARGUMENT`; giao diện dùng các đặc trưng Option 02 trong yêu cầu làm fallback.
 - Nhận dạng văn bản nguyện vọng chỉ hỗ trợ các mẫu cơ bản và cố ý đưa trường hợp mơ hồ vào danh sách xác nhận.
 - Chưa có xác thực nhiều người dùng hay phân quyền.
