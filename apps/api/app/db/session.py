@@ -44,7 +44,7 @@ def init_db() -> None:
     from alembic.config import Config
 
     config = Config(str(settings.project_root / "alembic.ini"))
-    config.set_main_option("sqlalchemy.url", settings.database_url)
+    config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
     command.upgrade(config, "head")
     # env.py commits the Alembic revision alongside migration DML. Never
     # manually stamp head during startup; upgrade must prove it was reached.

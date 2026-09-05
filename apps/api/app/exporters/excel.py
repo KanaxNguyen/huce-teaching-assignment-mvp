@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import shutil
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-import shutil
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.entities import Assignment, ClassSection, OptimizationRun, OutputTemplateProfile
 from app.services.readiness import validate_schedule
+from app.storage import get_storage_backend
 
 BLUE = "1F5FAA"
 PALE_BLUE = "EAF2FB"
@@ -47,9 +48,17 @@ def export_latest(db: Session, output_dir: Path, semester_id: int, mode: str = "
             selectinload(ClassSection.assigned_lecturer),
         )
     ).all()
-    profile = db.scalar(select(OutputTemplateProfile).where(OutputTemplateProfile.semester_id == semester_id).order_by(OutputTemplateProfile.id.desc()))
+    profile = db.scalar(
+        select(OutputTemplateProfile)
+        .where(OutputTemplateProfile.semester_id == semester_id)
+        .order_by(OutputTemplateProfile.id.desc())
+    )
     if profile:
-        return _export_template(profile, assignments, sections, output_dir)
+        try:
+            with get_storage_backend().materialize(profile.source_file) as source:
+                return _export_template(profile, assignments, sections, output_dir, source=source)
+        except FileNotFoundError as error:
+            raise ValueError("EXPORT_TEMPLATE_SOURCE_NOT_FOUND") from error
     if not assignments:
         raise ValueError("Lần tối ưu gần nhất chưa tạo được phân công; không thể xuất file rỗng.")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -177,8 +186,10 @@ def _export_template(
     assignments: list[Assignment],
     sections: list[ClassSection],
     output_dir: Path,
+    *,
+    source: Path | None = None,
 ) -> Path:
-    source = Path(profile.source_file)
+    source = source or Path(profile.source_file)
     if not source.exists():
         raise ValueError("EXPORT_TEMPLATE_SOURCE_NOT_FOUND")
     mappings = profile.mappings or {}

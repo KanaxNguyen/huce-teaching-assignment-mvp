@@ -1,6 +1,9 @@
 import type { AssignmentCheck, AssignmentItem, Candidate, ClassItem, Constraint, DashboardMetrics, Lecturer, MergeCandidate, OptimizationResult, Problem, Readiness, RunDiff, Seminar, Semester, TemplateDetection, ValidationIssue, Workload } from "@/src/types/api";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+// Local development can call FastAPI directly. Preview/staging omits the
+// public URL and uses the same-origin BFF so its backend credential never
+// enters the browser bundle.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "/api/backend";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}/api/v1${path}`, {

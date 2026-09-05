@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import shutil
+import tempfile
+from contextlib import ExitStack, contextmanager
 from datetime import date
 from pathlib import Path
+from uuid import uuid4
+from zipfile import BadZipFile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from openpyxl.utils.exceptions import InvalidFileException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
+from starlette.background import BackgroundTask
+from xlrd.biffh import XLRDError
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -19,8 +26,8 @@ from app.models.entities import (
     Constraint,
     Lecturer,
     LecturerCourseCapability,
-    OutputTemplateProfile,
     OptimizationRun,
+    OutputTemplateProfile,
     Semester,
     Seminar,
     ValidationIssue,
@@ -28,10 +35,10 @@ from app.models.entities import (
 from app.optimization.solver import solve
 from app.parsers.preferences import describe_preference
 from app.schemas.api import (
+    AliasResolution,
     ConstraintCreate,
     ConstraintUpdate,
     ImportResponse,
-    AliasResolution,
     MergedDecision,
     OptimizationRequest,
     SemesterCreate,
@@ -41,6 +48,7 @@ from app.schemas.api import (
 from app.services.importer import dashboard, import_files
 from app.services.manual_assignment import apply_manual_assignment, check_assignment_change
 from app.services.template_detector import detect_output_template
+from app.storage import get_storage_backend
 
 router = APIRouter(prefix="/api/v1")
 
@@ -53,15 +61,34 @@ def _semester_id(db: Session, requested: int | None) -> int:
     return semester.id
 
 
-def _save_typed_upload(item: UploadFile, directory: Path) -> Path:
-    suffix = Path(item.filename or "").suffix.lower()
+WORKBOOK_ERRORS = (BadZipFile, InvalidFileException, XLRDError, OSError)
+STORAGE_WORKBOOK_ERRORS = (FileNotFoundError, ValueError) + WORKBOOK_ERRORS
+
+
+def _copy_upload_limited(item: UploadFile, path: Path) -> None:
+    total = 0
+    with path.open("xb") as handle:
+        while chunk := item.file.read(1024 * 1024):
+            total += len(chunk)
+            if total > settings.max_upload_bytes:
+                raise HTTPException(413, "File vượt quá dung lượng cho phép.")
+            handle.write(chunk)
+
+
+@contextmanager
+def _temporary_typed_upload(item: UploadFile):
+    raw_name = Path((item.filename or "upload").replace("\\", "/")).name
+    raw_suffix = Path(raw_name).suffix
+    safe_name = f"{Path(raw_name).stem[:160]}{raw_suffix}" or "upload"
+    suffix = Path(safe_name).suffix.lower()
     if suffix not in {".xls", ".xlsx"}:
         raise HTTPException(415, f"Định dạng không hỗ trợ: {suffix}")
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / Path(item.filename or f"upload{suffix}").name
-    with path.open("wb") as handle:
-        shutil.copyfileobj(item.file, handle)
-    return path
+    with tempfile.TemporaryDirectory(prefix="huce-upload-") as directory:
+        # The directory is unique, while the basename is retained because it
+        # is import provenance used by the existing exporter row matching.
+        path = Path(directory) / safe_name
+        _copy_upload_limited(item, path)
+        yield path
 
 
 @router.get("/health")
@@ -118,13 +145,18 @@ def detect_template(
     semester_id: int | None = Query(None),
     db: Session = Depends(get_db),
 ) -> dict:
-    path = _save_typed_upload(template_file, settings.resolve(settings.upload_dir) / "template")
-    result = detect_output_template(path)
+    sid = _semester_id(db, semester_id)
+    try:
+        with _temporary_typed_upload(template_file) as path:
+            result = detect_output_template(path)
+            reference = get_storage_backend().put(
+                path, f"templates/{sid}/{uuid4().hex}/{path.name}"
+            )
+    except WORKBOOK_ERRORS as error:
+        raise HTTPException(422, "Không thể đọc workbook mẫu.") from error
     profile = OutputTemplateProfile(
-        semester_id=_semester_id(db, semester_id),
-        # The profile is executable data, not merely a preview.  Keep the
-        # exact saved upload so an export can copy that workbook later.
-        source_file=str(path.resolve()),
+        semester_id=sid,
+        source_file=reference,
         source_sheet=result["source_sheet"],
         header_row=result["header_row"],
         mappings=result["mappings"],
@@ -145,14 +177,10 @@ def get_latest_template(semester_id: int | None = Query(None), db: Session = Dep
     ).first()
     if not profile:
         return None
-    source_path = Path(profile.source_file)
-    if not source_path.exists():
-        # Compatibility with profiles created before source_file was stored
-        # as an absolute upload path.
-        source_path = settings.resolve(settings.upload_dir) / "template" / Path(profile.source_file).name
-    if source_path.exists():
-        result = detect_output_template(source_path)
-    else:
+    try:
+        with get_storage_backend().materialize(profile.source_file) as source_path:
+            result = detect_output_template(source_path)
+    except STORAGE_WORKBOOK_ERRORS:
         result = {
             "source_file": profile.source_file,
             "source_sheet": profile.source_sheet,
@@ -198,21 +226,14 @@ def import_local(semester_id: int | None = Query(None), db: Session = Depends(ge
 
 @router.post("/imports/upload", response_model=ImportResponse)
 def upload(files: list[UploadFile] = File(...), semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> dict:
-    upload_dir = settings.resolve(settings.upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    paths = []
-    for item in files:
-        suffix = Path(item.filename or "").suffix.lower()
-        if suffix not in {".xls", ".xlsx"}:
-            raise HTTPException(415, f"Định dạng không hỗ trợ: {suffix}")
-        path = upload_dir / Path(item.filename or f"upload{suffix}").name
-        with path.open("wb") as handle:
-            shutil.copyfileobj(item.file, handle)
-        paths.append(path)
     try:
-        return import_files(db, paths, semester_id=_semester_id(db, semester_id))
+        with ExitStack() as stack:
+            paths = [stack.enter_context(_temporary_typed_upload(item)) for item in files]
+            return import_files(db, paths, semester_id=_semester_id(db, semester_id))
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+    except WORKBOOK_ERRORS as error:
+        raise HTTPException(422, "Không thể đọc workbook đã tải lên.") from error
 
 
 @router.post("/imports/upload-pair", response_model=ImportResponse)
@@ -222,19 +243,21 @@ def upload_pair(
     semester_id: int | None = Query(None),
     db: Session = Depends(get_db),
 ) -> dict:
-    upload_dir = settings.resolve(settings.upload_dir)
-    schedule_path = _save_typed_upload(schedule_file, upload_dir / "schedule")
-    preference_path = _save_typed_upload(preference_file, upload_dir / "preference")
     try:
-        return import_files(
-            db,
-            [schedule_path, preference_path],
-            schedule_paths=[schedule_path],
-            preference_paths=[preference_path],
-            semester_id=_semester_id(db, semester_id),
-        )
+        with ExitStack() as stack:
+            schedule_path = stack.enter_context(_temporary_typed_upload(schedule_file))
+            preference_path = stack.enter_context(_temporary_typed_upload(preference_file))
+            return import_files(
+                db,
+                [schedule_path, preference_path],
+                schedule_paths=[schedule_path],
+                preference_paths=[preference_path],
+                semester_id=_semester_id(db, semester_id),
+            )
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
+    except WORKBOOK_ERRORS as error:
+        raise HTTPException(422, "Không thể đọc workbook đã tải lên.") from error
 
 
 @router.get("/dashboard")
@@ -750,12 +773,15 @@ def download_export(
     mode: str = Query("draft", pattern="^(draft|final)$"),
     db: Session = Depends(get_db),
 ) -> FileResponse:
+    directory = Path(tempfile.mkdtemp(prefix="huce-export-"))
     try:
-        path = export_latest(db, settings.resolve(settings.export_dir), _semester_id(db, semester_id), mode=mode)
+        path = export_latest(db, directory, _semester_id(db, semester_id), mode=mode)
     except ValueError as error:
+        shutil.rmtree(directory, ignore_errors=True)
         raise HTTPException(422, str(error)) from error
     return FileResponse(
         path,
         filename=path.name,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        background=BackgroundTask(shutil.rmtree, directory, ignore_errors=True),
     )

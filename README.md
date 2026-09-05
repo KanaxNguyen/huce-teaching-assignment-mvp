@@ -34,7 +34,7 @@ Partial merge hiện chỉ hỗ trợ **REVIEW-ONLY**. True partial merge ở Me
 ## Kiến trúc
 
 - `apps/web`: Next.js, React, TypeScript, CSS Modules.
-- `apps/api`: FastAPI, SQLAlchemy, SQLite, openpyxl/xlrd, OR-Tools.
+- `apps/api`: FastAPI, SQLAlchemy, Alembic, SQLite (development), PostgreSQL (staging), openpyxl/xlrd, OR-Tools.
 - `data/local`: dữ liệu Excel thật, bị Git ignore.
 - `data/fixtures`: dữ liệu kiểm thử ẩn danh.
 - `storage`: database, upload và export cục bộ, bị Git ignore.
@@ -81,6 +81,19 @@ docker compose up --build
 ```
 
 Docker chưa được cài trên máy phát triển hiện tại, nên cấu hình đã được tạo nhưng chưa thể chạy xác minh tại đây.
+
+## Staging deployment
+
+Staging dùng Vercel Preview cho Next.js, một FastAPI container bền vững, PostgreSQL managed và private S3-compatible storage. Trình duyệt gọi same-origin BFF `/api/backend`; chỉ BFF giữ `INTERNAL_API_TOKEN` để gọi backend. Không đặt token này trong biến `NEXT_PUBLIC_*`.
+
+Trước khi khởi động hoặc cập nhật backend staging, chạy migration như một release command riêng:
+
+```bash
+ENVIRONMENT=staging DATABASE_URL="$DATABASE_URL" \
+  .venv/bin/alembic -c alembic.ini upgrade head
+```
+
+Backend staging phải đặt `RUN_MIGRATIONS_ON_STARTUP=false`; application replica sẽ không tự chạy Alembic. Danh sách biến bắt buộc và placeholder an toàn nằm trong `.env.example`. Quy trình đầy đủ nằm tại `docs/staging-deployment.md`.
 
 ## Kiểm thử
 
@@ -129,6 +142,7 @@ Khi có asset chính thức, đặt SVG tại `apps/web/public/brand/huce-logo.s
 - `docs/data-analysis.md`
 - `docs/architecture.md`
 - `docs/api.md`
+- `docs/staging-deployment.md`
 
 ## Giới hạn hiện tại
 
