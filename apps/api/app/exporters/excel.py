@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import re
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -181,6 +182,53 @@ def _cell(value: object) -> str:
     return str(value or "").strip().casefold()
 
 
+def _periods(value: object) -> tuple[int, ...]:
+    """Normalize an Excel period cell without guessing its meaning."""
+    return tuple(int(item) for item in re.findall(r"\d+", str(value or "")))
+
+
+def _template_row_candidates(
+    candidates: list[tuple[ClassSection, object]],
+    sheet: object,
+    row: int,
+    columns: dict[str, int],
+) -> list[tuple[ClassSection, object]]:
+    """Use optional schedule columns to disambiguate a repeated class row.
+
+    A prior-semester output template normally has one row per meeting.  Its
+    row numbers cannot be trusted for a newly imported schedule, so course +
+    class alone may identify several meetings.  Each recognised schedule
+    column narrows the candidate set only when it has a matching value; stale
+    room/week values in an old template therefore cannot turn a valid row into
+    an unmapped row.
+    """
+    def narrow(matches: list[tuple[ClassSection, object]]) -> None:
+        nonlocal candidates
+        if matches:
+            candidates = matches
+
+    if "weekday" in columns:
+        value = _cell(sheet.cell(row, columns["weekday"]).value)
+        if value:
+            narrow([item for item in candidates if _cell(item[1].weekday) == value])
+    if "periods" in columns:
+        value = _periods(sheet.cell(row, columns["periods"]).value)
+        if value:
+            narrow([
+                item for item in candidates
+                if _periods(f"{item[1].start_period}-{item[1].end_period}") == value
+            ])
+    if "room" in columns:
+        value = _cell(sheet.cell(row, columns["room"]).value)
+        if value:
+            narrow([item for item in candidates if _cell(item[1].room) == value])
+    if "weeks" in columns:
+        value = _cell(sheet.cell(row, columns["weeks"]).value)
+        if value:
+            narrow([item for item in candidates if _cell(item[1].raw_weeks) == value])
+    return candidates
+
+
 def _export_template(
     profile: OutputTemplateProfile,
     assignments: list[Assignment],
@@ -238,6 +286,8 @@ def _export_template(
         if not candidates:
             candidates = by_class_key.get(key, [])
         candidates = [item for item in candidates if (_cell(item[0].course.code), _cell(item[0].class_code)) == key]
+        if len(candidates) > 1:
+            candidates = _template_row_candidates(candidates, sheet, row, columns)
         if len(candidates) != 1:
             raise ValueError("EXPORT_SOURCE_ROW_AMBIGUOUS" if len(candidates) > 1 else "EXPORT_SOURCE_ROW_UNMAPPED")
         section, meeting = candidates[0]
