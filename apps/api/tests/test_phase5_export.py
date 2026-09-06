@@ -106,3 +106,35 @@ def test_prior_output_template_allows_repeated_meetings_of_one_teaching_group(tm
     output = load_workbook(result)["S"]
     assert output.cell(2, 3).value == "A"
     assert output.cell(3, 3).value == "A"
+
+
+def test_prior_output_template_preserves_unmatched_historical_rows(tmp_path):
+    source = tmp_path / "prior-output.xlsx"
+    book = Workbook()
+    sheet = book.active
+    sheet.title = "S"
+    sheet.append(["Mã học phần", "Mã lớp học", "Giảng viên"])
+    sheet.append(["C", "L0", "old-current"])
+    sheet.append(["OLD", "HISTORICAL", "keep-history"])
+    book.save(source)
+    with SessionLocal() as db:
+        semester, course, lecturer, _, _ = setup(db)
+        capability(db, lecturer, course)
+        solve(db, 2, False, semester.id)
+        db.add(OutputTemplateProfile(
+            semester_id=semester.id,
+            source_file=str(source),
+            source_sheet="S",
+            header_row=1,
+            mappings={
+                "course_code": {"column_index": 1},
+                "class_code": {"column_index": 2},
+                "lecturer": {"column_index": 3},
+            },
+            missing_fields=[],
+        ))
+        db.commit()
+        result = export_latest(db, tmp_path / "out", semester.id)
+    output = load_workbook(result)["S"]
+    assert output.cell(2, 3).value == "A"
+    assert output.cell(3, 3).value == "keep-history"

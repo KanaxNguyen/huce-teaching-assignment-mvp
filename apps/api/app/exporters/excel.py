@@ -286,6 +286,12 @@ def _export_template(
         if not candidates:
             candidates = by_class_key.get(key, [])
         candidates = [item for item in candidates if (_cell(item[0].course.code), _cell(item[0].class_code)) == key]
+        # A prior-semester template can retain classes that are absent from the
+        # current semester.  Leave those rows untouched; a template created
+        # from the current import is still completeness-checked below through
+        # its source-row identity.
+        if not candidates:
+            continue
         if len(candidates) > 1:
             candidates = _template_row_candidates(candidates, sheet, row, columns)
         # An output row only stores the lecturer.  Multiple meetings of the
