@@ -170,7 +170,7 @@ def test_release_migration_command_uses_database_url_environment(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (
-            "0004_v11_merge_status",
+            "0005_preference_normalization_v2",
         )
 
 

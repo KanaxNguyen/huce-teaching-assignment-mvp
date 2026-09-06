@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.routes import get_assignments, get_constraints, get_latest_template, get_optimization_runs
 from app.db.session import Base, SessionLocal, engine
-from app.models.entities import Assignment, ClassSection, Constraint, Course, ImportBatch, Lecturer, LecturerCourseCapability, OptimizationRun, OutputTemplateProfile, Semester, Seminar, ValidationIssue
+from app.models.entities import Assignment, ClassSection, Constraint, Course, ImportBatch, Lecturer, LecturerCourseCapability, NormalizedPreferenceDraft, OptimizationRun, OutputTemplateProfile, Semester, Seminar, ValidationIssue
 from app.parsers.preferences import ParsedPreference
 from app.parsers.schedule import ParsedClass, ParsedSession, ScheduleParseResult
 from app.services import importer
@@ -99,7 +99,8 @@ def test_confirmed_alias_matches_existing_lecturer_without_creating_a_duplicate(
         monkeypatch.setattr(importer, "parse_preferences", lambda _: [ParsedPreference("T. One", "T. One", 2, "unavailable", {"weekday": 2, "periods": [1, 2, 3]}, "no Tuesday", .9, 4)])
         importer.import_files(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
         assert db.query(Lecturer).count() == 1
-        assert db.scalar(select(Constraint.lecturer_id).where(Constraint.semester_id == a.id)) == teacher.id
+        assert db.scalar(select(NormalizedPreferenceDraft.lecturer_id).where(NormalizedPreferenceDraft.semester_id == a.id)) == teacher.id
+        assert db.scalar(select(Constraint).where(Constraint.semester_id == a.id)) is None
 
 
 def test_many_rows_form_one_teaching_group_and_many_meetings(monkeypatch):
@@ -143,8 +144,9 @@ def test_solver_loads_constraints_only_from_target_semester(monkeypatch):
     with SessionLocal() as db:
         a, b = semester(db, "A"), semester(db, "B")
         run_import(monkeypatch, db, a.id, "A"); run_import(monkeypatch, db, b.id, "B")
-        b_constraint = db.scalar(select(Constraint).where(Constraint.semester_id == b.id))
-        b_constraint.hardness = "hard"; b_constraint.target = {"weekday": 2, "periods": [1, 2, 3]}; db.commit()
+        teacher = db.scalar(select(Lecturer).where(Lecturer.code == "GV01"))
+        b_constraint = Constraint(semester_id=b.id, lecturer_id=teacher.id, name="B only", constraint_type="unavailable", hardness="hard", weight=1, target={"weekday": 2, "periods": [1, 2, 3]}, confirmed=True)
+        db.add(b_constraint); db.commit()
         assert solve(db, 2, False, a.id).status in {"optimal", "feasible"}
         run_b = solve(db, 2, False, b.id)
         assert run_b.status in {"optimal", "feasible"}

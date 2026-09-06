@@ -23,7 +23,9 @@ test-results/
 outputs/
 *.xls
 *.xlsx
+.DS_Store
 !data/fixtures/*.json
+!data/fixtures/Template_Nguyen_vong_Giang_v2.xlsx
 !data/manifests/source-files.example.json
 data/manifests/source-files.json
 .vercel

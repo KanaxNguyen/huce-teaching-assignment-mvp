@@ -100,7 +100,7 @@ def test_fresh_postgresql_migration_foreign_keys_and_unique_constraints():
             version = connection.execute(
                 sa.text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-        assert version == "0004_v11_merge_status"
+        assert version == "0005_preference_normalization_v2"
 
         token = "postgres-runtime-test-token"
         environment = {

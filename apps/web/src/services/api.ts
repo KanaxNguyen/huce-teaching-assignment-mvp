@@ -1,4 +1,4 @@
-import type { AssignmentCheck, AssignmentItem, Candidate, ClassItem, Constraint, DashboardMetrics, Lecturer, MergeCandidate, OptimizationResult, Problem, Readiness, RunDiff, Seminar, Semester, TemplateDetection, ValidationIssue, Workload } from "@/src/types/api";
+import type { AssignmentCheck, AssignmentItem, Candidate, ClassItem, Constraint, DashboardMetrics, Lecturer, MergeCandidate, OptimizationResult, PreferenceDraft, Problem, Readiness, RunDiff, Seminar, Semester, TemplateDetection, ValidationIssue, Workload } from "@/src/types/api";
 
 // Local development can call FastAPI directly. Preview/staging omits the
 // public URL and uses the same-origin BFF so its backend credential never
@@ -56,6 +56,15 @@ export const api = {
     body.append("preference_file", preferenceFile);
     return request<Record<string, unknown>>("/imports/upload-pair", { method: "POST", body });
   },
+  preferenceDrafts: (semesterId: number) => request<PreferenceDraft[]>(`/preference-drafts?semester_id=${semesterId}`),
+  createPreferenceDraft: (payload: Record<string, unknown>, semesterId: number) =>
+    request<{ ids: number[]; created: number; atomic_split: boolean }>(`/preference-drafts?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify(payload) }),
+  updatePreferenceDraft: (id: number, payload: Partial<PreferenceDraft>, semesterId: number) =>
+    request<PreferenceDraft>(`/preference-drafts/${id}?semester_id=${semesterId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  confirmHighPreferenceDrafts: (semesterId: number) =>
+    request<{ confirmed: number }>(`/preference-drafts/confirm-high?semester_id=${semesterId}`, { method: "POST" }),
+  applyPreferenceDrafts: (ids: number[], semesterId: number) =>
+    request<{ applied: number; constraints: number; seminars: number }>(`/preference-drafts/apply?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify({ draft_ids: ids }) }),
   createConstraint: (payload: Record<string, unknown>) =>
     request<{ id: number }>("/constraints", { method: "POST", body: JSON.stringify(payload) }),
   updateConstraint: (id: number, payload: Partial<Constraint>) =>

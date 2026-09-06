@@ -156,6 +156,47 @@ class Constraint(Base):
     lecturer: Mapped[Lecturer | None] = relationship()
 
 
+class NormalizedPreferenceDraft(Base):
+    """Reviewable parser output. Solver-visible constraints are created only on apply."""
+
+    __tablename__ = "normalized_preference_drafts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    semester_id: Mapped[int] = mapped_column(ForeignKey("semesters.id"))
+    import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"), nullable=True)
+    lecturer_id: Mapped[int | None] = mapped_column(ForeignKey("lecturers.id"), nullable=True)
+    lecturer_code: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    lecturer_alias: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    draft_kind: Mapped[str] = mapped_column(String(30), default="CONSTRAINT")
+    context_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    context_confidence: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    context_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    constraint_type: Mapped[str] = mapped_column(String(60))
+    day_scope: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    periods: Mapped[list] = mapped_column(JSON, default=list)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    hardness: Mapped[str] = mapped_column(String(10), default="soft")
+    weight: Mapped[float] = mapped_column(Float, default=0.8)
+    numeric_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    target: Mapped[dict] = mapped_column(JSON, default=dict)
+    participant_codes: Mapped[list] = mapped_column(JSON, default=list)
+    seminar_link: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    source_file: Mapped[str] = mapped_column(String(300))
+    source_sheet: Mapped[str] = mapped_column(String(100))
+    source_row: Mapped[int] = mapped_column(Integer)
+    source_cell: Mapped[str] = mapped_column(String(60))
+    raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[str] = mapped_column(String(10), default="LOW")
+    needs_review: Mapped[bool] = mapped_column(Boolean, default=True)
+    review_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="DRAFT")
+    applied_constraint_id: Mapped[int | None] = mapped_column(ForeignKey("constraints.id"), nullable=True)
+    applied_seminar_id: Mapped[int | None] = mapped_column(ForeignKey("seminars.id"), nullable=True)
+
+    lecturer: Mapped[Lecturer | None] = relationship(foreign_keys=[lecturer_id])
+
+
 class Seminar(Base):
     __tablename__ = "seminars"
 

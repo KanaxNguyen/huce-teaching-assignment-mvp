@@ -45,7 +45,7 @@ def test_legacy_database_upgrades_to_phase1(tmp_path):
 
     migrated = create_engine(f"sqlite:///{database}")
     with migrated.connect() as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0004_v11_merge_status"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0005_preference_normalization_v2"
         assert "merge_status" in {column["name"] for column in inspect(db).get_columns("classes")}
         assert "lecturer_course_capabilities" in inspect(db).get_table_names()
         for table in ("classes", "constraints", "optimization_runs", "assignments", "import_batches", "output_template_profiles"):
@@ -71,7 +71,7 @@ def test_interrupted_human_in_loop_migration_resumes_safely(tmp_path):
     command.upgrade(config, "head")
     migrated = create_engine(f"sqlite:///{database}")
     with migrated.connect() as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0004_v11_merge_status"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0005_preference_normalization_v2"
         assert "source" in {column["name"] for column in inspect(db).get_columns("assignments")}
 
 
@@ -89,4 +89,4 @@ def test_merge_status_migration_backfills_existing_review_decisions(tmp_path):
     command.upgrade(config, "head")
     with sqlite3.connect(database) as db:
         assert db.execute("SELECT merge_status FROM classes").fetchone() == ("confirmed",)
-        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == ("0004_v11_merge_status",)
+        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == ("0005_preference_normalization_v2",)

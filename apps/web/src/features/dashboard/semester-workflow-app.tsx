@@ -39,6 +39,7 @@ import type {
   DashboardMetrics,
   Lecturer,
   MergeCandidate,
+  PreferenceDraft,
   Problem,
   Readiness,
   RunDiff,
@@ -50,6 +51,7 @@ import type {
 } from "@/src/types/api";
 
 import styles from "./semester-workflow.module.css";
+import { preferenceRuleTypesForContext } from "./preference-context";
 
 type View = "semester" | "template" | "inputs" | "preferences" | "workspace" | "publish";
 
@@ -91,6 +93,7 @@ export function SemesterWorkflowApp() {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [constraints, setConstraints] = useState<Constraint[]>([]);
+  const [preferenceDrafts, setPreferenceDrafts] = useState<PreferenceDraft[]>([]);
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -120,6 +123,7 @@ export function SemesterWorkflowApp() {
       setIssues(issueRows);
       setTemplate(latestTemplate);
       const active = semesterRows.find((item) => item.is_active) ?? semesterRows[0];
+      setPreferenceDrafts(active ? await api.preferenceDrafts(active.id) : []);
       setProblems(active ? await api.problems(active.id) : []);
       setError(null);
     } catch (reason) {
@@ -242,12 +246,14 @@ export function SemesterWorkflowApp() {
           ) : null}
           {!loading && view === "preferences" ? (
             <PreferenceReview
-              constraints={constraints}
+              drafts={preferenceDrafts}
               lecturers={lecturers}
+              semesterId={activeSemester?.id ?? null}
               busy={busy}
-              onSave={(item, payload) => execute(`constraint-${item.id}`, () => api.updateConstraint(item.id, payload), "Đã cập nhật quyết định của trưởng bộ môn.")}
-              onDelete={(item) => execute(`delete-${item.id}`, () => api.deleteConstraint(item.id), "Đã loại ràng buộc khỏi phiên lập lịch.")}
-              onCreate={(payload) => execute("new-preference", () => api.createConstraint(payload), "Đã thêm ràng buộc mới vào danh sách nguyện vọng.")}
+              onSave={(item, payload) => execute(`draft-${item.id}`, () => api.updatePreferenceDraft(item.id, payload, activeSemester?.id ?? 0), "Đã lưu quyết định duyệt.")}
+              onConfirmHigh={() => execute("confirm-high", () => api.confirmHighPreferenceDrafts(activeSemester?.id ?? 0), "Đã xác nhận các rule HIGH có identity rõ ràng.")}
+              onApply={(ids) => execute("apply-drafts", () => api.applyPreferenceDrafts(ids, activeSemester?.id ?? 0), "Đã áp dụng các nguyện vọng đã xác nhận.")}
+              onCreate={(payload) => execute("new-preference", () => api.createPreferenceDraft(payload, activeSemester?.id ?? 0), "Đã thêm bản nháp nguyện vọng để duyệt.")}
               onNext={() => setView("workspace")}
             />
           ) : null}
@@ -379,17 +385,85 @@ function UploadCard({ number, title, text, file, inputRef, onChange }: { number:
   </div>;
 }
 
-function PreferenceReview({ constraints, lecturers, busy, onSave, onDelete, onCreate, onNext }: { constraints: Constraint[]; lecturers: Lecturer[]; busy: string | null; onSave: (item: Constraint, payload: Partial<Constraint>) => void; onDelete: (item: Constraint) => void; onCreate: (payload: Record<string, unknown>) => Promise<void>; onNext: () => void }) {
-  const pending = constraints.filter((item) => !item.confirmed);
+function PreferenceReview({ drafts, lecturers, semesterId, busy, onSave, onConfirmHigh, onApply, onCreate, onNext }: { drafts: PreferenceDraft[]; lecturers: Lecturer[]; semesterId: number | null; busy: string | null; onSave: (item: PreferenceDraft, payload: Partial<PreferenceDraft>) => void; onConfirmHigh: () => void; onApply: (ids: number[]) => void; onCreate: (payload: Record<string, unknown>) => Promise<void>; onNext: () => void }) {
+  const [filter, setFilter] = useState<"ALL" | "HIGH" | "REVIEW" | "CONFIRMED" | "REJECTED">("ALL");
   const [adding, setAdding] = useState(false);
+  const pending = drafts.filter((item) => item.status === "DRAFT" || item.status === "NEEDS_REVIEW");
+  const visible = drafts.filter((item) => filter === "ALL" || (filter === "REVIEW" ? item.needs_review : filter === item.confidence || filter === item.status));
+  const applicable = drafts.filter((item) => item.status === "CONFIRMED" && !item.needs_review && !item.applied_constraint_id && !item.applied_seminar_id);
   return <section className={styles.viewEnter}>
-    <PageHeading eyebrow="BƯỚC 04" title="Duyệt nguyện vọng đã chuẩn hóa" text="Mỗi câu gốc được chuyển thành quy tắc theo ngày, tiết và loại ưu tiên. Trưởng bộ môn có thể chỉnh hoặc bổ sung trực tiếp." action={<div className={styles.reviewActions}><span className={pending.length ? styles.reviewBadge : styles.readyBadge}>{pending.length} cần xác nhận</span><button type="button" className={styles.secondaryButton} onClick={() => setAdding((value) => !value)}><Plus size={16} />Thêm ràng buộc</button></div>} />
-    {adding ? <PreferenceComposer lecturers={lecturers} busy={busy === "new-preference"} onClose={() => setAdding(false)} onCreate={onCreate} /> : null}
+    <PageHeading eyebrow="BƯỚC 04" title="Duyệt nguyện vọng đã chuẩn hóa" text="Parser chỉ tạo bản nháp. Chỉ quy tắc được trưởng bộ môn xác nhận và áp dụng mới đi vào solver." action={<div className={styles.reviewActions}><span className={pending.length ? styles.reviewBadge : styles.readyBadge}>{pending.length} cần xử lý</span><button type="button" className={styles.secondaryButton} onClick={() => setAdding((value) => !value)}><Plus size={16} />Thêm thủ công</button></div>} />
+    <div className={styles.importBar}><span>{drafts.length} rule · {drafts.filter((item) => item.needs_review).length} cần rà soát · {applicable.length} sẵn sàng áp dụng</span><div><select aria-label="Lọc bản nháp" value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="ALL">Tất cả</option><option value="HIGH">Độ tin cậy cao</option><option value="REVIEW">Cần rà soát</option><option value="CONFIRMED">Đã xác nhận</option><option value="REJECTED">Đã từ chối</option></select><button type="button" className={styles.secondaryButton} disabled={!semesterId || !!busy} onClick={onConfirmHigh}>Xác nhận tất cả HIGH</button><button type="button" className={styles.primaryButton} disabled={!applicable.length || !!busy} onClick={() => onApply(applicable.map((item) => item.id))}>Áp dụng đã xác nhận</button></div></div>
+    {adding ? <ManualDraftComposer lecturers={lecturers} busy={busy === "new-preference"} onClose={() => setAdding(false)} onCreate={onCreate} /> : null}
     <div className={styles.preferenceList}>
-      {constraints.length ? constraints.map((item) => <PreferenceRow key={`${item.id}-${item.hardness}-${item.weight}-${item.active}-${item.confirmed}`} item={item} lecturers={lecturers} busy={busy === `constraint-${item.id}` || busy === `delete-${item.id}`} onSave={onSave} onDelete={onDelete} />) : <div className={styles.emptyPanel}><FileCheck2 size={24} /><strong>Chưa có nguyện vọng</strong><span>Upload file nguyện vọng hoặc tự thêm một quy tắc mới.</span></div>}
+      {visible.length ? visible.map((item) => <DraftPreferenceRow key={`${item.id}-${item.status}-${item.lecturer_id}`} item={item} lecturers={lecturers} busy={busy === `draft-${item.id}`} onSave={onSave} />) : <div className={styles.emptyPanel}><FileCheck2 size={24} /><strong>Không có bản nháp trong bộ lọc</strong><span>Upload file nguyện vọng hoặc đổi bộ lọc.</span></div>}
     </div>
-    <div className={styles.stickyContinue}><span>Chỉ các ràng buộc đã xác nhận và đang bật mới được đưa vào tối ưu.</span><button type="button" className={styles.primaryButton} disabled={!constraints.length} onClick={onNext}>Mở bàn phân công<ArrowRight size={16} /></button></div>
+    <div className={styles.stickyContinue}><span>RAW_NOTE và identity chưa resolve không thể áp dụng vào solver.</span><button type="button" className={styles.primaryButton} disabled={!drafts.length} onClick={onNext}>Mở bàn phân công<ArrowRight size={16} /></button></div>
   </section>;
+}
+
+const draftScopes = ["T2", "T3", "T4", "T5", "T6", "T7", "CN", "ALL_WEEKDAYS", "ALL_DAYS"];
+
+function ManualDraftComposer({ lecturers, busy, onCreate, onClose }: { lecturers: Lecturer[]; busy: boolean; onCreate: (payload: Record<string, unknown>) => Promise<void>; onClose: () => void }) {
+  const [lecturerId, setLecturerId] = useState("");
+  const [context, setContext] = useState<"TEACHING" | "SEMINAR" | "MIXED">("TEACHING");
+  const [type, setType] = useState("UNAVAILABLE");
+  const [scope, setScope] = useState("ALL_WEEKDAYS");
+  const [periodText, setPeriodText] = useState("");
+  const [startDate, setStartDate] = useState(""); const [endDate, setEndDate] = useState("");
+  const [hardness, setHardness] = useState<"hard" | "soft">("soft"); const [weight, setWeight] = useState(0.8);
+  const [numeric, setNumeric] = useState(""); const [seminarLink, setSeminarLink] = useState(""); const [note, setNote] = useState("");
+  const [mixedSeminarScope, setMixedSeminarScope] = useState("T2"); const [mixedSeminarPeriods, setMixedSeminarPeriods] = useState("");
+  const [mixedTeachingScope, setMixedTeachingScope] = useState("T3"); const [mixedTeachingPeriods, setMixedTeachingPeriods] = useState("");
+  const periods = (value: string) => { const bounds = (value.match(/\d+/g) ?? []).map(Number); return bounds.length === 2 ? Array.from({ length: bounds[1] - bounds[0] + 1 }, (_, index) => bounds[0] + index) : bounds; };
+  const selected = lecturers.find((item) => item.id === Number(lecturerId));
+  const setContextSafely = (next: typeof context) => { setContext(next); setType(next === "SEMINAR" ? "SEMINAR_COMMITMENT" : "UNAVAILABLE"); };
+  const basePart = (partContext: "TEACHING" | "SEMINAR", partType: string, partScope: string, partPeriods: string) => ({ context_type: partContext, constraint_type: partType, day_scope: partScope, periods: periods(partPeriods), start_date: startDate || null, end_date: endDate || null, hardness, weight, numeric_value: numeric ? Number(numeric) : null, seminar_link: partContext === "SEMINAR" ? seminarLink || null : null, note, status: "DRAFT" });
+  const save = async (status: "DRAFT" | "CONFIRMED") => {
+    if (!lecturerId) return;
+    if (context === "MIXED") {
+      await onCreate({ lecturer_id: Number(lecturerId), context_type: "MIXED", constraint_type: "RAW_NOTE", day_scope: null, periods: [], hardness, weight, note, status: "DRAFT", parts: [
+        { ...basePart("SEMINAR", mixedSeminarPeriods ? "SEMINAR_COMMITMENT" : "SEMINAR_NOTE", mixedSeminarScope, mixedSeminarPeriods), status },
+        { ...basePart("TEACHING", "PREFERRED_PERIOD", mixedTeachingScope, mixedTeachingPeriods), status },
+      ] });
+    } else {
+      await onCreate({ lecturer_id: Number(lecturerId), ...basePart(context, type, scope, periodText), status });
+    }
+    onClose();
+  };
+  const ruleOptions = preferenceRuleTypesForContext(context);
+  return <div className={styles.flatPanel}>
+    <span className={styles.eyebrow}>RÀNG BUỘC THỦ CÔNG</span><strong>Thêm dưới dạng bản nháp có ngữ cảnh rõ ràng</strong>
+    <div className={styles.composerGrid}><label className={styles.field}><span>1. Giảng viên</span><select value={lecturerId} onChange={(event) => setLecturerId(event.target.value)}><option value="">Chọn giảng viên…</option>{lecturers.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} · ` : ""}{item.name}</option>)}</select></label></div>
+    <div className={styles.field}><span>2. Ngữ cảnh</span><div className={styles.contextSegments}>{(["TEACHING", "SEMINAR", "MIXED"] as const).map((value) => <button type="button" key={value} className={context === value ? styles.contextActive : ""} onClick={() => setContextSafely(value)}>{value === "TEACHING" ? "Lịch dạy" : value === "SEMINAR" ? "Lịch seminar" : "Cả hai"}</button>)}</div></div>
+    {context !== "MIXED" ? <><div className={styles.composerGrid}><label className={styles.field}><span>3. Rule type</span><select value={type} onChange={(event) => setType(event.target.value)}>{ruleOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label className={styles.field}><span>4. Ngày / phạm vi</span><select value={scope} onChange={(event) => setScope(event.target.value)}>{draftScopes.map((value) => <option key={value}>{value}</option>)}</select></label><label className={styles.field}><span>5. Tiết</span><input value={periodText} onChange={(event) => setPeriodText(event.target.value)} placeholder="4-6" /></label></div></> : <div className={styles.inlineFields}><div className={styles.flatPanel}><strong>Phần A · Seminar</strong><label className={styles.field}><span>Ngày</span><select value={mixedSeminarScope} onChange={(event) => setMixedSeminarScope(event.target.value)}>{draftScopes.map((value) => <option key={value}>{value}</option>)}</select></label><label className={styles.field}><span>Tiết (để trống nếu chưa rõ)</span><input value={mixedSeminarPeriods} onChange={(event) => setMixedSeminarPeriods(event.target.value)} /></label></div><div className={styles.flatPanel}><strong>Phần B · Lịch dạy</strong><label className={styles.field}><span>Ngày ưu tiên</span><select value={mixedTeachingScope} onChange={(event) => setMixedTeachingScope(event.target.value)}>{draftScopes.map((value) => <option key={value}>{value}</option>)}</select></label><label className={styles.field}><span>Tiết</span><input value={mixedTeachingPeriods} onChange={(event) => setMixedTeachingPeriods(event.target.value)} /></label></div></div>}
+    <div className={styles.composerGrid}><label className={styles.field}><span>6. Từ ngày</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label><label className={styles.field}><span>Đến ngày</span><input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label><label className={styles.field}><span>7. Hard/Soft</span><select value={hardness} onChange={(event) => setHardness(event.target.value as "hard" | "soft")}><option value="soft">SOFT</option><option value="hard">HARD</option></select></label><label className={styles.field}><span>8. Weight</span><input type="number" min="0" max="1" step="0.1" value={weight} onChange={(event) => setWeight(Number(event.target.value))} /></label><label className={styles.field}><span>9. Giá trị số</span><input type="number" value={numeric} onChange={(event) => setNumeric(event.target.value)} /></label>{context !== "TEACHING" ? <label className={styles.field}><span>10. Liên kết seminar</span><input value={seminarLink} onChange={(event) => setSeminarLink(event.target.value)} placeholder="SEM-THOAN" /></label> : null}</div>
+    <label className={styles.field}><span>11. Ghi chú / nguyên văn</span><textarea value={note} onChange={(event) => setNote(event.target.value)} /></label>
+    <div className={styles.livePreview}><span>APP SẼ HIỂU RÀNG BUỘC NÀY LÀ:</span><strong>{selected?.name ?? "Chưa chọn giảng viên"}</strong><p>Ngữ cảnh: {context === "TEACHING" ? "Lịch dạy" : context === "SEMINAR" ? "Lịch seminar" : "Cả hai · tách thành 2 draft"}<br />{context === "MIXED" ? "Phần seminar và phần lịch dạy được xác nhận độc lập." : `${type} · ${scope}${periodText ? ` · tiết ${periodText}` : " · tiết chưa xác định"}`}<br />{hardness.toUpperCase()} · {weight.toFixed(1)}</p></div>
+    <div className={styles.dialogFooter}><button type="button" className={styles.ghostButton} onClick={onClose}>Hủy</button><button type="button" className={styles.secondaryButton} disabled={busy || !lecturerId} onClick={() => void save("DRAFT")}>Lưu bản nháp</button><button type="button" className={styles.primaryButton} disabled={busy || !lecturerId} onClick={() => void save("CONFIRMED")}>Lưu và xác nhận</button></div>
+  </div>;
+}
+
+function DraftPreferenceRow({ item, lecturers, busy, onSave }: { item: PreferenceDraft; lecturers: Lecturer[]; busy: boolean; onSave: (item: PreferenceDraft, payload: Partial<PreferenceDraft>) => void }) {
+  const [lecturerId, setLecturerId] = useState(String(item.lecturer_id ?? ""));
+  const [type, setType] = useState(item.constraint_type);
+  const [context, setContext] = useState(item.context_type ?? "TEACHING");
+  const [scope, setScope] = useState(item.day_scope ?? "ALL_WEEKDAYS");
+  const [periods, setPeriods] = useState(item.periods.length ? `${Math.min(...item.periods)}-${Math.max(...item.periods)}` : "");
+  const [hardness, setHardness] = useState(item.hardness);
+  const [weight, setWeight] = useState(item.weight);
+  const [startDate, setStartDate] = useState(item.start_date ?? ""); const [endDate, setEndDate] = useState(item.end_date ?? "");
+  const [numeric, setNumeric] = useState(item.numeric_value == null ? "" : String(item.numeric_value));
+  const [seminarLink, setSeminarLink] = useState(item.seminar_link ?? "");
+  const parsedPeriods = () => { const bounds = (periods.match(/\d+/g) ?? []).map(Number); return bounds.length === 2 ? Array.from({ length: bounds[1] - bounds[0] + 1 }, (_, index) => bounds[0] + index) : bounds; };
+  const availableTypes = preferenceRuleTypesForContext(context);
+  const payload = (status: PreferenceDraft["status"]): Partial<PreferenceDraft> => ({ lecturer_id: lecturerId ? Number(lecturerId) : null, context_type: context, constraint_type: type, day_scope: scope, periods: parsedPeriods(), start_date: startDate || null, end_date: endDate || null, hardness, weight, numeric_value: numeric ? Number(numeric) : null, seminar_link: context === "SEMINAR" ? seminarLink || null : null, status });
+  return <article className={styles.preferenceRow}>
+    <span className={`${styles.preferenceState} ${item.status === "CONFIRMED" ? styles.stateConfirmed : ""}`}>{item.status === "CONFIRMED" ? <Check size={15} /> : <PencilLine size={15} />}</span>
+    <div className={styles.preferenceCopy}><div><strong>{item.lecturer ?? item.lecturer_alias ?? "Chưa xác định"}</strong><span>{item.context_type === "TEACHING" ? "Lịch dạy" : item.context_type === "SEMINAR" ? "Seminar" : "Cả hai · Cần tách"}</span><span>{item.constraint_type}</span><span>{item.confidence}</span></div><p>{item.raw_text || "Không có câu gốc"}</p><small className={styles.normalizedRule}>{item.source_sheet}!{item.source_cell}{item.review_reason ? ` · ${item.review_reason}` : ""}</small></div>
+    <div className={styles.preferenceEditor}><label className={styles.field}><span>Giảng viên</span><select value={lecturerId} onChange={(event) => setLecturerId(event.target.value)}><option value="">Cần resolve…</option>{lecturers.map((lecturer) => <option key={lecturer.id} value={lecturer.id}>{lecturer.code ? `${lecturer.code} · ` : ""}{lecturer.name}</option>)}</select></label><label className={styles.field}><span>Ngữ cảnh</span><select value={context} onChange={(event) => { const next = event.target.value as typeof context; setContext(next); setType(next === "SEMINAR" ? "SEMINAR_COMMITMENT" : "RAW_NOTE"); }}><option value="TEACHING">Lịch dạy</option><option value="SEMINAR">Lịch seminar</option><option value="MIXED">Cả hai · cần tách</option></select></label><label className={styles.field}><span>Loại</span><select value={type} onChange={(event) => setType(event.target.value)}>{availableTypes.map((value) => <option key={value}>{value}</option>)}</select></label><label className={styles.field}><span>Phạm vi</span><select value={scope} onChange={(event) => setScope(event.target.value)}>{draftScopes.map((value) => <option key={value}>{value}</option>)}</select></label><label className={styles.field}><span>Tiết</span><input value={periods} onChange={(event) => setPeriods(event.target.value)} placeholder="4-6" /></label><label className={styles.field}><span>Từ ngày</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label><label className={styles.field}><span>Đến ngày</span><input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label><label className={styles.field}><span>Giá trị số</span><input type="number" value={numeric} onChange={(event) => setNumeric(event.target.value)} /></label>{context === "SEMINAR" ? <label className={styles.field}><span>Liên kết seminar</span><input value={seminarLink} onChange={(event) => setSeminarLink(event.target.value)} /></label> : null}<label className={styles.field}><span>Độ cứng</span><select value={hardness} onChange={(event) => setHardness(event.target.value as "hard" | "soft")}><option value="soft">SOFT</option><option value="hard">HARD</option></select></label><label className={styles.field}><span>Weight</span><input type="number" min="0" max="1" step="0.1" value={weight} onChange={(event) => setWeight(Number(event.target.value))} /></label></div>
+    <div className={styles.rowActions}><button type="button" className={styles.saveIcon} disabled={busy || !lecturerId || type === "RAW_NOTE" || type === "SEMINAR_NOTE" || context === "MIXED"} onClick={() => onSave(item, payload("CONFIRMED"))}>Xác nhận</button><button type="button" className={styles.deleteIcon} disabled={busy} onClick={() => onSave(item, { status: "REJECTED" })}>Từ chối</button></div>
+  </article>;
 }
 
 function PreferenceRow({ item, lecturers, busy, onSave, onDelete }: { item: Constraint; lecturers: Lecturer[]; busy: boolean; onSave: (item: Constraint, payload: Partial<Constraint>) => void; onDelete: (item: Constraint) => void }) {

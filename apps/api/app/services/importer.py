@@ -12,17 +12,27 @@ from app.models.entities import (
     Assignment,
     ClassSection,
     ClassSession,
-    Constraint,
     Course,
     ImportBatch,
     LecturerCourseCapability,
     Lecturer,
+    NormalizedPreferenceDraft,
     OptimizationRun,
-    Seminar,
     ValidationIssue,
 )
-from app.parsers.preferences import describe_preference, parse_preferences
+from app.parsers.preferences import PreferenceParseResult, parse_preference_workbook, parse_preferences
 from app.parsers.schedule import ScheduleParseResult, parse_schedule
+
+
+_ORIGINAL_PARSE_PREFERENCES = parse_preferences
+
+
+def _parse_preference_source(path: Path) -> PreferenceParseResult:
+    """Keep old test/integration monkeypatches working while V2 uses rich results."""
+    if parse_preferences is not _ORIGINAL_PARSE_PREFERENCES:
+        drafts = parse_preferences(path)
+        return PreferenceParseResult(format="LEGACY", drafts=drafts, raw_clauses=len(drafts))
+    return parse_preference_workbook(path)
 
 
 def _name_tokens(value: str) -> set[str]:
@@ -31,12 +41,29 @@ def _name_tokens(value: str) -> set[str]:
     return {token for token in plain.replace("đ", "d").split() if token}
 
 
+def _normalized_name(value: str) -> str:
+    normalized = unicodedata.normalize("NFD", value.casefold())
+    plain = "".join(char for char in normalized if unicodedata.category(char) != "Mn").replace("đ", "d")
+    return " ".join(plain.split())
+
+
 def _clear_imported_data(db: Session, semester_id: int) -> None:
     class_ids = list(db.scalars(select(ClassSection.id).where(ClassSection.semester_id == semester_id)))
     if class_ids:
         db.execute(delete(ClassSession).where(ClassSession.class_id.in_(class_ids)))
-    for model in (Assignment, OptimizationRun, ClassSection, Constraint, Seminar, ValidationIssue):
+    for model in (Assignment, OptimizationRun, ClassSection):
         db.execute(delete(model).where(model.semester_id == semester_id))
+    # Re-normalization may replace machine drafts, but it must never overwrite
+    # a manager-confirmed context or erase the audit row behind an applied rule.
+    db.execute(delete(NormalizedPreferenceDraft).where(
+        NormalizedPreferenceDraft.semester_id == semester_id,
+        NormalizedPreferenceDraft.context_confirmed.is_(False),
+        NormalizedPreferenceDraft.status.in_(("DRAFT", "NEEDS_REVIEW")),
+        NormalizedPreferenceDraft.source_file != "MANUAL",
+        NormalizedPreferenceDraft.applied_constraint_id.is_(None),
+        NormalizedPreferenceDraft.applied_seminar_id.is_(None),
+    ))
+    db.execute(delete(ValidationIssue).where(ValidationIssue.semester_id == semester_id))
     db.flush()
 
 
@@ -62,8 +89,12 @@ def _import_files_impl(
     lecturers_by_alias = {
         alias.casefold(): item
         for item in lecturers_by_name.values()
+        if item.confirmed
         for alias in (item.aliases or [])
     }
+    lecturers_by_normalized_name: dict[str, list[Lecturer]] = defaultdict(list)
+    for lecturer in lecturers_by_name.values():
+        lecturers_by_normalized_name[_normalized_name(lecturer.canonical_name)].append(lecturer)
 
     def ensure_lecturer(code: str | None, name: str, alias: str | None = None) -> Lecturer:
         lookup = lecturers_by_code.get(code) if code else None
@@ -84,6 +115,7 @@ def _import_files_impl(
         db.add(lecturer)
         db.flush()
         lecturers_by_name[name.casefold()] = lecturer
+        lecturers_by_normalized_name[_normalized_name(name)].append(lecturer)
         for item_alias in lecturer.aliases or []:
             lecturers_by_alias[item_alias.casefold()] = lecturer
         if code:
@@ -94,42 +126,101 @@ def _import_files_impl(
         if item.lecturer_name:
             ensure_lecturer(item.lecturer_code, item.lecturer_name)
 
+    summary = _summary(parsed)
+    batch = ImportBatch(semester_id=semester_id, source_files=[path.name for path in paths], summary={})
+    db.add(batch)
+    db.flush()
+
     unmatched = set()
+    protected_draft_keys = {
+        (item.source_file, item.source_sheet, item.source_cell)
+        for item in db.scalars(select(NormalizedPreferenceDraft).where(NormalizedPreferenceDraft.semester_id == semester_id))
+    }
+    preference_stats = {
+        "format": None, "parsed_rules": 0, "shared_seminars": 0, "needs_review": 0,
+        "invalid_rows": 0, "raw_clauses": 0, "dropped_clauses": 0,
+    }
     for preference_path in preference_paths:
-        for preference in parse_preferences(preference_path):
-            lecturer = lecturers_by_name.get(preference.canonical_name.casefold()) or lecturers_by_alias.get(preference.lecturer_alias.casefold())
-            if not lecturer:
-                lecturer = None
+        parsed_preferences = _parse_preference_source(preference_path)
+        preference_stats["format"] = parsed_preferences.format
+        preference_stats["parsed_rules"] += len(parsed_preferences.drafts)
+        preference_stats["shared_seminars"] += len(parsed_preferences.seminars)
+        preference_stats["invalid_rows"] += parsed_preferences.invalid_rows
+        preference_stats["raw_clauses"] += parsed_preferences.raw_clauses
+        preference_stats["dropped_clauses"] += parsed_preferences.dropped_clauses
+        for preference in parsed_preferences.drafts:
+            if (preference_path.name, preference.source_sheet, preference.source_cell) in protected_draft_keys:
+                continue
+            lecturer = lecturers_by_code.get(preference.lecturer_code) if preference.lecturer_code else None
+            lecturer = lecturer or lecturers_by_alias.get(preference.lecturer_alias.casefold())
+            exact_name_matches = lecturers_by_normalized_name.get(_normalized_name(preference.canonical_name), [])
+            lecturer = lecturer or (exact_name_matches[0] if len(exact_name_matches) == 1 else None)
             if lecturer:
                 aliases = set(lecturer.aliases or [])
                 aliases.add(preference.lecturer_alias)
                 lecturer.aliases = sorted(aliases)
-                lecturers_by_alias[preference.lecturer_alias.casefold()] = lecturer
+                if lecturer.confirmed:
+                    lecturers_by_alias[preference.lecturer_alias.casefold()] = lecturer
             else:
+                first_unmatched = preference.lecturer_alias not in unmatched
                 unmatched.add(preference.lecturer_alias)
-                db.add(ValidationIssue(
-                    semester_id=semester_id,
-                    severity="error",
-                    code="LECTURER_IDENTITY_AMBIGUOUS",
-                    message=f"Không xác định chắc chắn giảng viên cho '{preference.lecturer_alias}'.",
-                    source_file=preference_path.name,
-                    source_row=preference.source_row,
-                    raw_value=preference.lecturer_alias,
-                    suggestion="Xác nhận mã hoặc tên đầy đủ trước khi tối ưu.",
-                ))
-            db.add(
-                Constraint(
-                    name=describe_preference(preference.constraint_type, preference.target),
-                    constraint_type=preference.constraint_type,
-                    hardness="soft",
-                    weight=0.8,
-                    lecturer_id=lecturer.id if lecturer else None,
-                    target=preference.target,
-                    raw_text=preference.raw_text,
-                    confirmed=preference.confidence >= 0.8,
-                    semester_id=semester_id,
-                )
-            )
+                if first_unmatched:
+                    db.add(ValidationIssue(
+                        semester_id=semester_id, severity="error", code="LECTURER_IDENTITY_AMBIGUOUS",
+                        message=f"Không xác định chắc chắn giảng viên cho '{preference.lecturer_alias}'.",
+                        source_file=preference_path.name, source_sheet=preference.source_sheet,
+                        source_row=preference.source_row, field=preference.source_cell,
+                        raw_value=preference.lecturer_alias,
+                        suggestion="Xác nhận mã hoặc tên đầy đủ trước khi áp dụng nguyện vọng.",
+                    ))
+            needs_review = preference.needs_review or lecturer is None
+            preference_stats["needs_review"] += int(needs_review)
+            db.add(NormalizedPreferenceDraft(
+                semester_id=semester_id, import_batch_id=batch.id,
+                lecturer_id=lecturer.id if lecturer else None, lecturer_code=preference.lecturer_code,
+                lecturer_alias=preference.lecturer_alias, draft_kind="CONSTRAINT",
+                context_type=preference.context_type, context_confidence=preference.context_confidence,
+                context_confirmed=preference.context_confirmed,
+                constraint_type=preference.constraint_type, day_scope=preference.day_scope,
+                periods=preference.target.get("periods", []), start_date=preference.start_date,
+                end_date=preference.end_date, hardness=preference.hardness, weight=preference.weight,
+                numeric_value=preference.numeric_value, target=preference.target,
+                source_file=preference_path.name, source_sheet=preference.source_sheet,
+                source_row=preference.source_row, source_cell=preference.source_cell,
+                raw_text=preference.raw_text, confidence=preference.confidence_label,
+                needs_review=needs_review,
+                review_reason=("Chưa xác định được giảng viên. " if lecturer is None else "") + (preference.review_reason or ""),
+                status="NEEDS_REVIEW" if needs_review else preference.status,
+            ))
+        for seminar in parsed_preferences.seminars:
+            if (preference_path.name, seminar.source_sheet, seminar.source_cell) in protected_draft_keys:
+                continue
+            member_ids = []
+            missing_codes = []
+            for code in seminar.participant_codes:
+                lecturer = lecturers_by_code.get(code) or lecturers_by_alias.get(code.casefold())
+                exact_name_matches = lecturers_by_normalized_name.get(_normalized_name(code), [])
+                lecturer = lecturer or (exact_name_matches[0] if len(exact_name_matches) == 1 else None)
+                if lecturer:
+                    member_ids.append(lecturer.id)
+                else:
+                    missing_codes.append(code)
+            needs_review = seminar.needs_review or bool(missing_codes)
+            preference_stats["needs_review"] += int(needs_review)
+            db.add(NormalizedPreferenceDraft(
+                semester_id=semester_id, import_batch_id=batch.id, draft_kind="SHARED_SEMINAR",
+                context_type="SEMINAR", context_confidence="HIGH", context_confirmed=False,
+                constraint_type="SHARED_SEMINAR", participant_codes=seminar.participant_codes,
+                target={"name": seminar.name, "seminar_code": seminar.seminar_code,
+                        "member_ids": member_ids, "day_scopes": seminar.day_scopes,
+                        "period_blocks": seminar.period_blocks},
+                hardness=seminar.hardness, weight=seminar.weight, source_file=preference_path.name,
+                source_sheet=seminar.source_sheet, source_row=seminar.source_row,
+                source_cell=seminar.source_cell, raw_text=seminar.raw_text, confidence="HIGH",
+                needs_review=needs_review,
+                review_reason=seminar.review_reason or (f"Không tìm thấy mã GV: {', '.join(missing_codes)}" if missing_codes else None),
+                status="NEEDS_REVIEW" if needs_review else seminar.status,
+            ))
 
     courses: dict[str, Course] = {item.code: item for item in db.scalars(select(Course)).all()}
     locked_loads: dict[int, float] = defaultdict(float)
@@ -232,9 +323,8 @@ def _import_files_impl(
             )
         )
 
-    summary = _summary(parsed)
-    batch = ImportBatch(semester_id=semester_id, source_files=[path.name for path in paths], summary=summary)
-    db.add(batch)
+    summary["preferences"] = preference_stats
+    batch.summary = summary
     db.commit()
     return {
         "batch_id": batch.id,

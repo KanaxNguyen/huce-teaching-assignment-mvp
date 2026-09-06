@@ -112,7 +112,7 @@ def test_preference_normalization_does_not_mistake_weekday_for_period():
 
     assert constraint_type == "unavailable"
     assert target["weekday"] == 6
-    assert target["periods"] == []
+    assert target["periods"] == [1, 2, 3, 4, 5, 6]
 
 
 def test_parse_real_schedule_when_present():

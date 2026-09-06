@@ -26,6 +26,7 @@ from app.models.entities import (
     Constraint,
     Lecturer,
     LecturerCourseCapability,
+    NormalizedPreferenceDraft,
     OptimizationRun,
     OutputTemplateProfile,
     Semester,
@@ -40,7 +41,10 @@ from app.schemas.api import (
     ConstraintUpdate,
     ImportResponse,
     MergedDecision,
+    ManualPreferenceDraftCreate,
     OptimizationRequest,
+    PreferenceDraftApply,
+    PreferenceDraftUpdate,
     SemesterCreate,
     SeminarCreate,
     TemplateMappingUpdate,
@@ -260,6 +264,275 @@ def upload_pair(
         raise HTTPException(422, "Không thể đọc workbook đã tải lên.") from error
 
 
+def _draft_payload(item: NormalizedPreferenceDraft) -> dict:
+    return {
+        "id": item.id, "batch_id": item.import_batch_id, "draft_kind": item.draft_kind,
+        "lecturer_id": item.lecturer_id, "lecturer": item.lecturer.canonical_name if item.lecturer else None,
+        "lecturer_code": item.lecturer_code, "lecturer_alias": item.lecturer_alias,
+        "context_type": item.context_type or "TEACHING", "context_confidence": item.context_confidence,
+        "context_confirmed": item.context_confirmed,
+        "constraint_type": item.constraint_type, "day_scope": item.day_scope,
+        "periods": item.periods, "start_date": item.start_date, "end_date": item.end_date,
+        "hardness": item.hardness, "weight": item.weight, "numeric_value": item.numeric_value,
+        "target": item.target, "participant_codes": item.participant_codes, "seminar_link": item.seminar_link,
+        "source_file": item.source_file, "source_sheet": item.source_sheet,
+        "source_row": item.source_row, "source_cell": item.source_cell, "raw_text": item.raw_text,
+        "confidence": item.confidence, "needs_review": item.needs_review,
+        "review_reason": item.review_reason, "status": item.status,
+        "applied_constraint_id": item.applied_constraint_id, "applied_seminar_id": item.applied_seminar_id,
+    }
+
+
+@router.get("/preference-drafts")
+def get_preference_drafts(semester_id: int = Query(...), db: Session = Depends(get_db)) -> list[dict]:
+    _semester_id(db, semester_id)
+    items = db.scalars(
+        select(NormalizedPreferenceDraft)
+        .where(NormalizedPreferenceDraft.semester_id == semester_id)
+        .options(selectinload(NormalizedPreferenceDraft.lecturer))
+        .order_by(NormalizedPreferenceDraft.lecturer_alias, NormalizedPreferenceDraft.source_row, NormalizedPreferenceDraft.id)
+    ).all()
+    return [_draft_payload(item) for item in items]
+
+
+def _manual_draft_values(part, lecturer: Lecturer, semester_id: int) -> dict:
+    if part.day_scope and part.day_scope not in {"T2", "T3", "T4", "T5", "T6", "T7", "CN", "ALL_WEEKDAYS", "ALL_DAYS"}:
+        raise HTTPException(422, "Phạm vi ngày không hợp lệ.")
+    if any(period < 1 or period > 15 for period in part.periods):
+        raise HTTPException(422, "Tiết phải nằm trong 1–15.")
+    teaching_types = {"UNAVAILABLE", "AVOID_PERIOD", "PREFERRED_PERIOD", "PREFER_CONSECUTIVE_PERIODS", "MIN_CLASSES", "MAX_CLASSES", "MAX_SESSIONS_PER_DAY", "MAX_DAYS_PER_WEEK", "MIN_FREE_MORNING_PER_WEEK", "REQUIRED_ASSIGNMENT", "FORBIDDEN_ASSIGNMENT", "RAW_NOTE"}
+    seminar_types = {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}
+    allowed = teaching_types if part.context_type == "TEACHING" else seminar_types
+    if part.constraint_type not in allowed:
+        raise HTTPException(422, "Loại rule không phù hợp ngữ cảnh.")
+    needs_review = part.constraint_type in {"RAW_NOTE", "SEMINAR_NOTE", "PREFER_CONSECUTIVE_PERIODS", "MIN_FREE_MORNING_PER_WEEK", "REQUIRED_ASSIGNMENT", "FORBIDDEN_ASSIGNMENT"}
+    if part.context_type == "SEMINAR" and part.constraint_type == "SEMINAR_COMMITMENT" and (not part.day_scope or not part.periods):
+        needs_review = True
+    try:
+        start_date = date.fromisoformat(part.start_date) if part.start_date else None
+        end_date = date.fromisoformat(part.end_date) if part.end_date else None
+    except ValueError as error:
+        raise HTTPException(422, "Khoảng ngày không hợp lệ.") from error
+    if start_date and end_date and end_date < start_date:
+        raise HTTPException(422, "Ngày kết thúc phải không trước ngày bắt đầu.")
+    target = {"day_scope": part.day_scope, "periods": part.periods,
+              "context_type": part.context_type, "seminar_link": part.seminar_link}
+    if part.day_scope in {"T2", "T3", "T4", "T5", "T6", "T7"}:
+        target["weekday"] = int(part.day_scope[1:])
+    elif part.day_scope == "CN":
+        target["weekday"] = 8
+    elif part.day_scope in {"ALL_WEEKDAYS", "ALL_DAYS"}:
+        weekdays = range(2, 7) if part.day_scope == "ALL_WEEKDAYS" else range(2, 9)
+        target["slots"] = [{"weekday": weekday, "periods": part.periods} for weekday in weekdays]
+    if start_date: target["start_date"] = start_date.isoformat()
+    if end_date: target["end_date"] = end_date.isoformat()
+    if part.numeric_value is not None:
+        target.update({"value": part.numeric_value, "max": part.numeric_value})
+        if part.constraint_type == "MIN_CLASSES":
+            target.pop("max", None); target["min"] = part.numeric_value
+    return {
+        "semester_id": semester_id, "lecturer_id": lecturer.id, "lecturer_code": lecturer.code,
+        "lecturer_alias": lecturer.canonical_name, "draft_kind": "CONSTRAINT",
+        "context_type": part.context_type, "context_confidence": "HIGH", "context_confirmed": True,
+        "constraint_type": part.constraint_type, "day_scope": part.day_scope, "periods": part.periods,
+        "start_date": start_date, "end_date": end_date, "hardness": part.hardness,
+        "weight": part.weight, "numeric_value": part.numeric_value, "target": target,
+        "seminar_link": part.seminar_link, "source_file": "MANUAL", "source_sheet": "Step04",
+        "source_row": 0, "source_cell": "MANUAL", "raw_text": part.note,
+        "confidence": "HIGH", "needs_review": needs_review,
+        "review_reason": "Cần bổ sung scheduling semantics cụ thể." if needs_review else None,
+        "status": "NEEDS_REVIEW" if needs_review else part.status,
+    }
+
+
+@router.post("/preference-drafts")
+def create_manual_preference_draft(
+    payload: ManualPreferenceDraftCreate, semester_id: int = Query(...), db: Session = Depends(get_db),
+) -> dict:
+    _semester_id(db, semester_id)
+    lecturer = db.get(Lecturer, payload.lecturer_id)
+    if not lecturer:
+        raise HTTPException(404, "Không tìm thấy giảng viên.")
+    parts = payload.parts if payload.context_type == "MIXED" else [payload]
+    if payload.context_type == "MIXED" and (len(parts) < 2 or {part.context_type for part in parts} != {"TEACHING", "SEMINAR"}):
+        raise HTTPException(422, "MIXED phải tách thành ít nhất một phần lịch dạy và một phần seminar.")
+    items = [NormalizedPreferenceDraft(**_manual_draft_values(part, lecturer, semester_id)) for part in parts]
+    db.add_all(items); db.commit()
+    return {"ids": [item.id for item in items], "created": len(items), "atomic_split": payload.context_type == "MIXED"}
+
+
+@router.patch("/preference-drafts/{draft_id}")
+def update_preference_draft(
+    draft_id: int, payload: PreferenceDraftUpdate, semester_id: int = Query(...), db: Session = Depends(get_db),
+) -> dict:
+    item = db.get(NormalizedPreferenceDraft, draft_id)
+    if not item or item.semester_id != semester_id:
+        raise HTTPException(404, "Không tìm thấy bản nháp nguyện vọng.")
+    changes = payload.model_dump(exclude_unset=True)
+    old_context = item.context_type or "TEACHING"
+    for field in ("start_date", "end_date"):
+        if field in changes:
+            try:
+                changes[field] = date.fromisoformat(changes[field]) if changes[field] else None
+            except ValueError as error:
+                raise HTTPException(422, f"{field} không hợp lệ.") from error
+    if "periods" in changes and any(period < 1 or period > 15 for period in changes["periods"]):
+        raise HTTPException(422, "Tiết phải nằm trong 1–15.")
+    for field, value in changes.items():
+        setattr(item, field, value)
+    if "context_type" in changes:
+        item.context_confirmed = True
+        item.context_confidence = "HIGH"
+        if changes["context_type"] == "MIXED":
+            item.needs_review = True
+            item.status = "NEEDS_REVIEW"
+            item.review_reason = "MIXED phải tách thành các rule nguyên tử trước khi Apply."
+        elif old_context == "SEMINAR" and changes["context_type"] == "TEACHING":
+            item.seminar_link = None
+            if item.constraint_type in {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}:
+                item.constraint_type = "RAW_NOTE"
+                item.needs_review = True
+                item.status = "NEEDS_REVIEW"
+    context = item.context_type or "TEACHING"
+    compatible = (
+        context == "TEACHING" and item.constraint_type not in {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}
+    ) or (
+        context == "SEMINAR" and item.constraint_type in {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}
+    )
+    if not compatible and context != "MIXED":
+        item.needs_review = True
+        item.status = "NEEDS_REVIEW"
+        item.review_reason = "Loại rule chưa phù hợp ngữ cảnh đã chọn."
+    if item.lecturer_id and compatible and item.constraint_type not in {"RAW_NOTE", "SEMINAR_NOTE"} and context != "MIXED" and item.status == "CONFIRMED":
+        item.needs_review = False
+        item.review_reason = None
+    if item.start_date and item.end_date and item.end_date < item.start_date:
+        raise HTTPException(422, "Ngày kết thúc phải không trước ngày bắt đầu.")
+    target = {**(item.target or {}), "day_scope": item.day_scope, "periods": item.periods or []}
+    target.pop("weekday", None)
+    target.pop("slots", None)
+    weekdays = _scope_weekdays(item.day_scope) if item.day_scope else []
+    if item.day_scope in {"ALL_WEEKDAYS", "ALL_DAYS"}:
+        target["slots"] = [{"weekday": weekday, "periods": item.periods or []} for weekday in weekdays]
+    elif weekdays:
+        target["weekday"] = weekdays[0]
+    if item.start_date:
+        target["start_date"] = item.start_date.isoformat()
+    else:
+        target.pop("start_date", None)
+    if item.end_date:
+        target["end_date"] = item.end_date.isoformat()
+    else:
+        target.pop("end_date", None)
+    item.target = target
+    item.target["context_type"] = context
+    if context == "TEACHING":
+        item.target.pop("seminar_link", None)
+    else:
+        item.target["seminar_link"] = item.seminar_link
+    if item.numeric_value is not None:
+        item.target = {**item.target, "value": item.numeric_value}
+        item.target.pop("min", None)
+        item.target.pop("max", None)
+        item.target["min" if item.constraint_type == "MIN_CLASSES" else "max"] = item.numeric_value
+    db.commit()
+    db.refresh(item)
+    return _draft_payload(item)
+
+
+@router.post("/preference-drafts/confirm-high")
+def confirm_high_preference_drafts(semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+    _semester_id(db, semester_id)
+    items = db.scalars(select(NormalizedPreferenceDraft).where(
+        NormalizedPreferenceDraft.semester_id == semester_id,
+        NormalizedPreferenceDraft.confidence == "HIGH",
+        NormalizedPreferenceDraft.needs_review.is_(False),
+        NormalizedPreferenceDraft.status.not_in(("CONFIRMED", "REJECTED")),
+    )).all()
+    confirmed = 0
+    for item in items:
+        if item.draft_kind == "SHARED_SEMINAR" or (item.lecturer_id and item.constraint_type != "RAW_NOTE"):
+            item.status = "CONFIRMED"
+            confirmed += 1
+    db.commit()
+    return {"confirmed": confirmed}
+
+
+def _scope_weekdays(scope: str) -> list[int]:
+    if scope == "ALL_WEEKDAYS":
+        return [2, 3, 4, 5, 6]
+    if scope == "ALL_DAYS":
+        return [2, 3, 4, 5, 6, 7, 8]
+    if scope == "CN":
+        return [8]
+    return [int(scope[1:])] if scope and scope.startswith("T") else []
+
+
+@router.post("/preference-drafts/apply")
+def apply_preference_drafts(
+    payload: PreferenceDraftApply, semester_id: int = Query(...), db: Session = Depends(get_db),
+) -> dict:
+    _semester_id(db, semester_id)
+    items = db.scalars(select(NormalizedPreferenceDraft).where(
+        NormalizedPreferenceDraft.id.in_(payload.draft_ids),
+        NormalizedPreferenceDraft.semester_id == semester_id,
+    )).all()
+    if len(items) != len(set(payload.draft_ids)):
+        raise HTTPException(404, "Có bản nháp không thuộc kỳ học này.")
+    invalid = [item.id for item in items if item.status != "CONFIRMED" or item.needs_review]
+    invalid.extend(item.id for item in items if item.draft_kind == "CONSTRAINT" and (not item.lecturer_id or item.constraint_type in {"RAW_NOTE", "SEMINAR_NOTE"} or item.context_type == "MIXED"))
+    supported_types = {"UNAVAILABLE", "AVOID_PERIOD", "PREFERRED_PERIOD", "MIN_CLASSES", "MAX_CLASSES", "MAX_SESSIONS_PER_DAY", "MAX_DAYS_PER_WEEK", "REQUIRED_ASSIGNMENT", "FORBIDDEN_ASSIGNMENT", "SEMINAR_COMMITMENT"}
+    invalid.extend(item.id for item in items if item.draft_kind == "CONSTRAINT" and item.constraint_type not in supported_types)
+    seminar_types = {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}
+    invalid.extend(
+        item.id
+        for item in items
+        if item.draft_kind == "CONSTRAINT"
+        and (
+            ((item.context_type or "TEACHING") == "TEACHING" and item.constraint_type in seminar_types)
+            or ((item.context_type or "TEACHING") == "SEMINAR" and item.constraint_type not in seminar_types)
+        )
+    )
+    if invalid:
+        raise HTTPException(422, {"code": "PREFERENCE_DRAFT_NOT_READY", "draft_ids": sorted(set(invalid))})
+    type_map = {"UNAVAILABLE": "unavailable", "AVOID_PERIOD": "avoid", "PREFERRED_PERIOD": "prefer_period", "SEMINAR_COMMITMENT": "seminar"}
+    created_constraints = 0
+    created_seminars = 0
+    try:
+        for item in items:
+            if item.applied_constraint_id or item.applied_seminar_id or item.status == "REJECTED":
+                continue
+            if item.draft_kind == "SHARED_SEMINAR":
+                target = item.target or {}
+                alternatives = [
+                    {"weekday": weekday, "periods": periods}
+                    for scope in target.get("day_scopes", [])
+                    for weekday in _scope_weekdays(scope)
+                    for periods in target.get("period_blocks", [])
+                ]
+                seminar = Seminar(
+                    semester_id=semester_id, name=target.get("name") or "Shared seminar", chair_name="",
+                    members=target.get("member_ids") or [], alternatives=alternatives,
+                    hardness=item.hardness, weight=item.weight,
+                )
+                db.add(seminar); db.flush(); item.applied_seminar_id = seminar.id; created_seminars += 1
+            else:
+                constraint = Constraint(
+                    semester_id=semester_id, lecturer_id=item.lecturer_id,
+                    name=describe_preference(item.constraint_type, item.target or {}),
+                    constraint_type=type_map.get(item.constraint_type, item.constraint_type),
+                    hardness=item.hardness, weight=item.weight,
+                    target={**(item.target or {}), "context_type": item.context_type or "TEACHING", "seminar_link": item.seminar_link},
+                    raw_text=item.raw_text, confirmed=True, active=True,
+                )
+                db.add(constraint); db.flush(); item.applied_constraint_id = constraint.id; created_constraints += 1
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return {"applied": len(items), "constraints": created_constraints, "seminars": created_seminars}
+
+
 @router.get("/dashboard")
 def get_dashboard(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> dict:
     return dashboard(db, _semester_id(db, semester_id))
@@ -315,6 +588,7 @@ def get_readiness(semester_id: int | None = Query(None), db: Session = Depends(g
     capable_courses = {item.course_id for item in capability_rows if item.allowed and item.confirmed}
     issues = db.scalars(select(ValidationIssue).where(ValidationIssue.semester_id == sid)).all()
     constraints = db.scalars(select(Constraint).where(Constraint.semester_id == sid)).all()
+    preference_drafts = db.scalars(select(NormalizedPreferenceDraft).where(NormalizedPreferenceDraft.semester_id == sid)).all()
     relevant_ids = {item.assigned_lecturer_id for item in classes if item.assigned_lecturer_id}
     relevant_ids.update(item.lecturer_id for item in constraints if item.lecturer_id)
     relevant_ids.update(item.lecturer_id for item in capability_rows)
@@ -327,6 +601,9 @@ def get_readiness(semester_id: int | None = Query(None), db: Session = Depends(g
     review_constraints = [item for item in constraints if item.active and item.constraint_type.casefold() in {"raw_preference", "preferred_assignment", "compact_schedule"}]
     if review_constraints:
         warnings.append({"code": "MALFORMED_CONSTRAINT", "message": f"{len(review_constraints)} ràng buộc chưa chuẩn hóa cần trưởng bộ môn rà soát."})
+    pending_drafts = [item for item in preference_drafts if item.needs_review or item.status in {"DRAFT", "NEEDS_REVIEW"}]
+    if pending_drafts:
+        warnings.append({"code": "PREFERENCE_DRAFT_REVIEW_REQUIRED", "message": f"{len(pending_drafts)} nguyện vọng đang là bản nháp hoặc cần rà soát trước khi áp dụng."})
     missing_rooms = sum(1 for item in classes for session in item.sessions if not session.room.strip())
     if missing_rooms:
         warnings.append({"code": "MISSING_ROOM", "message": f"{missing_rooms} meeting chưa có phòng; mặc định không ghép lớp."})
@@ -730,6 +1007,16 @@ def get_problems(semester_id: int = Query(...), db: Session = Depends(get_db)) -
         problems.setdefault(key, {"code": code, "severity": severity, "entity_type": entity_type, "entity_id": str(entity_id), "lecturer_id": lecturer_id, "message": message, "reasons": reasons or [], "related_constraints": constraints or [], "resolvable": True})
     for issue in db.scalars(select(ValidationIssue).where(ValidationIssue.semester_id == semester_id)):
         add(issue.code, "critical" if issue.severity == "error" else "warning", "validation_issue", issue.id, issue.message)
+    for draft in db.scalars(select(NormalizedPreferenceDraft).where(
+        NormalizedPreferenceDraft.semester_id == semester_id,
+        NormalizedPreferenceDraft.needs_review.is_(True),
+        NormalizedPreferenceDraft.status != "REJECTED",
+    )):
+        code = "MIXED_PREFERENCE_REQUIRES_SPLIT" if (draft.context_type or "TEACHING") == "MIXED" else "PREFERENCE_DRAFT_REVIEW_REQUIRED"
+        add(code, "warning", "preference_draft", draft.id,
+            draft.review_reason or "Nguyện vọng cần trưởng bộ môn rà soát trước khi áp dụng.",
+            [{"source": f"{draft.source_sheet}!{draft.source_cell}", "raw_text": draft.raw_text}],
+            lecturer_id=draft.lecturer_id)
     run = db.scalar(select(OptimizationRun).where(OptimizationRun.semester_id == semester_id).order_by(OptimizationRun.id.desc()))
     if run:
         summary = run.summary or {}

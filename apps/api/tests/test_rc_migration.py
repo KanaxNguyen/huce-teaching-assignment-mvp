@@ -12,7 +12,7 @@ from alembic.config import Config
 from test_phase1_migration import LEGACY_SQL
 
 ROOT = Path(__file__).resolve().parents[3]
-HEAD = "0004_v11_merge_status"
+HEAD = "0005_preference_normalization_v2"
 
 
 def upgrade(path, revision="head"):
@@ -61,6 +61,12 @@ def test_fresh_database_migration_and_repeat(tmp_path):
     before = snapshot(path)
     upgrade(path)
     assert_preserved(path, before)
+    with sqlite3.connect(path) as db:
+        columns = {row[1]: row for row in db.execute("PRAGMA table_info(normalized_preference_drafts)")}
+        assert columns["context_type"][3] == 0
+        assert columns["context_confirmed"][3] == 1
+        foreign_keys = {row[3] for row in db.execute("PRAGMA foreign_key_list(normalized_preference_drafts)")}
+        assert {"semester_id", "import_batch_id", "lecturer_id", "applied_constraint_id", "applied_seminar_id"} <= foreign_keys
 
 
 def test_0002_rows_defaults_and_foreign_keys_preserved(tmp_path):
@@ -129,7 +135,7 @@ for restart in range(2):
         assert response.status_code == 200, response.text
         assert response.json()['status'] == 'ok'
         with engine.connect() as db:
-            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '0004_v11_merge_status'
+            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '0005_preference_normalization_v2'
             assert db.scalar(text('PRAGMA foreign_keys')) == 1
         assert client.get('/api/v1/semesters').status_code == 200
 print('STARTUP_AND_RESTART_HEALTH_PASS')

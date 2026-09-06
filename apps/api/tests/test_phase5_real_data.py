@@ -18,7 +18,7 @@ from app.models.entities import (
     Semester,
 )
 from app.optimization.solver import solve
-from app.parsers.preferences import parse_preferences
+from app.parsers.preferences import parse_preference_workbook
 from app.parsers.schedule import parse_schedule
 from app.services.importer import import_files
 from app.services.manual_assignment import apply_manual_assignment, check_assignment_change
@@ -40,14 +40,27 @@ def test_real_huce_schedule_and_preferences_normalize_without_losing_rows():
     preferences = root / "Nguyện vọng TKB 2026-2027.xlsx"
     assert schedule.exists() and preferences.exists()
     result = parse_schedule(schedule)
-    wishes = parse_preferences(preferences)
+    wishes = parse_preference_workbook(preferences)
     assert result.rows_accepted == 286
     assert result.rows_rejected == 0
     assert len(result.classes) == 158
     assert sum(len(item.sessions) for item in result.classes) == 286
     assert all(len({meeting.signature() for meeting in item.sessions}) == len(item.sessions) for item in result.classes)
-    assert len(wishes) == 28
-    assert all(item.raw_text for item in wishes)
+    assert wishes.format == "LEGACY"
+    assert len(wishes.drafts) == 39
+    assert len(wishes.seminars) == 0
+    assert wishes.raw_clauses == 37
+    assert wishes.dropped_clauses == 0
+    assert all(item.raw_text for item in wishes.drafts)
+    lieu = [item for item in wishes.drafts if item.lecturer_alias == "Liễu"]
+    assert len(lieu) >= 3 and {item.context_type for item in lieu} == {"TEACHING", "SEMINAR"}
+    x_linh_mixed = [
+        item for item in wishes.drafts
+        if item.lecturer_alias == "X Linh" and "có thể đến 12h30" in item.raw_text
+    ]
+    assert len(x_linh_mixed) == 2
+    assert {item.context_type for item in x_linh_mixed} == {"TEACHING", "SEMINAR"}
+    assert all(item.raw_text == x_linh_mixed[0].raw_text for item in x_linh_mixed)
 
 
 def test_real_data_import_solve_problem_export_round_trip_and_persistence(tmp_path):
@@ -156,7 +169,9 @@ def test_real_data_import_solve_problem_export_round_trip_and_persistence(tmp_pa
     with SessionLocal() as fresh:
         assert fresh.get(Semester, semester_id) is not None
         assert fresh.scalar(select(ClassSection).where(ClassSection.semester_id == semester_id)) is not None
-        assert fresh.scalar(select(Constraint).where(Constraint.semester_id == semester_id)) is not None
+        # Imported preferences remain review drafts and do not silently become
+        # solver-visible constraints.
+        assert fresh.scalar(select(Constraint).where(Constraint.semester_id == semester_id)) is None
         assert fresh.scalar(select(LecturerCourseCapability)) is not None
         assert fresh.scalar(select(OutputTemplateProfile).where(OutputTemplateProfile.semester_id == semester_id)) is not None
         assert fresh.scalars(select(OptimizationRun).where(OptimizationRun.semester_id == semester_id)).all()

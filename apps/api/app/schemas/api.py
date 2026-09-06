@@ -71,3 +71,44 @@ class ImportResponse(BaseModel):
     unmatched_lecturers: list[str]
     serious_errors: int
     preview: list[dict[str, Any]]
+
+
+class PreferenceDraftUpdate(BaseModel):
+    lecturer_id: int | None = None
+    context_type: Literal["TEACHING", "SEMINAR", "MIXED"] | None = None
+    constraint_type: str | None = None
+    day_scope: str | None = None
+    periods: list[int] | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    hardness: Literal["hard", "soft"] | None = None
+    weight: float | None = Field(default=None, ge=0, le=1)
+    numeric_value: float | None = None
+    raw_text: str | None = None
+    seminar_link: str | None = None
+    status: Literal["DRAFT", "CONFIRMED", "NEEDS_REVIEW", "REJECTED"] | None = None
+
+
+class PreferenceDraftApply(BaseModel):
+    draft_ids: list[int] = Field(min_length=1)
+
+
+class ManualDraftPart(BaseModel):
+    context_type: Literal["TEACHING", "SEMINAR"]
+    constraint_type: str
+    day_scope: str | None = None
+    periods: list[int] = Field(default_factory=list)
+    start_date: str | None = None
+    end_date: str | None = None
+    hardness: Literal["hard", "soft"] = "soft"
+    weight: float = Field(default=0.8, ge=0, le=1)
+    numeric_value: float | None = None
+    seminar_link: str | None = None
+    note: str | None = None
+    status: Literal["DRAFT", "CONFIRMED"] = "DRAFT"
+
+
+class ManualPreferenceDraftCreate(ManualDraftPart):
+    lecturer_id: int
+    context_type: Literal["TEACHING", "SEMINAR", "MIXED"]
+    parts: list[ManualDraftPart] = Field(default_factory=list)

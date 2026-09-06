@@ -109,6 +109,41 @@ export type Constraint = {
   target?: Record<string, unknown>;
 };
 
+export type PreferenceDraft = {
+  id: number;
+  batch_id: number | null;
+  draft_kind: "CONSTRAINT" | "SHARED_SEMINAR";
+  lecturer_id: number | null;
+  lecturer?: string | null;
+  lecturer_code?: string | null;
+  lecturer_alias?: string | null;
+  context_type: "TEACHING" | "SEMINAR" | "MIXED";
+  context_confidence?: "HIGH" | "MEDIUM" | "LOW" | null;
+  context_confirmed?: boolean;
+  constraint_type: string;
+  day_scope?: string | null;
+  periods: number[];
+  start_date?: string | null;
+  end_date?: string | null;
+  hardness: "hard" | "soft";
+  weight: number;
+  numeric_value?: number | null;
+  target: Record<string, unknown>;
+  participant_codes: string[];
+  seminar_link?: string | null;
+  source_file: string;
+  source_sheet: string;
+  source_row: number;
+  source_cell: string;
+  raw_text?: string | null;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+  needs_review: boolean;
+  review_reason?: string | null;
+  status: "DRAFT" | "CONFIRMED" | "NEEDS_REVIEW" | "REJECTED";
+  applied_constraint_id?: number | null;
+  applied_seminar_id?: number | null;
+};
+
 export type Lecturer = {
   id: number;
   name: string;
