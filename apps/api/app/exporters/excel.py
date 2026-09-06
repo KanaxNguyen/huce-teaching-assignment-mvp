@@ -288,6 +288,12 @@ def _export_template(
         candidates = [item for item in candidates if (_cell(item[0].course.code), _cell(item[0].class_code)) == key]
         if len(candidates) > 1:
             candidates = _template_row_candidates(candidates, sheet, row, columns)
+        # An output row only stores the lecturer.  Multiple meetings of the
+        # same TeachingGroup are therefore equivalent here: the domain
+        # guarantees they receive one lecturer, and an old template may split
+        # a repeated day/period into more rows than the current import.
+        if len(candidates) > 1 and len({item[0].id for item in candidates}) == 1:
+            candidates = candidates[:1]
         if len(candidates) != 1:
             raise ValueError("EXPORT_SOURCE_ROW_AMBIGUOUS" if len(candidates) > 1 else "EXPORT_SOURCE_ROW_UNMAPPED")
         section, meeting = candidates[0]

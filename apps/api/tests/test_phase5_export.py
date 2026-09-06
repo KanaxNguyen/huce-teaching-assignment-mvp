@@ -64,3 +64,45 @@ def test_prior_output_template_disambiguates_repeated_class_by_schedule_columns(
     output = load_workbook(result)["S"]
     assert output.cell(2, 3).value == "A"
     assert output.cell(3, 3).value == "A"
+
+
+def test_prior_output_template_allows_repeated_meetings_of_one_teaching_group(tmp_path):
+    source = tmp_path / "prior-output.xlsx"
+    book = Workbook()
+    sheet = book.active
+    sheet.title = "S"
+    sheet.append(["Mã học phần", "Mã lớp học", "Giảng viên", "Thứ", "Tiết"])
+    sheet.append(["C", "L0", "old", 2, "4-6"])
+    sheet.append(["C", "L0", "old", 2, "4-6"])
+    book.save(source)
+    with SessionLocal() as db:
+        semester, course, lecturer, _, items = setup(db)
+        capability(db, lecturer, course)
+        item = items[0]
+        item.source_file = "current-import.xlsx"
+        item.source_sheet = "S"
+        db.add(ClassSession(
+            class_id=item.id, weekday=2, start_period=4, end_period=6,
+            room="P2", raw_weeks="34", active_weeks=[3, 4], source_row=2,
+        ))
+        db.commit()
+        solve(db, 2, False, semester.id)
+        db.add(OutputTemplateProfile(
+            semester_id=semester.id,
+            source_file=str(source),
+            source_sheet="S",
+            header_row=1,
+            mappings={
+                "course_code": {"column_index": 1},
+                "class_code": {"column_index": 2},
+                "lecturer": {"column_index": 3},
+                "weekday": {"column_index": 4},
+                "periods": {"column_index": 5},
+            },
+            missing_fields=[],
+        ))
+        db.commit()
+        result = export_latest(db, tmp_path / "out", semester.id)
+    output = load_workbook(result)["S"]
+    assert output.cell(2, 3).value == "A"
+    assert output.cell(3, 3).value == "A"
