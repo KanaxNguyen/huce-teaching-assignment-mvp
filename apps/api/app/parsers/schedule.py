@@ -23,6 +23,7 @@ class ParsedSession:
     raw_weeks: str
     active_weeks: list[int]
     source_row: int
+    source_rows: list[int] = field(default_factory=list)
 
     def signature(self) -> tuple:
         return (
@@ -51,6 +52,7 @@ class ParsedClass:
     raw_values: dict[str, Any]
     sessions: list[ParsedSession] = field(default_factory=list)
     merged_group_id: str | None = None
+    lecturer_evidence: list[dict] = field(default_factory=list)
 
     @property
     def key(self) -> str:
@@ -146,18 +148,33 @@ def is_unassigned_lecturer(value: Any) -> bool:
     return normalized.startswith("chua phan") or normalized.startswith("chua xep")
 
 
+def lecturer_identities(value: Any) -> list[dict]:
+    """Keep separate coded identities and common explicit person separators."""
+    raw = str(value or "").strip()
+    if is_unassigned_lecturer(raw):
+        return []
+    # Bracketed codes are unambiguous boundaries even without punctuation.
+    parts = re.split(r"[,;\n\r]+|\s*/\s*|(?=\[[^\]]+\])", raw)
+    identities = []
+    for part in parts:
+        text = clean_text(part).strip(" ,;/")
+        if not text or is_unassigned_lecturer(text):
+            continue
+        match = re.match(r"^\[([^\]]+)]\s*(.*)$", text)
+        if match:
+            code, name = clean_code(match[1]), clean_text(match[2])
+        else:
+            code, name = None, re.sub(r"^(thầy|cô)\s+", "", text, flags=re.IGNORECASE)
+        identities.append({"code": code, "name": name or code})
+    return identities
+
+
 def parse_lecturer(value: Any) -> tuple[str | None, str | None]:
-    text = clean_text(value)
-    if not text or is_unassigned_lecturer(text):
+    identities = lecturer_identities(value)
+    keys = {(i["code"] or clean_text(i["name"]).casefold()) for i in identities}
+    if len(keys) != 1:
         return None, None
-    # A few source rows contain co-teachers separated by a comma/newline.  The
-    # MVP keeps the first teacher as the class owner and surfaces later changes
-    # as a review warning instead of creating a fake combined lecturer name.
-    match = re.search(r"\[([^\]]+)]\s*([^,\[]+)", text)
-    if match:
-        return clean_code(match.group(1)), clean_text(match.group(2))
-    primary = re.split(r"\s*,\s*", text, maxsplit=1)[0]
-    return None, re.sub(r"^(thầy|cô)\s+", "", primary, flags=re.IGNORECASE)
+    return identities[0]["code"], identities[0]["name"]
 
 
 def parse_periods(value: Any) -> tuple[int, int]:
@@ -220,7 +237,7 @@ def _read_rows(path: Path) -> tuple[str, list[list[Any]], int]:
     book = openpyxl.load_workbook(path, read_only=False, data_only=True)
     sheet = book[book.sheetnames[0]]
     rows = [
-        [sheet.cell(row, col).value for col in range(1, 15)] for row in range(1, min(sheet.max_row, 5000) + 1)
+        [sheet.cell(row, col).value for col in range(1, 15)] for row in range(1, sheet.max_row + 1)
     ]
     return sheet.title, rows, 0
 
@@ -295,14 +312,6 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
         key = f"{code}::{class_id}"
         lecturer_code, lecturer_name = parse_lecturer(padded[13])
         raw_lecturer = clean_text(padded[13])
-        co_teaching = bool(lecturer_name and ("," in raw_lecturer or "\n" in str(padded[13] or "")))
-        if co_teaching:
-            issues.append(ParseIssue(
-                "error", "CO_TEACHING_REQUIRES_REVIEW",
-                f"Lớp {class_id} có nhiều giảng viên trong ô nguồn; cần rà soát.",
-                path.name, sheet_name, index, "Giảng viên", raw_lecturer,
-                "Xác nhận chính sách đồng giảng trước khi phân công.",
-            ))
         credits_text = clean_text(padded[8])
         try:
             credits = float(credits_text) if credits_text else 0
@@ -317,7 +326,7 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
             end_date=end_date,
             raw_weeks=raw_weeks,
             active_weeks=active_weeks,
-            source_row=index,
+            source_row=index, source_rows=[index],
         )
         if key not in grouped:
             grouped[key] = ParsedClass(
@@ -345,31 +354,27 @@ def parse_schedule(path: Path) -> ScheduleParseResult:
                     path.name, sheet_name, index, "Môn học/Số TC", str(padded[:4]),
                     "Rà soát dữ liệu nguồn trước khi tối ưu.",
                 ))
-            if (
-                lecturer_name
-                and current.lecturer_name
-                and lecturer_name.casefold() != current.lecturer_name.casefold()
-            ):
-                issues.append(
-                    ParseIssue(
-                        "warning",
-                        "multiple_lecturers_for_class",
-                        f"Lớp {class_id} có thay đổi hoặc đồng giảng viên giữa các buổi.",
-                        path.name,
-                        sheet_name,
-                        index,
-                        "Giảng viên",
-                        lecturer_name,
-                        "Tạm giữ giảng viên ở buổi đầu; trưởng bộ môn cần rà soát trước khi xuất.",
-                    )
-                )
-            elif lecturer_name and not current.lecturer_name:
-                current.lecturer_code = lecturer_code
-                current.lecturer_name = lecturer_name
-                current.locked_assignment = False
-        if not any(existing.signature() == parsed_session.signature() for existing in grouped[key].sessions):
-            grouped[key].sessions.append(parsed_session)
+        current = grouped[key]
+        current.lecturer_evidence.append({"row": index, "raw": str(padded[13] or ""), "identities": lecturer_identities(padded[13])})
+        existing = next((m for m in current.sessions if m.signature() == parsed_session.signature()), None)
+        if existing:
+            existing.source_rows.append(index)
+        else:
+            current.sessions.append(parsed_session)
         accepted += 1
+
+    for item in grouped.values():
+        identities = [identity for row in item.lecturer_evidence for identity in row["identities"]]
+        keys = {identity["code"] or clean_text(identity["name"]).casefold() for identity in identities}
+        if len(keys) > 1:
+            item.lecturer_code = item.lecturer_name = None
+            issues.append(ParseIssue("error", "MULTI_LECTURER_REVIEW",
+                f"Lớp {item.class_code} có nhiều danh tính giảng viên; cần xác nhận.",
+                path.name, sheet_name, item.source_row, "Giảng viên",
+                "\n".join(row["raw"] for row in item.lecturer_evidence),
+                "Chọn một giảng viên cho cả nhóm hoặc đánh dấu trường hợp cần hỗ trợ phân đoạn."))
+        elif identities:
+            item.lecturer_code, item.lecturer_name = identities[0]["code"], identities[0]["name"]
 
     signature_groups: dict[tuple, list[ParsedClass]] = defaultdict(list)
     for parsed_class in grouped.values():

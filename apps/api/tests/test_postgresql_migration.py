@@ -100,7 +100,12 @@ def test_fresh_postgresql_migration_foreign_keys_and_unique_constraints():
             version = connection.execute(
                 sa.text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-        assert version == "0005_preference_normalization_v2"
+        assert version == "0009_department_agnostic_capabilities"
+        version_column = next(
+            column for column in inspector.get_columns("alembic_version")
+            if column["name"] == "version_num"
+        )
+        assert version_column["type"].length >= len(version)
 
         token = "postgres-runtime-test-token"
         environment = {

@@ -1,10 +1,26 @@
+export type UnassignedBreakdown = {
+  total: number;
+  no_capability: number;
+  hard_availability: number;
+  timetable_collision: number;
+  global_infeasibility: number;
+  workload_limit: number;
+  locked_conflict: number;
+  eligible_available: number;
+  no_eligible: number;
+  data_quality: number;
+  other: number;
+};
+
 export type DashboardMetrics = {
   classes: number;
   locked_classes: number;
   unassigned_classes: number;
+  unassigned_breakdown?: UnassignedBreakdown;
   merged_suggestions: number;
   lecturers: number;
   validation_errors: number;
+  issues_count?: number;
   optimization_status: string;
   optimization_score: number | null;
 };
@@ -49,6 +65,62 @@ export type AssignmentItem = {
 };
 
 export type Candidate = { lecturer_id: number; status: string; workload?: { teaching_groups: number; credits: number } };
+
+export type CandidateAnalysisItem = {
+  lecturer_id: number;
+  lecturer_name: string;
+  lecturer_code: string;
+  status: string;
+  status_label: string;
+  status_badge_variant: "success" | "danger" | "warning" | "secondary";
+  is_eligible: boolean;
+  has_capability: boolean;
+  hard_unavailable: boolean;
+  has_collision: boolean;
+  conflicting_classes?: Array<{
+    class_id: number;
+    class_code: string;
+    course_name: string;
+    weekday: number;
+    periods: string;
+    overlapping_weeks: number[];
+  }>;
+  preference_source?: { sheet: string; cell: string; raw_text: string } | null;
+  workload: { teaching_groups: number; credits: number };
+  details: string;
+  is_currently_assigned?: boolean;
+  is_locked_to_this?: boolean;
+};
+
+export type UnassignedDiagnosticItem = {
+  class_id: number;
+  course_id: number;
+  course_code: string;
+  course_name: string;
+  class_code: string;
+  credits: number;
+  schedule_summary: string;
+  sessions: Session[];
+  root_cause: string;
+  root_cause_label: string;
+  root_cause_severity: "critical" | "warning" | "info";
+  eligible_candidates_count: number;
+  total_candidates_count: number;
+  resolution_status: "NEW" | "UNDER_REVIEW" | "WAITING_FOR_DATA" | "MANUALLY_RESOLVED" | "RESOLVED_BY_SOLVER" | "ACCEPTED_UNRESOLVED";
+  resolution_notes?: string | null;
+  recommended_actions: Array<{
+    type: "OPEN_CALENDAR" | "REVIEW_PREFERENCES" | "REVIEW_CAPABILITY" | "MANUAL_ASSIGN" | "REQUEST_FACULTY_CHANGE";
+    label: string;
+    description: string;
+  }>;
+  bottleneck_details?: {
+    weekday: number;
+    period_range: string;
+    overlapping_classes_count: number;
+    available_lecturers_count: number;
+    shortage: number;
+  } | null;
+};
 
 export type Readiness = {
   ready: boolean;
@@ -110,6 +182,11 @@ export type Constraint = {
 };
 
 export type PreferenceDraft = {
+  normalized_text?: string;
+  is_confirmable?: boolean;
+  validation_errors?: Array<{code: string; field: string; message: string}>;
+  validation_warnings?: Array<{code: string; field: string; message: string}>;
+  field_provenance?: Record<string, {origin: string}>;
   id: number;
   batch_id: number | null;
   draft_kind: "CONSTRAINT" | "SHARED_SEMINAR";
@@ -117,7 +194,7 @@ export type PreferenceDraft = {
   lecturer?: string | null;
   lecturer_code?: string | null;
   lecturer_alias?: string | null;
-  context_type: "TEACHING" | "SEMINAR" | "MIXED";
+  context_type: "TEACHING" | "SEMINAR" | "MIXED" | null;
   context_confidence?: "HIGH" | "MEDIUM" | "LOW" | null;
   context_confirmed?: boolean;
   constraint_type: string;
@@ -139,9 +216,72 @@ export type PreferenceDraft = {
   confidence: "HIGH" | "MEDIUM" | "LOW";
   needs_review: boolean;
   review_reason?: string | null;
-  status: "DRAFT" | "CONFIRMED" | "NEEDS_REVIEW" | "REJECTED";
+  status: "DRAFT" | "CONFIRMED" | "NEEDS_REVIEW" | "REJECTED" | "INTERPRETED";
+  rejected_at?: string | null;
+  rejected_reason?: string | null;
   applied_constraint_id?: number | null;
   applied_seminar_id?: number | null;
+};
+
+export type LecturerReviewItem = {
+  id: number;
+  code: string | null;
+  name: string;
+  email: string | null;
+  department: string | null;
+  quota_min: number;
+  quota_max: number;
+  aliases: string[];
+  identity_status: "STANDARDIZED" | "NEEDS_CONFIRMATION" | "POSSIBLE_DUPLICATE";
+  sources: string[];
+  participates: boolean;
+  courses_can_teach: string[];
+  capabilities: Array<{course_id: number; course_code: string; course_name: string; allowed: boolean; confirmed: boolean; source: string | null}>;
+  active: boolean;
+  notes?: string | null;
+};
+
+export type LecturerReviewResponse = {
+  semester_id: number;
+  semester_name: string;
+  total_lecturers: number;
+  ready_count: number;
+  needs_review_count: number;
+  blockers_count: number;
+  blockers: string[];
+  items: LecturerReviewItem[];
+};
+
+export type LecturerImportPreviewRow = {
+  row: number;
+  code: string;
+  name: string;
+  email?: string | null;
+  department?: string | null;
+  quota_min?: number;
+  quota_max?: number;
+  aliases: string[];
+  participates: boolean;
+  match_rule: string;
+  matched_lecturer_id?: number | null;
+  issues: string[];
+};
+
+export type LecturerImportPreview = {
+  total_rows: number;
+  to_add: LecturerImportPreviewRow[];
+  to_update: LecturerImportPreviewRow[];
+  needs_confirmation: LecturerImportPreviewRow[];
+  possible_duplicates: LecturerImportPreviewRow[];
+  skipped: LecturerImportPreviewRow[];
+  can_commit: boolean;
+};
+
+export type LecturerImportResult = {
+  added: number;
+  updated: number;
+  aliases_created: number;
+  participations_updated: number;
 };
 
 export type Lecturer = {
@@ -151,6 +291,10 @@ export type Lecturer = {
   aliases?: string[];
   confirmed?: boolean;
   max_credits?: number;
+  status?: string;
+  department?: string;
+  email?: string;
+  note?: string;
 };
 
 export type ValidationIssue = {
@@ -183,6 +327,24 @@ export type TemplateColumn = {
 
 export type TemplateMapping = TemplateColumn & { confidence: number };
 
+export type HistoricalSummary = {
+  columns_count: number;
+  data_rows_count: number;
+  courses_count: number;
+  classes_count: number;
+  merged_groups_count: number;
+  lecturers_count: number;
+  lecturers_with_code?: number;
+};
+
+export type LecturerIdentitySummary = {
+  total: number;
+  with_code: number;
+  matched_master: number;
+  need_review: number;
+  new_candidates: number;
+};
+
 export type TemplateDetection = {
   profile_id: number;
   source_file: string;
@@ -190,10 +352,55 @@ export type TemplateDetection = {
   layout: "table" | "matrix";
   layout_label: string;
   header_row: number;
+  header_start_row?: number;
+  header_end_row?: number;
   mappings: Record<string, TemplateMapping>;
   missing_fields: string[];
   available_columns: TemplateColumn[];
   weekday_columns: Array<TemplateColumn & { weekday: number }>;
   preview: Record<string, string>[];
   ready: boolean;
+  historical_summary?: HistoricalSummary;
+  lecturer_identity_summary?: LecturerIdentitySummary;
+  historical_learning?: {status?: string; message?: string};
 };
+
+export type SourceRole = 'CURRENT_SCHEDULE' | 'PREFERENCE' | 'HISTORICAL' | 'OUTPUT_TEMPLATE' | 'REFERENCE_MATRIX';
+export type SourceVersion = {
+  id: number; source_type: SourceRole; original_filename: string; content_hash: string | null;
+  created_at: string; provenance_status: string; active: boolean; parent_version_id: number | null;
+  parse_summary: Record<string, unknown>;
+};
+export type SourceIssue = { id: number; code: string; message: string; details: { rows?: Array<{row: number; raw: string}>; class_code?: string }; resolution_status: string };
+export type SourceState = { sources: SourceVersion[]; active_schedule_source_id: number | null; active_preference_source_id: number | null; source_revision: number; legacy_unverified: boolean; issues: SourceIssue[] };
+export type SourcePreview = {
+  source_id: number; source_type: SourceRole; filename: string; preview_token: string; can_activate: boolean;
+  diff: { counts?: Record<string, number>; meetings?: Array<{status: string; before: Record<string, unknown> | null; after: Record<string, unknown> | null; changed_fields: string[]}>; drafts?: number; seminars?: number };
+  diagnostics: Array<{code: string; message: string}>; consequences: string[];
+};
+
+export type CapabilityReadiness = {
+  department_id?: number | null;
+  department_name?: string | null;
+  total_lecturers: number;
+  total_courses: number;
+  total_teaching_groups: number;
+  confirmed_groups: number;
+  historical_groups: number;
+  provisional_groups: number;
+  zero_candidate_groups: number;
+  confirmed_coverage_pct: number;
+  historical_coverage_pct: number;
+  provisional_coverage_pct: number;
+  unknown_coverage_pct: number;
+  courses_without_capability: Array<{
+    course_id: number;
+    course_code: string;
+    course_name: string;
+    affected_groups: number;
+  }>;
+  status: "READY" | "CAPABILITY_REVIEW_REQUIRED" | "NOT_READY";
+  ready: boolean;
+  recommendations: string[];
+};
+

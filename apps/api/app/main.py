@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.engine import make_url
 
 from app.api.routes import router
+from app.api.source_routes import router as source_router
+from app.api.lecturer_routes import router as lecturer_router
 from app.core.config import settings
 from app.db.session import init_db
 
@@ -57,6 +59,8 @@ async def protect_internal_api(request: Request, call_next):
 
 
 app.include_router(router)
+app.include_router(source_router)
+app.include_router(lecturer_router)
 
 
 @app.get("/")

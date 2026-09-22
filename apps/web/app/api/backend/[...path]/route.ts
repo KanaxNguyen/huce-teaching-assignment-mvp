@@ -8,11 +8,16 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
   const backendUrl = process.env.BACKEND_API_URL;
   const token = process.env.INTERNAL_API_TOKEN;
   if (!backendUrl || !token) {
-    return Response.json({ detail: "Backend staging chưa được cấu hình." }, { status: 503 });
+    const envLabel = process.env.NODE_ENV === "production" ? "Backend staging" : "Backend local";
+    return Response.json({ detail: `${envLabel} chưa được cấu hình.` }, { status: 503 });
   }
 
   const { path } = await context.params;
-  const target = new URL(`/${path.join("/")}`, backendUrl);
+  const cleanBase = backendUrl.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
+  const rawPath = path.join("/");
+  const subPath = rawPath.replace(/^api\/v1(?:\/|$)/, "");
+  const normalizedPath = subPath ? `/api/v1/${subPath}` : "/api/v1";
+  const target = new URL(normalizedPath, cleanBase);
   target.search = request.nextUrl.search;
   const headers = new Headers();
   const contentType = request.headers.get("content-type");
@@ -21,13 +26,18 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
   if (accept) headers.set("accept", accept);
   headers.set("x-internal-api-key", token);
 
-  const upstream = await fetch(target, {
-    method: request.method,
-    headers,
-    body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.arrayBuffer(),
-    cache: "no-store",
-    redirect: "manual",
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: request.method,
+      headers,
+      body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.arrayBuffer(),
+      cache: "no-store",
+      redirect: "follow",
+    });
+  } catch {
+    return Response.json({ detail: "Không kết nối được backend HUCE. Kiểm tra dịch vụ API và thử lại." }, { status: 502 });
+  }
   const responseHeaders = new Headers();
   for (const name of ["content-type", "content-disposition", "content-length"]) {
     const value = upstream.headers.get(name);

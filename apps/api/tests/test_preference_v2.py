@@ -126,6 +126,7 @@ def test_apply_route_is_semester_scoped_and_unresolved_identity_never_becomes_gl
         batch = ImportBatch(semester_id=semester.id, source_files=["v2.xlsx"], summary={}); db.add(batch); db.flush()
         valid = NormalizedPreferenceDraft(semester_id=semester.id, import_batch_id=batch.id, lecturer_id=lecturer.id, lecturer_code="GV1", lecturer_alias="A", constraint_type="UNAVAILABLE", day_scope="T4", periods=[4, 5, 6], target={"weekday": 4, "periods": [4, 5, 6]}, source_file="v2.xlsx", source_sheet="Nguyen_vong_GV", source_row=2, source_cell="A2:M2", confidence="HIGH", needs_review=False, status="CONFIRMED")
         unresolved = NormalizedPreferenceDraft(semester_id=semester.id, import_batch_id=batch.id, lecturer_alias="Unknown", constraint_type="UNAVAILABLE", periods=[1, 2, 3], target={"periods": [1, 2, 3]}, source_file="v2.xlsx", source_sheet="Nguyen_vong_GV", source_row=3, source_cell="A3:M3", confidence="LOW", needs_review=True, status="NEEDS_REVIEW")
+        valid.context_type = 'TEACHING'
         db.add_all([valid, unresolved]); db.commit(); sid, oid, valid_id, unresolved_id = semester.id, other.id, valid.id, unresolved.id
     with TestClient(app) as client:
         assert client.get(f"/api/v1/preference-drafts?semester_id={oid}").json() == []
@@ -143,6 +144,8 @@ def test_apply_rolls_back_all_mutations_on_failure(monkeypatch):
     with SessionLocal() as db:
         semester = _semester(db); lecturer = Lecturer(code="GV", canonical_name="Teacher", confirmed=True); db.add(lecturer); db.flush()
         drafts = [NormalizedPreferenceDraft(semester_id=semester.id, lecturer_id=lecturer.id, constraint_type="UNAVAILABLE", periods=[period], target={"weekday": 2, "periods": [period]}, source_file="x", source_sheet="s", source_row=period, source_cell=f"A{period}", confidence="HIGH", needs_review=False, status="CONFIRMED") for period in (1, 2)]
+        for draft in drafts:
+            draft.context_type='TEACHING'; draft.day_scope='T2'
         db.add_all(drafts); db.commit(); sid = semester.id; ids = [item.id for item in drafts]
         original_flush = db.flush; calls = 0
         def fail_second(*args, **kwargs):

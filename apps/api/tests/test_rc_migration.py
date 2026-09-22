@@ -12,7 +12,7 @@ from alembic.config import Config
 from test_phase1_migration import LEGACY_SQL
 
 ROOT = Path(__file__).resolve().parents[3]
-HEAD = "0005_preference_normalization_v2"
+HEAD = "0009_department_agnostic_capabilities"
 
 
 def upgrade(path, revision="head"):
@@ -135,7 +135,7 @@ for restart in range(2):
         assert response.status_code == 200, response.text
         assert response.json()['status'] == 'ok'
         with engine.connect() as db:
-            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '0005_preference_normalization_v2'
+            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '0009_department_agnostic_capabilities'
             assert db.scalar(text('PRAGMA foreign_keys')) == 1
         assert client.get('/api/v1/semesters').status_code == 200
 print('STARTUP_AND_RESTART_HEALTH_PASS')

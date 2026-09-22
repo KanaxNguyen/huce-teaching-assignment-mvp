@@ -170,7 +170,7 @@ def test_release_migration_command_uses_database_url_environment(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (
-            "0005_preference_normalization_v2",
+            "0009_department_agnostic_capabilities",
         )
 
 
@@ -277,6 +277,7 @@ def test_upload_size_extension_and_malformed_workbook_are_controlled(monkeypatch
 
 def test_template_upload_persists_storage_reference_and_reloads(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "upload_dir", tmp_path / "uploads")
+    workbook_data = _workbook_bytes()
     with TestClient(app) as client:
         semester = client.post(
             "/api/v1/semesters",
@@ -294,7 +295,7 @@ def test_template_upload_persists_storage_reference_and_reloads(tmp_path, monkey
             files={
                 "template_file": (
                     "template.xlsx",
-                    _workbook_bytes(),
+                    workbook_data,
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
             },
@@ -315,7 +316,7 @@ def test_template_upload_persists_storage_reference_and_reloads(tmp_path, monkey
         with LocalStorage(tmp_path / "uploads" / "objects").materialize(
             profile.source_file
         ) as stored:
-            assert stored.read_bytes() == _workbook_bytes()
+            assert stored.read_bytes() == workbook_data
 
 
 def test_missing_persisted_template_is_controlled_export_error(tmp_path, monkeypatch):

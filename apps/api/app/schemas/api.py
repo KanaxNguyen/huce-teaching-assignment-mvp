@@ -34,6 +34,7 @@ class SemesterCreate(BaseModel):
     start_date: str
     end_date: str
     head_name: str = Field(min_length=2, max_length=200)
+    department_id: int | None = None
 
 
 class TemplateMappingUpdate(BaseModel):
@@ -87,6 +88,8 @@ class PreferenceDraftUpdate(BaseModel):
     raw_text: str | None = None
     seminar_link: str | None = None
     status: Literal["DRAFT", "CONFIRMED", "NEEDS_REVIEW", "REJECTED"] | None = None
+    rejected_reason: str | None = None
+    review_reason: str | None = None
 
 
 class PreferenceDraftApply(BaseModel):
@@ -112,3 +115,34 @@ class ManualPreferenceDraftCreate(ManualDraftPart):
     lecturer_id: int
     context_type: Literal["TEACHING", "SEMINAR", "MIXED"]
     parts: list[ManualDraftPart] = Field(default_factory=list)
+
+
+class DepartmentCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    code: str = Field(min_length=1, max_length=50)
+    description: str | None = None
+
+
+class DepartmentOut(BaseModel):
+    id: int
+    name: str
+    code: str
+    description: str | None = None
+
+
+class DepartmentPolicyUpdate(BaseModel):
+    allow_provisional_capability: bool | None = None
+    course_capability_mode: Literal["STRICT", "PERMISSIVE_WITH_PENALTY", "DEPARTMENT_ONLY"] | None = None
+    policy_config: dict[str, Any] | None = None
+
+
+class CapabilityBulkConfirmRequest(BaseModel):
+    capability_ids: list[int] | None = None
+    course_ids: list[int] | None = None
+
+
+class CapabilityUpdateRequest(BaseModel):
+    allowed: bool | None = None
+    confirmed: bool | None = None
+
+

@@ -39,7 +39,7 @@ def preference(version):
 def run_import(monkeypatch, db, sid, version, lecturer=True):
     monkeypatch.setattr(importer, "parse_schedule", lambda _: parsed(version, lecturer))
     monkeypatch.setattr(importer, "parse_preferences", lambda _: [preference(version)] if lecturer else [])
-    return importer.import_files(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=sid, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
+    return importer._import_files_impl(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=sid, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
 
 
 def snapshot(db, sid):
@@ -84,7 +84,7 @@ def test_capability_is_preserved_and_ambiguous_preference_is_flagged(monkeypatch
         a = semester(db, "A")
         run_import(monkeypatch, db, a.id, "A")
         monkeypatch.setattr(importer, "parse_preferences", lambda _: [ParsedPreference("Unknown", "Unknown", None, "unavailable", {}, "unknown", .4, 4)])
-        importer.import_files(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
+        importer._import_files_impl(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
         assert db.query(LecturerCourseCapability).count() == 1
         assert db.scalar(select(ValidationIssue.code).where(ValidationIssue.semester_id == a.id, ValidationIssue.code == "LECTURER_IDENTITY_AMBIGUOUS"))
 
@@ -97,7 +97,7 @@ def test_confirmed_alias_matches_existing_lecturer_without_creating_a_duplicate(
         teacher.aliases = ["T. One"]
         db.commit()
         monkeypatch.setattr(importer, "parse_preferences", lambda _: [ParsedPreference("T. One", "T. One", 2, "unavailable", {"weekday": 2, "periods": [1, 2, 3]}, "no Tuesday", .9, 4)])
-        importer.import_files(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
+        importer._import_files_impl(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
         assert db.query(Lecturer).count() == 1
         assert db.scalar(select(NormalizedPreferenceDraft.lecturer_id).where(NormalizedPreferenceDraft.semester_id == a.id)) == teacher.id
         assert db.scalar(select(Constraint).where(Constraint.semester_id == a.id)) is None
@@ -108,7 +108,7 @@ def test_many_rows_form_one_teaching_group_and_many_meetings(monkeypatch):
         a = semester(db, "A")
         monkeypatch.setattr(importer, "parse_schedule", lambda _: ScheduleParseResult([ParsedClass("M", "Math", "L", 3, None, None, False, "f", "s", 1, {}, [ParsedSession(2, 1, 3, "P1", None, None, "1", [1], 1), ParsedSession(3, 4, 6, "P2", None, None, "1", [1], 2)], merged_group_id="MG-1")], [], [], 2, 0, 1))
         monkeypatch.setattr(importer, "parse_preferences", lambda _: [])
-        importer.import_files(db, [Path("schedule.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[])
+        importer._import_files_impl(db, [Path("schedule.xlsx")], semester_id=a.id, schedule_paths=[Path("schedule.xlsx")], preference_paths=[])
         assert db.query(ClassSection).filter_by(semester_id=a.id).count() == 1
         section = db.query(ClassSection).filter_by(semester_id=a.id).one()
         assert len(section.sessions) == 2
@@ -126,7 +126,7 @@ def test_atomic_rollback_after_persistence_started(monkeypatch):
             if calls == 4: raise RuntimeError("forced persistence failure")
             return original_flush(*args, **kwargs)
         monkeypatch.setattr(db, "flush", failing_flush)
-        with pytest.raises(RuntimeError): importer.import_files(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=aid, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
+        with pytest.raises(RuntimeError): importer._import_files_impl(db, [Path("schedule.xlsx"), Path("preference.xlsx")], semester_id=aid, schedule_paths=[Path("schedule.xlsx")], preference_paths=[Path("preference.xlsx")])
     with SessionLocal() as verify:
         assert snapshot(verify, aid) == before
         assert verify.scalars(select(ImportBatch).where(ImportBatch.semester_id == aid)).all()

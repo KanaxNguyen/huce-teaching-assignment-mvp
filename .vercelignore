@@ -1,0 +1,16 @@
+.git
+.venv
+.venv*/
+node_modules/
+apps/web/.next/
+output/
+tmp/
+storage/
+data/local/
+playwright-report/
+test-results/
+*.db
+*.sqlite
+*.sqlite3
+*.xls
+*.xlsx

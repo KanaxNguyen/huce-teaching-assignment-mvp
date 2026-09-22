@@ -148,3 +148,27 @@ def test_calendar_constraint_date_scope_does_not_block_outside_its_range():
         db.commit()
         run = solve(db, 2, False, s.id)
         assert db.scalar(select(Assignment).where(Assignment.run_id == run.id)).lecturer_id == a.id
+
+
+def test_prefer_low_workload_builds_valid_reified_thresholds():
+    with SessionLocal() as db:
+        s, c, a, b, items = setup(db, 2)
+        capability(db, a, c)
+        capability(db, b, c)
+        items[1].sessions[0].weekday = 3
+        db.add(Constraint(
+            semester_id=s.id,
+            name="keep load low",
+            constraint_type="PREFER_LOW_WORKLOAD",
+            hardness="soft",
+            weight=0.7,
+            lecturer_id=a.id,
+            target={},
+            confirmed=True,
+        ))
+        db.commit()
+
+        run = solve(db, 2, False, s.id)
+
+        assert run.status in {"optimal", "feasible"}
+        assert len(db.scalars(select(Assignment).where(Assignment.run_id == run.id)).all()) == 2

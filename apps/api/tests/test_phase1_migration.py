@@ -40,14 +40,21 @@ def test_legacy_database_upgrades_to_phase1(tmp_path):
 
     root = Path(__file__).resolve().parents[3]
     config = Config(str(root / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "apps/api/alembic"))
     config.set_main_option("sqlalchemy.url", f"sqlite:///{database}")
     command.upgrade(config, "head")
 
     migrated = create_engine(f"sqlite:///{database}")
     with migrated.connect() as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0005_preference_normalization_v2"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0009_department_agnostic_capabilities"
         assert "merge_status" in {column["name"] for column in inspect(db).get_columns("classes")}
         assert "lecturer_course_capabilities" in inspect(db).get_table_names()
+        assert "lecturer_aliases" in inspect(db).get_table_names()
+        assert "lecturer_semester_profiles" in inspect(db).get_table_names()
+        assert "historical_evidence" in inspect(db).get_table_names()
+        assert "lecturer_identity_audit" in inspect(db).get_table_names()
+        assert "profile_type" in {column["name"] for column in inspect(db).get_columns("output_template_profiles")}
+        assert "status" in {column["name"] for column in inspect(db).get_columns("lecturers")}
         for table in ("classes", "constraints", "optimization_runs", "assignments", "import_batches", "output_template_profiles"):
             assert "semester_id" in {column["name"] for column in inspect(db).get_columns(table)}
             assert db.scalar(text(f"SELECT semester_id FROM {table} LIMIT 1")) == 7
@@ -62,6 +69,7 @@ def test_interrupted_human_in_loop_migration_resumes_safely(tmp_path):
     connection.commit(); connection.close()
     root = Path(__file__).resolve().parents[3]
     config = Config(str(root / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "apps/api/alembic"))
     config.set_main_option("sqlalchemy.url", f"sqlite:///{database}")
     command.upgrade(config, "0002_domain_correctness")
     # Simulate the exact partially-applied SQLite state found by release UAT.
@@ -71,7 +79,7 @@ def test_interrupted_human_in_loop_migration_resumes_safely(tmp_path):
     command.upgrade(config, "head")
     migrated = create_engine(f"sqlite:///{database}")
     with migrated.connect() as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0005_preference_normalization_v2"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0009_department_agnostic_capabilities"
         assert "source" in {column["name"] for column in inspect(db).get_columns("assignments")}
 
 
@@ -82,6 +90,7 @@ def test_merge_status_migration_backfills_existing_review_decisions(tmp_path):
     connection.commit(); connection.close()
     root = Path(__file__).resolve().parents[3]
     config = Config(str(root / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "apps/api/alembic"))
     config.set_main_option("sqlalchemy.url", f"sqlite:///{database}")
     command.upgrade(config, "0003_human_in_loop")
     with sqlite3.connect(database) as db:
@@ -89,4 +98,4 @@ def test_merge_status_migration_backfills_existing_review_decisions(tmp_path):
     command.upgrade(config, "head")
     with sqlite3.connect(database) as db:
         assert db.execute("SELECT merge_status FROM classes").fetchone() == ("confirmed",)
-        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == ("0005_preference_normalization_v2",)
+        assert db.execute("SELECT version_num FROM alembic_version").fetchone() == ("0009_department_agnostic_capabilities",)

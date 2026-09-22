@@ -20,10 +20,10 @@ def test_week_decoder_preserves_positions():
     assert active == [1, 2, 3, 4, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18]
 
 
-def test_parse_lecturer_uses_primary_teacher_for_co_teaching_cell():
+def test_parse_lecturer_quarantines_co_teaching_cell():
     code, name = parse_lecturer("[00173]Nguyễn Bằng Giang,\n[00181]Nguyễn Xuân Linh")
-    assert code == "00173"
-    assert name == "Nguyễn Bằng Giang"
+    assert code is None
+    assert name is None
 
 
 def test_parse_lecturer_treats_unassigned_placeholders_as_empty():
@@ -63,7 +63,7 @@ def test_co_teaching_is_preserved_for_review(tmp_path):
     path = tmp_path / "cotaught.xlsx"
     _schedule_book(path, [[1, "M1", "Math", "L1", "", 2, "1-3", "P", 3, "", "01/01/2026", "01/06/2026", "123", "[T1]Teacher One, [T2]Teacher Two"]])
     result = parse_schedule(path)
-    assert any(issue.code == "CO_TEACHING_REQUIRES_REVIEW" for issue in result.issues)
+    assert any(issue.code == "MULTI_LECTURER_REVIEW" for issue in result.issues)
     assert result.classes[0].locked_assignment is False
 
 

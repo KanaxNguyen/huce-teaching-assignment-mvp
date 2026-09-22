@@ -20,7 +20,7 @@ from app.models.entities import (
 from app.optimization.solver import solve
 from app.parsers.preferences import parse_preference_workbook
 from app.parsers.schedule import parse_schedule
-from app.services.importer import import_files
+from app.services.importer import _import_files_impl as import_files
 from app.services.manual_assignment import apply_manual_assignment, check_assignment_change
 from app.services.readiness import capability_readiness, validate_schedule
 from app.services.template_detector import detect_output_template
@@ -49,18 +49,21 @@ def test_real_huce_schedule_and_preferences_normalize_without_losing_rows():
     assert wishes.format == "LEGACY"
     assert len(wishes.drafts) == 39
     assert len(wishes.seminars) == 0
-    assert wishes.raw_clauses == 37
+    assert wishes.raw_clauses == 38
     assert wishes.dropped_clauses == 0
     assert all(item.raw_text for item in wishes.drafts)
     lieu = [item for item in wishes.drafts if item.lecturer_alias == "Liễu"]
     assert len(lieu) >= 3 and {item.context_type for item in lieu} == {"TEACHING", "SEMINAR"}
     x_linh_mixed = [
         item for item in wishes.drafts
-        if item.lecturer_alias == "X Linh" and "có thể đến 12h30" in item.raw_text
+        if item.lecturer_alias == "X Linh" and item.source_cell.startswith('F6#')
     ]
     assert len(x_linh_mixed) == 2
     assert {item.context_type for item in x_linh_mixed} == {"TEACHING", "SEMINAR"}
-    assert all(item.raw_text == x_linh_mixed[0].raw_text for item in x_linh_mixed)
+    # Newlines delimit independent source clauses, preserving both intentions.
+    assert len({item.raw_text for item in x_linh_mixed}) == 2
+    assert any('12h30' in item.raw_text and item.context_type=='SEMINAR' for item in x_linh_mixed)
+    assert any('tiết 10' in item.raw_text and item.context_type=='TEACHING' for item in x_linh_mixed)
 
 
 def test_real_data_import_solve_problem_export_round_trip_and_persistence(tmp_path):

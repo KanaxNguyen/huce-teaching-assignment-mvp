@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import shutil
 import tempfile
 from contextlib import ExitStack, contextmanager
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 from zipfile import BadZipFile
@@ -11,34 +12,42 @@ from zipfile import BadZipFile
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from openpyxl.utils.exceptions import InvalidFileException
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import Session, selectinload
 from starlette.background import BackgroundTask
 from xlrd.biffh import XLRDError
 
 from app.core.config import settings
 from app.db.session import get_db
-from app.exporters.excel import export_latest
+from app.exporters.excel import export_latest, export_matrix
 from app.models.entities import (
     Assignment,
     ClassSection,
     ClassSession,
     Constraint,
+    HistoricalEvidence,
     Lecturer,
     LecturerCourseCapability,
     NormalizedPreferenceDraft,
     OptimizationRun,
     OutputTemplateProfile,
     Semester,
+    SourceVersion,
+    ImportBatch,
     Seminar,
     ValidationIssue,
 )
 from app.optimization.solver import solve
+from app.services.historical_learning import learn_from_template_profile
 from app.parsers.preferences import describe_preference
 from app.schemas.api import (
     AliasResolution,
+    CapabilityBulkConfirmRequest,
+    CapabilityUpdateRequest,
     ConstraintCreate,
     ConstraintUpdate,
+    DepartmentCreate,
+    DepartmentPolicyUpdate,
     ImportResponse,
     MergedDecision,
     ManualPreferenceDraftCreate,
@@ -49,9 +58,11 @@ from app.schemas.api import (
     SeminarCreate,
     TemplateMappingUpdate,
 )
-from app.services.importer import dashboard, import_files
+from app.services.importer import dashboard
+from app.services.source_authority import (SourceError, stage_source, register_source, source_payload, latest_current_run, current_run_predicate, source_blockers, active_issues)
 from app.services.manual_assignment import apply_manual_assignment, check_assignment_change
 from app.services.template_detector import detect_output_template
+from app.services.lecturer_master import confirm_alias
 from app.storage import get_storage_backend
 
 router = APIRouter(prefix="/api/v1")
@@ -106,6 +117,7 @@ def get_semesters(db: Session = Depends(get_db)) -> list[dict]:
         {
             "id": item.id,
             "name": item.name,
+            "department_id": item.department_id,
             "department_name": item.department_name,
             "start_date": item.start_date,
             "end_date": item.end_date,
@@ -128,9 +140,17 @@ def create_semester(payload: SemesterCreate, db: Session = Depends(get_db)) -> d
         raise HTTPException(422, "Ngày kết thúc phải sau ngày bắt đầu.")
     for semester in db.scalars(select(Semester).where(Semester.is_active.is_(True))).all():
         semester.is_active = False
+
+    dept_id = payload.department_id
+    if not dept_id and payload.department_name:
+        from app.core.department_policies import resolve_or_create_department
+        dept = resolve_or_create_department(db, payload.department_name)
+        dept_id = dept.id
+
     item = Semester(
         name=payload.name.strip(),
         department_name=payload.department_name.strip(),
+        department_id=dept_id,
         start_date=start_date,
         end_date=end_date,
         head_name=payload.head_name.strip(),
@@ -156,26 +176,45 @@ def detect_template(
             reference = get_storage_backend().put(
                 path, f"templates/{sid}/{uuid4().hex}/{path.name}"
             )
+            source_version = register_source(db, path, sid, "REFERENCE_MATRIX" if result.get("layout") == "matrix" else "OUTPUT_TEMPLATE")
+            profile = OutputTemplateProfile(
+                source_version_id=source_version.id,
+                semester_id=sid,
+                source_file=reference,
+                source_sheet=result["source_sheet"],
+                header_row=result["header_row"],
+                mappings=result["mappings"],
+                missing_fields=result["missing_fields"],
+                preview=result["preview"],
+                profile_type="DEPARTMENT_MATRIX" if result.get("layout") == "matrix" else "DETAILED_ASSIGNMENT",
+            )
+            db.add(profile)
+            db.commit()
+            result["profile_id"] = profile.id
+            try:
+                evidence_summary = learn_from_template_profile(db, profile, path)
+                result["historical_learning"] = evidence_summary
+                result["lecturer_identity_summary"] = {
+                    "total": evidence_summary.get("total_lecturers", result.get("historical_summary", {}).get("lecturers_count", 0)),
+                    "with_code": evidence_summary.get("with_code", result.get("historical_summary", {}).get("lecturers_with_code", 0)),
+                    "matched_master": evidence_summary.get("matched_master", evidence_summary.get("known_lecturers", 0)),
+                    "need_review": evidence_summary.get("need_review", evidence_summary.get("new_candidates", 0)),
+                    "new_candidates": evidence_summary.get("new_candidates", 0),
+                }
+            except Exception:
+                db.rollback()
+                result["historical_learning"] = {"status": "NEEDS_REVIEW", "message": "Nhận diện mẫu thành công nhưng chưa trích xuất được lịch sử; cần rà soát."}
+            return result
     except WORKBOOK_ERRORS as error:
         raise HTTPException(422, "Không thể đọc workbook mẫu.") from error
-    profile = OutputTemplateProfile(
-        semester_id=sid,
-        source_file=reference,
-        source_sheet=result["source_sheet"],
-        header_row=result["header_row"],
-        mappings=result["mappings"],
-        missing_fields=result["missing_fields"],
-        preview=result["preview"],
-    )
-    db.add(profile)
-    db.commit()
-    result["profile_id"] = profile.id
-    return result
 
 
 @router.get("/templates/latest")
 def get_latest_template(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> dict | None:
-    sid = _semester_id(db, semester_id)
+    try:
+        sid = _semester_id(db, semester_id)
+    except HTTPException:
+        return None
     profile = db.scalars(
         select(OutputTemplateProfile).where(OutputTemplateProfile.semester_id == sid).order_by(OutputTemplateProfile.id.desc()).limit(1)
     ).first()
@@ -184,6 +223,13 @@ def get_latest_template(semester_id: int | None = Query(None), db: Session = Dep
     try:
         with get_storage_backend().materialize(profile.source_file) as source_path:
             result = detect_output_template(source_path)
+            # User override preservation: human mappings > automatic redetection
+            if profile.mappings:
+                for field, mapping in profile.mappings.items():
+                    result["mappings"][field] = mapping
+                from app.services.template_detector import REQUIRED_FIELDS
+                result["missing_fields"] = [f for f in REQUIRED_FIELDS if f not in result["mappings"]]
+                result["ready"] = len(result["missing_fields"]) == 0
     except STORAGE_WORKBOOK_ERRORS:
         result = {
             "source_file": profile.source_file,
@@ -199,6 +245,19 @@ def get_latest_template(semester_id: int | None = Query(None), db: Session = Dep
             "ready": not profile.missing_fields,
         }
     result["profile_id"] = profile.id
+    evidence_rows = db.scalars(select(HistoricalEvidence).where(HistoricalEvidence.profile_id == profile.id)).all()
+    if evidence_rows:
+        unique_lecturers = {e.source_text for e in evidence_rows}
+        with_code = {e.source_text for e in evidence_rows if e.lecturer_code}
+        matched = {e.lecturer_id for e in evidence_rows if e.lecturer_id is not None}
+        new_cands = {e.source_text for e in evidence_rows if e.status == "NEW_LECTURER_CANDIDATE"}
+        result["lecturer_identity_summary"] = {
+            "total": len(unique_lecturers),
+            "with_code": len(with_code),
+            "matched_master": len(matched),
+            "need_review": len(new_cands),
+            "new_candidates": len(new_cands),
+        }
     return result
 
 
@@ -218,53 +277,54 @@ def update_template_mapping(
     return {"id": profile.id, "updated": True, "ready": not profile.missing_fields}
 
 
-@router.post("/imports/local", response_model=ImportResponse)
-def import_local(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> dict:
-    source = settings.resolve(settings.source_dir)
-    paths = sorted((*source.glob("*.xls"), *source.glob("*.xlsx")))
-    try:
-        return import_files(db, paths, semester_id=_semester_id(db, semester_id))
-    except ValueError as error:
-        raise HTTPException(422, str(error)) from error
+@router.post("/imports/local")
+def import_local(semester_id: int | None = Query(None), db: Session = Depends(get_db)):
+    raise HTTPException(422, {"code": "EXPLICIT_SOURCE_ROLE_REQUIRED", "message": "Tải từng nguồn với vai trò rõ ràng; xem đối chiếu rồi kích hoạt."})
 
 
-@router.post("/imports/upload", response_model=ImportResponse)
-def upload(files: list[UploadFile] = File(...), semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> dict:
+@router.post("/imports/upload")
+def upload(files: list[UploadFile] = File(...), source_type: str = Query(...), semester_id: int | None = Query(None), db: Session = Depends(get_db)):
+    sid = _semester_id(db, semester_id)
     try:
         with ExitStack() as stack:
             paths = [stack.enter_context(_temporary_typed_upload(item)) for item in files]
-            return import_files(db, paths, semester_id=_semester_id(db, semester_id))
-    except ValueError as error:
-        raise HTTPException(422, str(error)) from error
-    except WORKBOOK_ERRORS as error:
-        raise HTTPException(422, "Không thể đọc workbook đã tải lên.") from error
+            sources = [stage_source(db, path, sid, source_type) for path in paths]
+            db.commit()
+            return {"status": "STAGED", "sources": [source_payload(s, db.get(Semester, sid)) for s in sources]}
+    except SourceError as error:
+        db.rollback(); raise HTTPException(422, error.detail) from error
+    except (ValueError, *WORKBOOK_ERRORS) as error:
+        db.rollback(); raise HTTPException(422, "Không thể đọc nguồn đã tải lên.") from error
 
 
-@router.post("/imports/upload-pair", response_model=ImportResponse)
-def upload_pair(
-    schedule_file: UploadFile = File(...),
-    preference_file: UploadFile = File(...),
-    semester_id: int | None = Query(None),
-    db: Session = Depends(get_db),
-) -> dict:
+@router.post("/imports/upload-pair")
+def upload_pair(schedule_file: UploadFile = File(...), preference_file: UploadFile = File(...),
+                semester_id: int | None = Query(None), db: Session = Depends(get_db)):
+    sid = _semester_id(db, semester_id)
     try:
         with ExitStack() as stack:
             schedule_path = stack.enter_context(_temporary_typed_upload(schedule_file))
             preference_path = stack.enter_context(_temporary_typed_upload(preference_file))
-            return import_files(
-                db,
-                [schedule_path, preference_path],
-                schedule_paths=[schedule_path],
-                preference_paths=[preference_path],
-                semester_id=_semester_id(db, semester_id),
-            )
-    except ValueError as error:
-        raise HTTPException(422, str(error)) from error
-    except WORKBOOK_ERRORS as error:
-        raise HTTPException(422, "Không thể đọc workbook đã tải lên.") from error
+            batch = ImportBatch(semester_id=sid, source_files=[schedule_path.name, preference_path.name], summary={"status": "STAGED"})
+            db.add(batch); db.flush()
+            sources = [stage_source(db, schedule_path, sid, "CURRENT_SCHEDULE", batch=batch),
+                       stage_source(db, preference_path, sid, "PREFERENCE", batch=batch)]
+            db.commit()
+            return {"status": "STAGED", "sources": [source_payload(s, db.get(Semester, sid)) for s in sources]}
+    except SourceError as error:
+        db.rollback(); raise HTTPException(422, error.detail) from error
+    except (ValueError, *WORKBOOK_ERRORS) as error:
+        db.rollback(); raise HTTPException(422, "Không thể đọc workbook đã tải lên.") from error
+
+
+from app.services.preference_validation import validate_preference_draft, transition_status, field_provenance, SEMANTIC_FIELDS, values as draft_values
 
 
 def _draft_payload(item: NormalizedPreferenceDraft) -> dict:
+    interpreted = item.constraint_type == "RAW_NOTE" and item.status == "INTERPRETED"
+    validation = ({"is_confirmable": False, "validation_errors": [], "validation_warnings": []}
+                  if interpreted else validate_preference_draft(item))
+    interpreted_rules = (item.target or {}).get("interpreted_rules") or []
     return {
         "id": item.id, "batch_id": item.import_batch_id, "draft_kind": item.draft_kind,
         "lecturer_id": item.lecturer_id, "lecturer": item.lecturer.canonical_name if item.lecturer else None,
@@ -272,14 +332,24 @@ def _draft_payload(item: NormalizedPreferenceDraft) -> dict:
         "context_type": item.context_type or "TEACHING", "context_confidence": item.context_confidence,
         "context_confirmed": item.context_confirmed,
         "constraint_type": item.constraint_type, "day_scope": item.day_scope,
+        "source_version_id": item.source_version_id,
         "periods": item.periods, "start_date": item.start_date, "end_date": item.end_date,
         "hardness": item.hardness, "weight": item.weight, "numeric_value": item.numeric_value,
         "target": item.target, "participant_codes": item.participant_codes, "seminar_link": item.seminar_link,
+        "normalized_text": ("Đã diễn giải thành: " + "; ".join(
+            describe_preference(rule.get("constraint_type", ""), rule.get("target") or {})
+            for rule in interpreted_rules
+        )) if interpreted_rules else ("Đã lưu nguyên văn; không tạo ràng buộc solver." if interpreted else
+            (describe_preference(item.constraint_type,item.target or {}) if item.day_scope or item.target.get('start_date') else 'Chưa xác định đủ phạm vi; cần rà soát.')),
         "source_file": item.source_file, "source_sheet": item.source_sheet,
         "source_row": item.source_row, "source_cell": item.source_cell, "raw_text": item.raw_text,
         "confidence": item.confidence, "needs_review": item.needs_review,
         "review_reason": item.review_reason, "status": item.status,
+        "rejected_at": item.rejected_at.isoformat() if item.rejected_at else None,
+        "rejected_reason": item.rejected_reason,
         "applied_constraint_id": item.applied_constraint_id, "applied_seminar_id": item.applied_seminar_id,
+        **validation,
+        "field_provenance": field_provenance(item),
     }
 
 
@@ -288,7 +358,7 @@ def get_preference_drafts(semester_id: int = Query(...), db: Session = Depends(g
     _semester_id(db, semester_id)
     items = db.scalars(
         select(NormalizedPreferenceDraft)
-        .where(NormalizedPreferenceDraft.semester_id == semester_id)
+        .where(NormalizedPreferenceDraft.semester_id == semester_id, or_(NormalizedPreferenceDraft.source_version_id.is_(None), NormalizedPreferenceDraft.source_version_id == db.get(Semester, semester_id).active_preference_source_id))
         .options(selectinload(NormalizedPreferenceDraft.lecturer))
         .order_by(NormalizedPreferenceDraft.lecturer_alias, NormalizedPreferenceDraft.source_row, NormalizedPreferenceDraft.id)
     ).all()
@@ -300,7 +370,7 @@ def _manual_draft_values(part, lecturer: Lecturer, semester_id: int) -> dict:
         raise HTTPException(422, "Phạm vi ngày không hợp lệ.")
     if any(period < 1 or period > 15 for period in part.periods):
         raise HTTPException(422, "Tiết phải nằm trong 1–15.")
-    teaching_types = {"UNAVAILABLE", "AVOID_PERIOD", "PREFERRED_PERIOD", "PREFER_CONSECUTIVE_PERIODS", "MIN_CLASSES", "MAX_CLASSES", "MAX_SESSIONS_PER_DAY", "MAX_DAYS_PER_WEEK", "MIN_FREE_MORNING_PER_WEEK", "REQUIRED_ASSIGNMENT", "FORBIDDEN_ASSIGNMENT", "RAW_NOTE"}
+    teaching_types = {"UNAVAILABLE", "AVOID_PERIOD", "PREFERRED_PERIOD", "PREFERRED_DAYS", "AVOID_DAYS", "PREFER_LOW_WORKLOAD", "PREFER_COMPACT_SCHEDULE", "PREFER_CONSECUTIVE_PERIODS", "MIN_CLASSES", "MAX_CLASSES", "MAX_SESSIONS_PER_DAY", "MAX_DAYS_PER_WEEK", "MIN_FREE_MORNING_PER_WEEK", "REQUIRED_ASSIGNMENT", "FORBIDDEN_ASSIGNMENT", "RAW_NOTE"}
     seminar_types = {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}
     allowed = teaching_types if part.context_type == "TEACHING" else seminar_types
     if part.constraint_type not in allowed:
@@ -345,6 +415,18 @@ def _manual_draft_values(part, lecturer: Lecturer, semester_id: int) -> dict:
     }
 
 
+@router.post('/preference-drafts/validate')
+def validate_new_draft(payload: dict, semester_id: int = Query(...), db: Session = Depends(get_db)):
+    _semester_id(db,semester_id)
+    parts=payload.get('parts') if payload.get('context_type')=='MIXED' else [payload]
+    if not isinstance(parts,list) or not parts:
+        raise HTTPException(422,'Cần có các phần nguyện vọng để kiểm tra.')
+    results=[validate_preference_draft({**part,'lecturer_id':payload.get('lecturer_id'),'semester_id':semester_id},db) for part in parts if isinstance(part,dict)]
+    if len(results)!=len(parts): raise HTTPException(422,'Phần nguyện vọng không hợp lệ.')
+    errors=[error for result in results for error in result['validation_errors']]
+    return {'is_confirmable':not errors,'validation_errors':errors,'validation_warnings':[]}
+
+
 @router.post("/preference-drafts")
 def create_manual_preference_draft(
     payload: ManualPreferenceDraftCreate, semester_id: int = Query(...), db: Session = Depends(get_db),
@@ -357,8 +439,31 @@ def create_manual_preference_draft(
     if payload.context_type == "MIXED" and (len(parts) < 2 or {part.context_type for part in parts} != {"TEACHING", "SEMINAR"}):
         raise HTTPException(422, "MIXED phải tách thành ít nhất một phần lịch dạy và một phần seminar.")
     items = [NormalizedPreferenceDraft(**_manual_draft_values(part, lecturer, semester_id)) for part in parts]
+    for item, part in zip(items, parts):
+        item.target = {**item.target, '_provenance': {field: {'origin': 'HUMAN_ENTERED' if getattr(item,field,None) not in (None,[], '') else 'UNKNOWN'} for field in SEMANTIC_FIELDS-{'target'}}}
+        validation = validate_preference_draft(item, db)
+        if part.status == 'CONFIRMED' and not validation['is_confirmable']:
+            raise HTTPException(422, {'code':'PREFERENCE_DRAFT_NOT_READY', **validation})
+        item.status = part.status if validation['is_confirmable'] else 'NEEDS_REVIEW'
+        item.needs_review = not validation['is_confirmable']
     db.add_all(items); db.commit()
     return {"ids": [item.id for item in items], "created": len(items), "atomic_split": payload.context_type == "MIXED"}
+
+
+@router.post("/preference-drafts/{draft_id}/validate")
+def validate_draft_edit(draft_id: int, payload: PreferenceDraftUpdate, semester_id: int = Query(...), db: Session = Depends(get_db)):
+    item = db.get(NormalizedPreferenceDraft, draft_id)
+    if not item or item.semester_id != semester_id:
+        raise HTTPException(404, 'Không tìm thấy bản nháp trong kỳ học.')
+    data = {**draft_values(item), **payload.model_dump(exclude_unset=True), 'semester_id':semester_id}
+    if 'numeric_value' in payload.model_fields_set:
+        data['target']={k:v for k,v in (data.get('target') or {}).items() if k not in {'value','min','max'}}
+    # Changing period values deliberately replaces existing alternatives.
+    if data.get('periods'):
+        data['target'] = {**(data.get('target') or {})}
+        data['target'].pop('period_alternatives', None)
+    if item.status == 'REJECTED': data['status'] = 'REJECTED'
+    return validate_preference_draft(data, db)
 
 
 @router.patch("/preference-drafts/{draft_id}")
@@ -369,7 +474,22 @@ def update_preference_draft(
     if not item or item.semester_id != semester_id:
         raise HTTPException(404, "Không tìm thấy bản nháp nguyện vọng.")
     changes = payload.model_dump(exclude_unset=True)
-    old_context = item.context_type or "TEACHING"
+    for field in ('weight','hardness','constraint_type','status'):
+        if field in changes and changes[field] is None:
+            raise HTTPException(422,{'code':'MISSING_FIELD','field':field,'message':'Không được bỏ trống giá trị này.'})
+    if 'periods' in changes and changes['periods'] is None: changes['periods']=[]
+    old_status = item.status
+    old_values = draft_values(item)
+    if changes.get('lecturer_id') and changes['lecturer_id']!=item.lecturer_id:
+        from app.services.lecturer_master import relink_source_identity
+        lecturer=db.get(Lecturer,changes['lecturer_id'])
+        if not lecturer: raise HTTPException(422,'Giảng viên không tồn tại.')
+        try: relink_source_identity(db,item,lecturer,semester_id)
+        except ValueError as error:
+            db.rollback();raise HTTPException(409,str(error)) from error
+    if (item.applied_constraint_id or item.applied_seminar_id) and any(k in SEMANTIC_FIELDS or k=='status' for k in changes):
+        raise HTTPException(409, {'code':'PREFERENCE_ALREADY_APPLIED','message':'Bản nháp đã áp dụng; chỉnh ràng buộc đang hoạt động riêng.'})
+    old_context = item.context_type
     for field in ("start_date", "end_date"):
         if field in changes:
             try:
@@ -393,7 +513,7 @@ def update_preference_draft(
                 item.constraint_type = "RAW_NOTE"
                 item.needs_review = True
                 item.status = "NEEDS_REVIEW"
-    context = item.context_type or "TEACHING"
+    context = item.context_type
     compatible = (
         context == "TEACHING" and item.constraint_type not in {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}
     ) or (
@@ -406,6 +526,21 @@ def update_preference_draft(
     if item.lecturer_id and compatible and item.constraint_type not in {"RAW_NOTE", "SEMINAR_NOTE"} and context != "MIXED" and item.status == "CONFIRMED":
         item.needs_review = False
         item.review_reason = None
+    if "status" in changes:
+        if changes["status"] == "REJECTED":
+            item.status = "REJECTED"
+            item.needs_review = False
+            item.rejected_at = datetime.now(timezone.utc)
+            item.rejected_reason = payload.rejected_reason or changes.get("review_reason") or item.rejected_reason
+            item.review_reason = item.rejected_reason
+        elif changes["status"] == "NEEDS_REVIEW":
+            item.status = "NEEDS_REVIEW"
+            item.needs_review = True
+            item.rejected_at = None
+            item.rejected_reason = None
+            item.review_reason = None
+    if "rejected_reason" in changes and changes.get("status") != "NEEDS_REVIEW":
+        item.rejected_reason = payload.rejected_reason
     if item.start_date and item.end_date and item.end_date < item.start_date:
         raise HTTPException(422, "Ngày kết thúc phải không trước ngày bắt đầu.")
     target = {**(item.target or {}), "day_scope": item.day_scope, "periods": item.periods or []}
@@ -416,6 +551,11 @@ def update_preference_draft(
         target["slots"] = [{"weekday": weekday, "periods": item.periods or []} for weekday in weekdays]
     elif weekdays:
         target["weekday"] = weekdays[0]
+    if target.get("period_alternatives"):
+        if item.periods:
+            target.pop("period_alternatives", None)
+        else:
+            target["slots"] = [{"weekday": day, "periods": periods} for day in weekdays for periods in target["period_alternatives"]]
     if item.start_date:
         target["start_date"] = item.start_date.isoformat()
     else:
@@ -435,6 +575,31 @@ def update_preference_draft(
         item.target.pop("min", None)
         item.target.pop("max", None)
         item.target["min" if item.constraint_type == "MIN_CLASSES" else "max"] = item.numeric_value
+    elif 'numeric_value' in changes:
+        item.target={k:v for k,v in item.target.items() if k not in {'value','min','max'}}
+    changed = {field for field in SEMANTIC_FIELDS & changes.keys() if old_values.get(field) != getattr(item,field,None)}
+    try:
+        item.status = transition_status(old_status, changes.get('status'), bool(changed))
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(409, {'code':str(error),'message':'Khôi phục về Cần xác nhận trước khi xác nhận lại.'}) from error
+    provenance = dict((item.target or {}).get('_provenance',{}))
+    for field in changed:
+        provenance[field] = {'origin':'HUMAN_ENTERED' if getattr(item,field,None) not in (None,[],'') else 'UNKNOWN'}
+    item.target = {**item.target,'_provenance':provenance}
+    item.context_confirmed = item.context_confirmed or bool(changed)
+    validation = validate_preference_draft(item, db)
+    if item.status == 'CONFIRMED' and not validation['is_confirmable']:
+        db.rollback()
+        raise HTTPException(422, {'code':'PREFERENCE_DRAFT_NOT_READY', **validation})
+    if item.status not in {'CONFIRMED','REJECTED'} and not validation['is_confirmable']:
+        item.status='NEEDS_REVIEW'
+        item.confidence='LOW'
+    item.needs_review = item.status not in {'CONFIRMED','REJECTED'}
+    if item.status=='CONFIRMED':
+        item.target = {**item.target,'_provenance':{field:{**entry,'confirmed':True} for field,entry in provenance.items()}}
+    elif changed and old_status=='CONFIRMED':
+        item.review_reason='Nội dung đã thay đổi; cần xác nhận lại.'
     db.commit()
     db.refresh(item)
     return _draft_payload(item)
@@ -451,7 +616,7 @@ def confirm_high_preference_drafts(semester_id: int = Query(...), db: Session = 
     )).all()
     confirmed = 0
     for item in items:
-        if item.draft_kind == "SHARED_SEMINAR" or (item.lecturer_id and item.constraint_type != "RAW_NOTE"):
+        if validate_preference_draft(item, db)['is_confirmable']:
             item.status = "CONFIRMED"
             confirmed += 1
     db.commit()
@@ -479,9 +644,16 @@ def apply_preference_drafts(
     )).all()
     if len(items) != len(set(payload.draft_ids)):
         raise HTTPException(404, "Có bản nháp không thuộc kỳ học này.")
-    invalid = [item.id for item in items if item.status != "CONFIRMED" or item.needs_review]
+    active_preference = db.get(Semester, semester_id).active_preference_source_id
+    if any((item.source_version_id is not None and item.source_version_id != active_preference) or (item.target or {}).get('_stale_source_reference') for item in items):
+        raise HTTPException(422, {"code": "SOURCE_CHANGED_REVIEW_REQUIRED", "message": "Bản nháp thuộc nguồn cũ hoặc có tham chiếu cũ; tạo lại hoặc rà soát nguồn hiện hành."})
+    invalid = [item.id for item in items if item.status != "CONFIRMED" or item.needs_review or not validate_preference_draft(item, db)['is_confirmable']]
     invalid.extend(item.id for item in items if item.draft_kind == "CONSTRAINT" and (not item.lecturer_id or item.constraint_type in {"RAW_NOTE", "SEMINAR_NOTE"} or item.context_type == "MIXED"))
-    supported_types = {"UNAVAILABLE", "AVOID_PERIOD", "PREFERRED_PERIOD", "MIN_CLASSES", "MAX_CLASSES", "MAX_SESSIONS_PER_DAY", "MAX_DAYS_PER_WEEK", "REQUIRED_ASSIGNMENT", "FORBIDDEN_ASSIGNMENT", "SEMINAR_COMMITMENT"}
+    supported_types = {
+        "UNAVAILABLE", "AVOID_PERIOD", "PREFERRED_PERIOD", "PREFERRED_DAYS", "AVOID_DAYS", "PREFER_LOW_WORKLOAD", "PREFER_COMPACT_SCHEDULE", "PREFER_CONSECUTIVE_PERIODS",
+        "MIN_CLASSES", "MAX_CLASSES", "MAX_SESSIONS_PER_DAY", "MAX_DAYS_PER_WEEK",
+        "MIN_FREE_MORNING_PER_WEEK", "REQUIRED_ASSIGNMENT", "FORBIDDEN_ASSIGNMENT", "SEMINAR_COMMITMENT"
+    }
     invalid.extend(item.id for item in items if item.draft_kind == "CONSTRAINT" and item.constraint_type not in supported_types)
     seminar_types = {"SEMINAR_COMMITMENT", "SEMINAR_NOTE"}
     invalid.extend(
@@ -495,7 +667,24 @@ def apply_preference_drafts(
     )
     if invalid:
         raise HTTPException(422, {"code": "PREFERENCE_DRAFT_NOT_READY", "draft_ids": sorted(set(invalid))})
-    type_map = {"UNAVAILABLE": "unavailable", "AVOID_PERIOD": "avoid", "PREFERRED_PERIOD": "prefer_period", "SEMINAR_COMMITMENT": "seminar"}
+    type_map = {
+        "UNAVAILABLE": "unavailable",
+        "AVOID_PERIOD": "avoid",
+        "PREFERRED_PERIOD": "prefer_period",
+        "PREFERRED_DAYS": "preferred_days",
+        "AVOID_DAYS": "avoid_days",
+        "PREFER_LOW_WORKLOAD": "prefer_low_workload",
+        "PREFER_COMPACT_SCHEDULE": "prefer_compact_schedule",
+        "PREFER_CONSECUTIVE_PERIODS": "prefer_consecutive_periods",
+        "MIN_FREE_MORNING_PER_WEEK": "min_free_morning_per_week",
+        "MIN_CLASSES": "min_classes",
+        "MAX_CLASSES": "max_classes",
+        "MAX_SESSIONS_PER_DAY": "max_sessions_per_day",
+        "MAX_DAYS_PER_WEEK": "max_days_per_week",
+        "REQUIRED_ASSIGNMENT": "required_assignment",
+        "FORBIDDEN_ASSIGNMENT": "forbidden_assignment",
+        "SEMINAR_COMMITMENT": "seminar",
+    }
     created_constraints = 0
     created_seminars = 0
     try:
@@ -511,14 +700,14 @@ def apply_preference_drafts(
                     for periods in target.get("period_blocks", [])
                 ]
                 seminar = Seminar(
-                    semester_id=semester_id, name=target.get("name") or "Shared seminar", chair_name="",
+                    semester_id=semester_id, source_version_id=item.source_version_id, name=target.get("name") or "Shared seminar", chair_name="",
                     members=target.get("member_ids") or [], alternatives=alternatives,
                     hardness=item.hardness, weight=item.weight,
                 )
                 db.add(seminar); db.flush(); item.applied_seminar_id = seminar.id; created_seminars += 1
             else:
                 constraint = Constraint(
-                    semester_id=semester_id, lecturer_id=item.lecturer_id,
+                    semester_id=semester_id, source_version_id=item.source_version_id, lecturer_id=item.lecturer_id,
                     name=describe_preference(item.constraint_type, item.target or {}),
                     constraint_type=type_map.get(item.constraint_type, item.constraint_type),
                     hardness=item.hardness, weight=item.weight,
@@ -534,8 +723,15 @@ def apply_preference_drafts(
 
 
 @router.get("/dashboard")
-def get_dashboard(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> dict:
-    return dashboard(db, _semester_id(db, semester_id))
+def get_dashboard(
+    semester_id: int | None = Query(None),
+    run_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> dict:
+    if isinstance(run_id, Session):
+        db = run_id
+        run_id = None
+    return dashboard(db, _semester_id(db, semester_id), run_id=run_id)
 
 
 @router.get("/lecturers")
@@ -547,9 +743,17 @@ def get_lecturers(db: Session = Depends(get_db)) -> list[dict]:
             "name": item.canonical_name,
             "aliases": item.aliases,
             "confirmed": item.confirmed,
+            "status": item.status,
+            "department": item.department,
+            "email": item.email,
+            "note": item.note,
             "max_credits": item.max_credits,
         }
-        for item in db.scalars(select(Lecturer).order_by(Lecturer.canonical_name)).all()
+        for item in db.scalars(
+            select(Lecturer)
+            .where((Lecturer.status != "INACTIVE") | (Lecturer.status.is_(None)))
+            .order_by(Lecturer.canonical_name)
+        ).all()
     ]
 
 
@@ -566,15 +770,22 @@ def resolve_lecturer_alias(
     if not lecturer:
         raise HTTPException(404, "Không tìm thấy giảng viên.")
     alias = payload.alias.strip()
+    try:
+        confirm_alias(db, lecturer, alias)
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
     aliases = {item.strip() for item in (lecturer.aliases or []) if item.strip()}
     aliases.add(alias)
     lecturer.aliases = sorted(aliases)
-    for issue in db.scalars(select(ValidationIssue).where(
-        ValidationIssue.semester_id == _semester_id(db, semester_id),
-        ValidationIssue.code == "LECTURER_IDENTITY_AMBIGUOUS",
-        ValidationIssue.raw_value.contains(alias),
-    )).all():
-        db.delete(issue)
+    from app.services.lecturer_master import relink_source_identity,normalize_identity,source_identity_key
+    linked=set()
+    try:
+        for draft in db.scalars(select(NormalizedPreferenceDraft).where(NormalizedPreferenceDraft.semester_id==_semester_id(db,semester_id))):
+            key=source_identity_key(draft.lecturer_alias,draft.lecturer_code)
+            if normalize_identity(draft.lecturer_alias or '')==normalize_identity(alias) and key not in linked:
+                relink_source_identity(db,draft,lecturer,_semester_id(db,semester_id));linked.add(key)
+    except ValueError as error:
+        db.rollback();raise HTTPException(409,str(error)) from error
     db.commit()
     return {"lecturer_id": lecturer.id, "aliases": lecturer.aliases, "resolved": True}
 
@@ -584,24 +795,27 @@ def get_readiness(semester_id: int | None = Query(None), db: Session = Depends(g
     sid = _semester_id(db, semester_id)
     classes = db.scalars(select(ClassSection).options(selectinload(ClassSection.sessions)).where(ClassSection.semester_id == sid)).all()
     course_ids = {item.course_id for item in classes}
-    capability_rows = db.scalars(select(LecturerCourseCapability).where(LecturerCourseCapability.course_id.in_(course_ids))).all() if course_ids else []
+    capability_rows = db.scalars(select(LecturerCourseCapability).where(LecturerCourseCapability.course_id.in_(course_ids), or_(LecturerCourseCapability.source.is_(None), LecturerCourseCapability.source != "HYPOTHETICAL_ALL"))).all() if course_ids else []
     capable_courses = {item.course_id for item in capability_rows if item.allowed and item.confirmed}
     issues = db.scalars(select(ValidationIssue).where(ValidationIssue.semester_id == sid)).all()
     constraints = db.scalars(select(Constraint).where(Constraint.semester_id == sid)).all()
-    preference_drafts = db.scalars(select(NormalizedPreferenceDraft).where(NormalizedPreferenceDraft.semester_id == sid)).all()
+    preference_drafts = db.scalars(select(NormalizedPreferenceDraft).where(NormalizedPreferenceDraft.semester_id == sid, or_(NormalizedPreferenceDraft.source_version_id.is_(None), NormalizedPreferenceDraft.source_version_id == db.get(Semester, sid).active_preference_source_id))).all()
     relevant_ids = {item.assigned_lecturer_id for item in classes if item.assigned_lecturer_id}
     relevant_ids.update(item.lecturer_id for item in constraints if item.lecturer_id)
-    relevant_ids.update(item.lecturer_id for item in capability_rows)
-    lecturers = db.scalars(select(Lecturer).where(Lecturer.id.in_(relevant_ids))).all() if relevant_ids else []
-    latest = db.scalar(select(OptimizationRun).where(OptimizationRun.semester_id == sid).order_by(OptimizationRun.id.desc()))
+    from app.api.lecturer_routes import review_lecturers
+    identity_review=review_lecturers(sid,db)
+    latest = latest_current_run(db, sid)
     warnings = []
     for issue in issues:
-        if issue.code in {"LECTURER_IDENTITY_AMBIGUOUS", "PARTIAL_MERGE_CANDIDATE"}:
+        if issue.code in {"LECTURER_IDENTITY_AMBIGUOUS", "PARTIAL_MERGE_CANDIDATE", "SEMESTER_METADATA_MISMATCH", "SOURCE_CHANGED_REVIEW_REQUIRED"}:
             warnings.append({"code": issue.code, "message": issue.message})
+    for message in identity_review['blockers']:
+        if not any(w['message']==message for w in warnings):
+            warnings.append({'code':'LECTURER_IDENTITY_AMBIGUOUS','message':message})
     review_constraints = [item for item in constraints if item.active and item.constraint_type.casefold() in {"raw_preference", "preferred_assignment", "compact_schedule"}]
     if review_constraints:
         warnings.append({"code": "MALFORMED_CONSTRAINT", "message": f"{len(review_constraints)} ràng buộc chưa chuẩn hóa cần trưởng bộ môn rà soát."})
-    pending_drafts = [item for item in preference_drafts if item.needs_review or item.status in {"DRAFT", "NEEDS_REVIEW"}]
+    pending_drafts = [item for item in preference_drafts if item.status!='REJECTED' and (item.needs_review or item.status in {"DRAFT", "NEEDS_REVIEW"})]
     if pending_drafts:
         warnings.append({"code": "PREFERENCE_DRAFT_REVIEW_REQUIRED", "message": f"{len(pending_drafts)} nguyện vọng đang là bản nháp hoặc cần rà soát trước khi áp dụng."})
     missing_rooms = sum(1 for item in classes for session in item.sessions if not session.room.strip())
@@ -609,9 +823,10 @@ def get_readiness(semester_id: int | None = Query(None), db: Session = Depends(g
         warnings.append({"code": "MISSING_ROOM", "message": f"{missing_rooms} meeting chưa có phòng; mặc định không ghép lớp."})
     if latest and (latest.summary or {}).get("code"):
         warnings.append({"code": latest.summary["code"], "message": "Solver gần nhất đang có điều kiện blocking cần rà soát."})
+    warnings.extend(source_blockers(db, sid))
     return {
-        "ready": not any(item["code"] in {"LECTURER_IDENTITY_AMBIGUOUS", "PARTIAL_MERGE_CANDIDATE", "LOCKED_ASSIGNMENT_CONFLICT"} for item in warnings),
-        "lecturers": {"total": len(lecturers), "resolved": sum(item.confirmed for item in lecturers), "need_review": sum(1 for issue in issues if issue.code == "LECTURER_IDENTITY_AMBIGUOUS")},
+        "ready": not source_blockers(db, sid) and not any(item["code"] in {"LECTURER_IDENTITY_AMBIGUOUS", "PARTIAL_MERGE_CANDIDATE", "LOCKED_ASSIGNMENT_CONFLICT"} for item in warnings),
+        "lecturers": {"total": identity_review['total_lecturers'], "resolved": identity_review['ready_count'], "need_review": identity_review['needs_review_count']},
         "teaching_groups": len(classes),
         "meetings": sum(len(item.sessions) for item in classes),
         "valid_meetings": all(item.sessions for item in classes),
@@ -621,16 +836,55 @@ def get_readiness(semester_id: int | None = Query(None), db: Session = Depends(g
 
 
 @router.get("/workload")
-def get_workload(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> list[dict]:
+def get_workload(
+    semester_id: int | None = Query(None),
+    run_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    if isinstance(run_id, Session):
+        db = run_id
+        run_id = None
     sid = _semester_id(db, semester_id)
     classes = db.scalars(select(ClassSection).options(selectinload(ClassSection.sessions)).where(ClassSection.semester_id == sid)).all()
+    class_by_id = {c.id: c for c in classes}
     course_ids = {item.course_id for item in classes}
     lecturer_ids = {item.assigned_lecturer_id for item in classes if item.assigned_lecturer_id}
     if course_ids:
         lecturer_ids.update(
             item.lecturer_id
-            for item in db.scalars(select(LecturerCourseCapability).where(LecturerCourseCapability.course_id.in_(course_ids))).all()
+            for item in db.scalars(select(LecturerCourseCapability).where(
+                LecturerCourseCapability.course_id.in_(course_ids),
+                or_(LecturerCourseCapability.source.is_(None), LecturerCourseCapability.source != "HYPOTHETICAL_ALL"),
+            )).all()
         )
+    run = None
+    if run_id is not None:
+        run = db.get(OptimizationRun, run_id)
+        if run and run.semester_id != sid:
+            run = None
+    if not run and run_id is None:
+        run = latest_current_run(db, sid)
+
+    if run and run.status in {"optimal", "feasible"}:
+        assignments = db.scalars(select(Assignment).where(Assignment.run_id == run.id)).all()
+        lecturer_ids.update(a.lecturer_id for a in assignments)
+        lecturers = db.scalars(select(Lecturer).where(Lecturer.id.in_(lecturer_ids)).order_by(Lecturer.canonical_name)).all() if lecturer_ids else []
+        lec_assigned = defaultdict(list)
+        for a in assignments:
+            if a.class_id in class_by_id:
+                lec_assigned[a.lecturer_id].append(class_by_id[a.class_id])
+        result = []
+        for lecturer in lecturers:
+            assigned = lec_assigned.get(lecturer.id, [])
+            meetings = [session for item in assigned for session in item.sessions]
+            result.append({
+                "lecturer_id": lecturer.id, "lecturer": lecturer.canonical_name,
+                "teaching_groups": len(assigned), "meetings": len(meetings),
+                "periods": sum(session.end_period - session.start_period + 1 for session in meetings),
+                "credits": sum(item.credits for item in assigned),
+            })
+        return result
+
     lecturers = db.scalars(select(Lecturer).where(Lecturer.id.in_(lecturer_ids)).order_by(Lecturer.canonical_name)).all() if lecturer_ids else []
     result = []
     for lecturer in lecturers:
@@ -646,7 +900,15 @@ def get_workload(semester_id: int | None = Query(None), db: Session = Depends(ge
 
 
 @router.get("/classes")
-def get_classes(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> list[dict]:
+def get_classes(
+    semester_id: int | None = Query(None),
+    run_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    if isinstance(run_id, Session):
+        db = run_id
+        run_id = None
+    sid = _semester_id(db, semester_id)
     items = db.scalars(
         select(ClassSection)
         .options(
@@ -654,11 +916,44 @@ def get_classes(semester_id: int | None = Query(None), db: Session = Depends(get
             selectinload(ClassSection.sessions),
             selectinload(ClassSection.assigned_lecturer),
         )
-        .where(ClassSection.semester_id == _semester_id(db, semester_id)).order_by(ClassSection.id)
+        .where(ClassSection.semester_id == sid).order_by(ClassSection.id)
     ).all()
-    return [
-        {
+    run = None
+    if run_id is not None:
+        run = db.get(OptimizationRun, run_id)
+        if run and run.semester_id != sid:
+            run = None
+    if not run and run_id is None:
+        run = latest_current_run(db, sid)
+    ass_by_class = {}
+    if run and run.status in {"optimal", "feasible"}:
+        for a in db.scalars(select(Assignment).options(selectinload(Assignment.lecturer)).where(Assignment.run_id == run.id)):
+            ass_by_class[a.class_id] = a
+
+    result = []
+    for item in items:
+        ass = ass_by_class.get(item.id)
+        if item.locked_assignment:
+            lec_id = item.assigned_lecturer_id
+            lec_name = item.assigned_lecturer.canonical_name if item.assigned_lecturer else None
+            ass_src = item.assignment_source or "MANUAL"
+        elif run and run.status in {"optimal", "feasible"}:
+            if ass and ass.lecturer_id:
+                lec_id = ass.lecturer_id
+                lec_name = ass.lecturer.canonical_name if ass.lecturer else None
+                ass_src = "SOLVER"
+            else:
+                lec_id = None
+                lec_name = None
+                ass_src = None
+        else:
+            lec_id = item.assigned_lecturer_id
+            lec_name = item.assigned_lecturer.canonical_name if item.assigned_lecturer else None
+            ass_src = item.assignment_source
+        result.append({
             "id": item.id,
+            "source_version_id": item.source_version_id,
+            "provenance_status": "VERIFIED" if item.source_version_id else "LEGACY_UNVERIFIED",
             "course_id": item.course_id,
             "course_code": item.course.code,
             "course_name": item.course.name,
@@ -668,11 +963,12 @@ def get_classes(semester_id: int | None = Query(None), db: Session = Depends(get
             "merged_confirmed": item.merged_confirmed,
             "merge_status": item.merge_status,
             "locked_assignment": item.locked_assignment,
-            "assignment_source": item.assignment_source,
-            "lecturer_id": item.assigned_lecturer_id,
-            "lecturer": item.assigned_lecturer.canonical_name if item.assigned_lecturer else None,
+            "assignment_source": ass_src,
+            "lecturer_id": lec_id,
+            "lecturer": lec_name,
             "sessions": [
                 {
+                    "source_version_id": session.source_version_id, "source_rows": session.source_rows or [session.source_row],
                     "weekday": session.weekday,
                     "start_period": session.start_period,
                     "end_period": session.end_period,
@@ -684,9 +980,8 @@ def get_classes(semester_id: int | None = Query(None), db: Session = Depends(get
                 }
                 for session in item.sessions
             ],
-        }
-        for item in items
-    ]
+        })
+    return result
 
 @router.get("/classes/{class_id}/candidates")
 def class_candidates(class_id: int, semester_id: int = Query(...), db: Session = Depends(get_db)) -> list[dict]:
@@ -712,9 +1007,73 @@ def check_assignment(class_id: int, payload: dict, semester_id: int = Query(...)
 
 @router.patch("/classes/{class_id}/assignment")
 def manual_assignment(class_id: int, payload: dict, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
-    result = apply_manual_assignment(db, semester_id, class_id, int(payload["lecturer_id"]), bool(payload.get("lock", False)))
+    allow_override = bool(payload.get("allow_override_lock", False))
+    override_reason = str(payload.get("override_reason", ""))
+    result = apply_manual_assignment(
+        db,
+        semester_id,
+        class_id,
+        int(payload["lecturer_id"]),
+        bool(payload.get("lock", False)),
+        allow_override_lock=allow_override,
+        override_reason=override_reason,
+    )
     if not result["valid"]: raise HTTPException(422, result)
     return result
+
+@router.get("/classes/unassigned")
+def list_unassigned_classes(
+    semester_id: int = Query(...),
+    run_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    from app.services.unassigned_diagnostics import diagnose_unassigned_classes
+    return diagnose_unassigned_classes(db, semester_id, run_id)
+
+@router.get("/classes/{class_id}/candidate-analysis")
+def candidate_analysis(
+    class_id: int,
+    semester_id: int = Query(...),
+    run_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    from app.services.unassigned_diagnostics import get_candidate_analysis
+    return get_candidate_analysis(db, semester_id, class_id, run_id)
+
+@router.patch("/classes/{class_id}/resolution-status")
+def update_class_resolution(
+    class_id: int,
+    payload: dict,
+    semester_id: int = Query(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.unassigned_diagnostics import update_resolution_status
+    status = payload.get("status", "NEW")
+    notes = payload.get("notes")
+    try:
+        return update_resolution_status(db, semester_id, class_id, status, notes)
+    except ValueError as err:
+        raise HTTPException(422, str(err)) from err
+
+@router.post("/classes/{class_id}/override-lock")
+def override_lock(
+    class_id: int,
+    payload: dict,
+    semester_id: int = Query(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Explicit human-in-the-loop lock override endpoint."""
+    from app.services.unassigned_diagnostics import override_lock_assignment
+    lecturer_id = payload.get("lecturer_id")
+    reason = payload.get("reason", "")
+    user = payload.get("user", "Human Operator")
+    lock = bool(payload.get("lock", True))
+    if not lecturer_id:
+        raise HTTPException(422, "lecturer_id is required.")
+    try:
+        return override_lock_assignment(db, semester_id, class_id, int(lecturer_id), reason, user=user, lock=lock)
+    except ValueError as err:
+        raise HTTPException(422, str(err)) from err
 
 @router.post("/classes/{class_id}/lock")
 def lock_assignment(class_id: int, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
@@ -729,6 +1088,7 @@ def unlock_assignment(class_id: int, semester_id: int = Query(...), db: Session 
     group=db.get(ClassSection,class_id)
     if not group or group.semester_id!=semester_id: raise HTTPException(404,"Không tìm thấy lớp.")
     group.locked_assignment=False; db.commit(); return {"id":class_id,"locked":False}
+
 
 
 @router.patch("/merged-groups")
@@ -836,6 +1196,8 @@ def update_constraint(
     item = db.get(Constraint, constraint_id)
     if not item or item.semester_id != _semester_id(db, semester_id):
         raise HTTPException(404, "Không tìm thấy ràng buộc.")
+    if (item.target or {}).get('_stale_source_reference'):
+        raise HTTPException(422, {"code": "SOURCE_CHANGED_REVIEW_REQUIRED", "message": "Ràng buộc thuộc nguồn cũ; tạo ràng buộc mới với nhóm lớp hiện hành."})
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(item, field, value)
     db.commit()
@@ -888,7 +1250,12 @@ def get_seminars(semester_id: int | None = Query(None), db: Session = Depends(ge
 @router.post("/optimization/run")
 def run_optimization(payload: OptimizationRequest, semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> dict:
     try:
-        run = solve(db, payload.time_limit_seconds, payload.confirm_merged_suggestions, _semester_id(db, semester_id))
+        sid = _semester_id(db, semester_id)
+        if db.get(Semester, sid).active_schedule_source_id is None:
+            raise SourceError("ACTIVE_SCHEDULE_REQUIRED", "Cần xem đối chiếu và xác nhận nguồn lịch trước khi chạy tối ưu.")
+        run = solve(db, payload.time_limit_seconds, payload.confirm_merged_suggestions, sid)
+    except SourceError as error:
+        raise HTTPException(422, error.detail) from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
     return {"run_id": run.id, "status": run.status, "score": run.score, "summary": run.summary}
@@ -912,8 +1279,10 @@ def get_optimization_run_diff(run_id: int, semester_id: int = Query(...), db: Se
     run = db.get(OptimizationRun, run_id)
     if not run or run.semester_id != semester_id:
         raise HTTPException(404, "Không tìm thấy phiên tối ưu.")
+    if run.source_revision != db.get(Semester, semester_id).source_revision:
+        return {"run_id": run.id, "historical": True, "archive": run.summary.get("archived_assignments", []), "changes": [], "assigned": 0, "unassigned": 0, "changed_assignments": 0, "new_problems": 0, "resolved_problems": 0, "previous_run_id": None}
     previous = db.scalar(select(OptimizationRun).where(
-        OptimizationRun.semester_id == semester_id, OptimizationRun.id < run.id,
+        current_run_predicate(db.get(Semester, semester_id)), OptimizationRun.id < run.id,
     ).order_by(OptimizationRun.id.desc()))
     current_rows = db.scalars(select(Assignment).options(selectinload(Assignment.lecturer), selectinload(Assignment.class_section)).where(Assignment.run_id == run.id)).all()
     before_rows = db.scalars(select(Assignment).options(selectinload(Assignment.lecturer)).where(Assignment.run_id == previous.id)).all() if previous else []
@@ -944,9 +1313,23 @@ def get_optimization_run_diff(run_id: int, semester_id: int = Query(...), db: Se
 
 
 @router.get("/assignments")
-def get_assignments(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> list[dict]:
+def get_assignments(
+    semester_id: int | None = Query(None),
+    run_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    if isinstance(run_id, Session):
+        db = run_id
+        run_id = None
     sid = _semester_id(db, semester_id)
-    latest = db.scalar(select(Assignment.run_id).where(Assignment.semester_id == sid).order_by(Assignment.run_id.desc()).limit(1))
+    run = None
+    if run_id is not None:
+        run = db.get(OptimizationRun, run_id)
+        if run and run.semester_id != sid:
+            run = None
+    if not run and run_id is None:
+        run = latest_current_run(db, sid)
+    latest = run.id if run else None
     if latest is None:
         return []
     items = db.scalars(
@@ -993,9 +1376,9 @@ def get_conflicts(semester_id: int | None = Query(None), db: Session = Depends(g
             "source_row": issue.source_row,
             "field": issue.field,
             "suggestion": issue.suggestion,
-            "raw_value": issue.raw_value,
+            "raw_value": issue.raw_value, "source_version_id": issue.source_version_id, "details": issue.details, "resolution_status": issue.resolution_status,
         }
-        for issue in db.scalars(select(ValidationIssue).where(ValidationIssue.semester_id == _semester_id(db, semester_id)).order_by(ValidationIssue.id)).all()
+        for issue in db.scalars(select(ValidationIssue).where(ValidationIssue.semester_id == _semester_id(db, semester_id), ValidationIssue.resolution_status != "SUPERSEDED").order_by(ValidationIssue.id)).all()
     ]
 
 @router.get("/problems")
@@ -1005,11 +1388,12 @@ def get_problems(semester_id: int = Query(...), db: Session = Depends(get_db)) -
     def add(code, severity, entity_type, entity_id, message, reasons=None, lecturer_id=None, constraints=None):
         key = (code, entity_type, str(entity_id))
         problems.setdefault(key, {"code": code, "severity": severity, "entity_type": entity_type, "entity_id": str(entity_id), "lecturer_id": lecturer_id, "message": message, "reasons": reasons or [], "related_constraints": constraints or [], "resolvable": True})
-    for issue in db.scalars(select(ValidationIssue).where(ValidationIssue.semester_id == semester_id)):
+    for issue in active_issues(db, semester_id):
         add(issue.code, "critical" if issue.severity == "error" else "warning", "validation_issue", issue.id, issue.message)
     for draft in db.scalars(select(NormalizedPreferenceDraft).where(
         NormalizedPreferenceDraft.semester_id == semester_id,
         NormalizedPreferenceDraft.needs_review.is_(True),
+        or_(NormalizedPreferenceDraft.source_version_id.is_(None), NormalizedPreferenceDraft.source_version_id == db.get(Semester, semester_id).active_preference_source_id),
         NormalizedPreferenceDraft.status != "REJECTED",
     )):
         code = "MIXED_PREFERENCE_REQUIRES_SPLIT" if (draft.context_type or "TEACHING") == "MIXED" else "PREFERENCE_DRAFT_REVIEW_REQUIRED"
@@ -1017,7 +1401,7 @@ def get_problems(semester_id: int = Query(...), db: Session = Depends(get_db)) -
             draft.review_reason or "Nguyện vọng cần trưởng bộ môn rà soát trước khi áp dụng.",
             [{"source": f"{draft.source_sheet}!{draft.source_cell}", "raw_text": draft.raw_text}],
             lecturer_id=draft.lecturer_id)
-    run = db.scalar(select(OptimizationRun).where(OptimizationRun.semester_id == semester_id).order_by(OptimizationRun.id.desc()))
+    run = latest_current_run(db, semester_id)
     if run:
         summary = run.summary or {}
         if summary.get("code"):
@@ -1043,10 +1427,11 @@ def get_problems(semester_id: int = Query(...), db: Session = Depends(get_db)) -
             else:
                 add(code, "critical", "optimization_run", run.id, code, summary.get("pairs", []))
         for item in summary.get("unassigned", []):
+            class_id = item.get("class_id")
+            group = db.get(ClassSection, class_id)
             reasons = item.get("reasons", [])
-            primary = reasons[0].get("reason", "NO_ELIGIBLE_LECTURER") if reasons else "NO_ELIGIBLE_LECTURER"
-            add("UNASSIGNED", "warning", "class_section", item["class_id"], "TeachingGroup chưa được phân công.", reasons)
-            add(primary, "warning", "class_section", item["class_id"], primary, reasons)
+            class_label = f"Lớp {group.class_code} ({group.course.name if group and group.course else ''})" if group else f"Lớp #{class_id}"
+            add("UNASSIGNED", "warning", "class_section", class_id, f"{class_label} chưa được phân công.", reasons)
         for item in summary.get("unsupported_constraints", []):
             add("UNSUPPORTED_CONSTRAINT_TYPE", "warning", "constraint", item, f"Constraint không được hỗ trợ: {item}")
         for item in summary.get("invalid_constraints", []):
@@ -1058,11 +1443,22 @@ def get_problems(semester_id: int = Query(...), db: Session = Depends(get_db)) -
 def download_export(
     semester_id: int | None = Query(None),
     mode: str = Query("draft", pattern="^(draft|final)$"),
+    export_type: str = Query("detailed", pattern="^(detailed|matrix)$"),
+    allow_unassigned_override: bool = Query(False),
+    override_reason: str = Query(""),
     db: Session = Depends(get_db),
 ) -> FileResponse:
     directory = Path(tempfile.mkdtemp(prefix="huce-export-"))
     try:
-        path = export_latest(db, directory, _semester_id(db, semester_id), mode=mode)
+        path = export_latest(
+            db,
+            directory,
+            _semester_id(db, semester_id),
+            mode=mode,
+            export_type=export_type,
+            allow_unassigned_override=allow_unassigned_override,
+            override_reason=override_reason,
+        )
     except ValueError as error:
         shutil.rmtree(directory, ignore_errors=True)
         raise HTTPException(422, str(error)) from error
@@ -1072,3 +1468,264 @@ def download_export(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         background=BackgroundTask(shutil.rmtree, directory, ignore_errors=True),
     )
+
+
+@router.get("/exports/matrix")
+def download_matrix_export(
+    semester_id: int | None = Query(None),
+    mode: str = Query("draft", pattern="^(draft|final)$"),
+    allow_unassigned_override: bool = Query(False),
+    override_reason: str = Query(""),
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    directory = Path(tempfile.mkdtemp(prefix="huce-matrix-export-"))
+    try:
+        path = export_matrix(
+            db,
+            directory,
+            _semester_id(db, semester_id),
+            mode=mode,
+            allow_unassigned_override=allow_unassigned_override,
+            override_reason=override_reason,
+        )
+    except ValueError as error:
+        shutil.rmtree(directory, ignore_errors=True)
+        raise HTTPException(422, str(error)) from error
+    return FileResponse(
+        path,
+        filename=path.name,
+
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        background=BackgroundTask(shutil.rmtree, directory, ignore_errors=True),
+    )
+
+
+@router.get("/historical-evidence")
+def list_historical_evidence(
+    semester_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    sid = _semester_id(db, semester_id)
+    records = db.scalars(
+        select(HistoricalEvidence)
+        .where(HistoricalEvidence.semester_id == sid)
+        .order_by(HistoricalEvidence.id.desc())
+    ).all()
+    return [
+        {
+            "id": r.id,
+            "profile_id": r.profile_id,
+            "lecturer_id": r.lecturer_id,
+            "source_text": r.source_text,
+            "lecturer_code": r.lecturer_code,
+            "source_row": r.source_row,
+            "source_cell": r.source_cell,
+            "evidence": r.evidence,
+            "status": r.status,
+            "human_confirmed": r.human_confirmed,
+        }
+        for r in records
+    ]
+
+
+@router.get("/semesters/{semester_id}/capability-readiness")
+def get_capability_readiness(semester_id: int, db: Session = Depends(get_db)):
+    from app.services.capability_resolution import CapabilityResolutionService
+    sid = _semester_id(db, semester_id)
+    return CapabilityResolutionService.evaluate_capability_readiness(db, sid)
+
+
+@router.post("/semesters/{semester_id}/capabilities/import-matrix")
+def import_capability_matrix(
+    semester_id: int,
+    file: UploadFile = File(...),
+    sheet_name: str | None = Query(None),
+    confirmed: bool = Query(True),
+    db: Session = Depends(get_db),
+):
+    from app.services.capability_resolution import CapabilityResolutionService
+    sid = _semester_id(db, semester_id)
+    suffix = Path(file.filename or "matrix.xlsx").suffix
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        _copy_upload_limited(file, tmp_path)
+    try:
+        return CapabilityResolutionService.import_capability_matrix(
+            db=db,
+            file_path=tmp_path,
+            semester_id=sid,
+            sheet_name=sheet_name,
+            confirmed=confirmed,
+        )
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+@router.post("/semesters/{semester_id}/capabilities/learn-history")
+def learn_historical_capabilities(
+    semester_id: int,
+    file: UploadFile = File(...),
+    sheet_name: str | None = Query(None),
+    academic_year: str | None = Query(None),
+    semester_code: str | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    from app.services.capability_resolution import CapabilityResolutionService
+    sid = _semester_id(db, semester_id)
+    suffix = Path(file.filename or "history.xlsx").suffix
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+        _copy_upload_limited(file, tmp_path)
+    try:
+        return CapabilityResolutionService.learn_from_historical_assignment_file(
+            db=db,
+            file_path=tmp_path,
+            semester_id=sid,
+            sheet_name=sheet_name,
+            academic_year=academic_year,
+            semester_code=semester_code,
+        )
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+@router.get("/semesters/{semester_id}/capabilities")
+def list_semester_capabilities(
+    semester_id: int,
+    course_id: int | None = Query(None),
+    lecturer_id: int | None = Query(None),
+    source: str | None = Query(None),
+    confirmed: bool | None = Query(None),
+    allowed: bool | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    from app.services.capability_resolution import CapabilityResolutionService
+    sid = _semester_id(db, semester_id)
+    return CapabilityResolutionService.list_capabilities(
+        db,
+        semester_id=sid,
+        course_id=course_id,
+        lecturer_id=lecturer_id,
+        source=source,
+        confirmed=confirmed,
+        allowed=allowed,
+    )
+
+
+@router.post("/semesters/{semester_id}/capabilities/bulk-confirm")
+def bulk_confirm_capabilities(
+    semester_id: int,
+    payload: CapabilityBulkConfirmRequest,
+    db: Session = Depends(get_db),
+):
+    from app.services.capability_resolution import CapabilityResolutionService
+    sid = _semester_id(db, semester_id)
+    return CapabilityResolutionService.bulk_confirm_capabilities(
+        db=db,
+        semester_id=sid,
+        capability_ids=payload.capability_ids,
+        course_ids=payload.course_ids,
+    )
+
+
+@router.put("/capabilities/{capability_id}")
+def update_capability(
+    capability_id: int,
+    payload: CapabilityUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    from app.services.capability_resolution import CapabilityResolutionService
+    try:
+        return CapabilityResolutionService.update_capability(
+            db=db,
+            capability_id=capability_id,
+            allowed=payload.allowed,
+            confirmed=payload.confirmed,
+        )
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@router.get("/departments")
+def list_departments(db: Session = Depends(get_db)):
+    from app.models.entities import Department
+    depts = db.scalars(select(Department).order_by(Department.id)).all()
+    return [{"id": d.id, "name": d.name, "code": d.code, "description": d.description} for d in depts]
+
+
+@router.post("/departments")
+def create_department(payload: DepartmentCreate, db: Session = Depends(get_db)):
+    from app.models.entities import Department, DepartmentProfile
+    existing = db.scalar(select(Department).where(or_(Department.name == payload.name, Department.code == payload.code)))
+    if existing:
+        raise HTTPException(400, "Phòng ban / bộ môn với tên hoặc mã này đã tồn tại.")
+    dept = Department(name=payload.name, code=payload.code, description=payload.description)
+    db.add(dept)
+    db.flush()
+    profile = DepartmentProfile(
+        department_id=dept.id,
+        allow_provisional_capability=False,
+        course_capability_mode="STRICT",
+        policy_config={},
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(dept)
+    return {"id": dept.id, "name": dept.name, "code": dept.code, "description": dept.description}
+
+
+@router.get("/departments/{department_id}/policy")
+def get_department_policy(department_id: int, db: Session = Depends(get_db)):
+    from app.models.entities import Department, DepartmentProfile
+    dept = db.get(Department, department_id)
+    if not dept:
+        raise HTTPException(404, "Không tìm thấy bộ môn.")
+    profile = db.scalar(select(DepartmentProfile).where(DepartmentProfile.department_id == department_id))
+    if not profile:
+        profile = DepartmentProfile(
+            department_id=department_id,
+            allow_provisional_capability=False,
+            course_capability_mode="STRICT",
+            policy_config={},
+        )
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+    return {
+        "department_id": department_id,
+        "department_name": dept.name,
+        "department_code": dept.code,
+        "allow_provisional_capability": profile.allow_provisional_capability,
+        "course_capability_mode": profile.course_capability_mode,
+        "policy_config": profile.policy_config or {},
+    }
+
+
+@router.put("/departments/{department_id}/policy")
+def update_department_policy(department_id: int, payload: DepartmentPolicyUpdate, db: Session = Depends(get_db)):
+    from app.models.entities import Department, DepartmentProfile
+    dept = db.get(Department, department_id)
+    if not dept:
+        raise HTTPException(404, "Không tìm thấy bộ môn.")
+    profile = db.scalar(select(DepartmentProfile).where(DepartmentProfile.department_id == department_id))
+    if not profile:
+        profile = DepartmentProfile(department_id=department_id)
+        db.add(profile)
+    if payload.allow_provisional_capability is not None:
+        profile.allow_provisional_capability = payload.allow_provisional_capability
+    if payload.course_capability_mode is not None:
+        profile.course_capability_mode = payload.course_capability_mode
+    if payload.policy_config is not None:
+        profile.policy_config = payload.policy_config
+    db.commit()
+    return {
+        "department_id": department_id,
+        "department_name": dept.name,
+        "department_code": dept.code,
+        "allow_provisional_capability": profile.allow_provisional_capability,
+        "course_capability_mode": profile.course_capability_mode,
+        "policy_config": profile.policy_config or {},
+    }
+

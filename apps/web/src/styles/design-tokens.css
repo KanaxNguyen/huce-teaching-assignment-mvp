@@ -42,7 +42,15 @@
     --color-border: #294054;
     --color-text: #eef5fb;
     --color-text-muted: #9eb0c1;
-    --color-primary-soft: #173f64;
-    --shadow-card: none;
+    --color-primary: #3b82f6;
+    --color-primary-strong: #2563eb;
+    --color-primary-soft: rgba(59, 130, 246, 0.18);
+    --color-success: #34d399;
+    --color-success-soft: rgba(52, 211, 153, 0.16);
+    --color-warning: #fbbf24;
+    --color-warning-soft: rgba(251, 191, 36, 0.16);
+    --color-danger: #f87171;
+    --color-danger-soft: rgba(248, 113, 113, 0.18);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
   }
 }

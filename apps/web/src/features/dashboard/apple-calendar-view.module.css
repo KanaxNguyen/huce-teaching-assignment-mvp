@@ -1,0 +1,918 @@
+/* ==========================================================================
+   Apple Calendar View - HUCE Timetable System
+   Clean, Spacious, Elegant, Apple-inspired Typography & Grid Layout
+   ========================================================================== */
+
+.calendarContainer {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* --------------------------------------------------------------------------
+   1. Calendar Toolbar (Apple-style Control Bar)
+   -------------------------------------------------------------------------- */
+.calendarToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbarHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toolbarEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.toolbarTitle {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill, 999px);
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  transition: all 0.15s ease;
+}
+
+.searchBox:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(35, 103, 173, 0.15);
+}
+
+.searchBox input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  width: 140px;
+}
+
+.searchBox input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.lecturerSelectWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill, 999px);
+  padding: 4px 14px 4px 10px;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.lecturerSelectWrap:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(35, 103, 173, 0.15);
+}
+
+.lecturerSelectWrap select {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding-right: 4px;
+}
+
+.statBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   2. Main Calendar Scroll Container & Grid
+   -------------------------------------------------------------------------- */
+.calendarScrollWrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 240px);
+  min-height: 520px;
+  scroll-behavior: smooth;
+  position: relative;
+}
+
+.calendarScrollWrap::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.calendarScrollWrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.calendarScrollWrap::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+.calendarScrollWrap::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+.calendarGrid {
+  display: grid;
+  /* Left column: 110px time/period, followed by 7 day columns */
+  grid-template-columns: 110px repeat(7, minmax(140px, 1fr));
+  min-width: 1090px;
+  background: var(--color-border);
+  gap: 1px; /* Creates crisp, subtle 1px Apple Calendar grid lines */
+}
+
+/* --------------------------------------------------------------------------
+   3. Sticky Headers & Axis
+   -------------------------------------------------------------------------- */
+.gridCorner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  background: var(--color-surface-muted);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dayHeader {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--color-surface-muted);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.15s ease;
+}
+
+.dayHeaderActive {
+  background: var(--color-surface);
+}
+
+.dayNameShort {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.dayNameFull {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.dayCountPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.dayCountPillActive {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: transparent;
+}
+
+.timeAxisCell {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: var(--color-surface-muted);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  border-right: 1px solid var(--color-border);
+}
+
+.caLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: -0.01em;
+}
+
+.periodBadge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--color-border);
+}
+
+.timeRangeText {
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   4. Calendar Cell & Event Stacking
+   -------------------------------------------------------------------------- */
+.calendarCell {
+  background: var(--color-surface);
+  min-height: 110px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  transition: background-color 0.12s ease;
+}
+
+.calendarCell:hover {
+  background: var(--color-surface-muted);
+}
+
+.cellEmptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 80px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-style: italic;
+  pointer-events: none;
+}
+
+.calendarCell:hover .cellEmptyState {
+  opacity: 0.4;
+}
+
+.eventStack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   5. Apple-Calendar Event Card
+   -------------------------------------------------------------------------- */
+.eventCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  user-select: none;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-color 0.16s ease,
+              background-color 0.16s ease;
+}
+
+.eventCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px -2px rgba(0, 0, 0, 0.14);
+}
+
+.eventCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(35, 103, 173, 0.4), 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.eventCardSelected {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px var(--color-primary), 0 6px 18px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Colored accent bar on the left (Apple Calendar hallmark) */
+.cardAccentBar {
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  border-radius: 4px;
+}
+
+.cardTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.classBadge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  letter-spacing: -0.01em;
+  font-family: var(--font-sans);
+}
+
+.roomTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.lockIndicator {
+  display: inline-flex;
+  align-items: center;
+  color: #f59e0b;
+}
+
+.courseTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cardBottomRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.lecturerName {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lecturerNameAssigned {
+  color: var(--color-text);
+}
+
+.weeksLabel {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   6. Event Color Themes (7 Apple Palettes)
+   -------------------------------------------------------------------------- */
+.theme0 {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+.theme0 .cardAccentBar { background: #2563eb; }
+.theme0 .classBadge { background: rgba(37, 99, 235, 0.22); color: #3b82f6; }
+
+.theme1 {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.theme1 .cardAccentBar { background: #059669; }
+.theme1 .classBadge { background: rgba(16, 185, 129, 0.22); color: #10b981; }
+
+.theme2 {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(167, 139, 250, 0.35);
+}
+.theme2 .cardAccentBar { background: #7c3aed; }
+.theme2 .classBadge { background: rgba(139, 92, 246, 0.22); color: #8b5cf6; }
+
+.theme3 {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.theme3 .cardAccentBar { background: #d97706; }
+.theme3 .classBadge { background: rgba(245, 158, 11, 0.22); color: #f59e0b; }
+
+.theme4 {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(251, 113, 133, 0.35);
+}
+.theme4 .cardAccentBar { background: #e11d48; }
+.theme4 .classBadge { background: rgba(244, 63, 94, 0.22); color: #f43f5e; }
+
+.theme5 {
+  background: rgba(20, 184, 166, 0.12);
+  border-color: rgba(45, 212, 191, 0.35);
+}
+.theme5 .cardAccentBar { background: #0d9488; }
+.theme5 .classBadge { background: rgba(20, 184, 166, 0.22); color: #14b8a6; }
+
+.theme6 {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(129, 140, 248, 0.35);
+}
+.theme6 .cardAccentBar { background: #4f46e5; }
+.theme6 .classBadge { background: rgba(99, 102, 241, 0.22); color: #6366f1; }
+
+/* --------------------------------------------------------------------------
+   7. Overflow Toggle Pill ("+ N lớp khác")
+   -------------------------------------------------------------------------- */
+.moreClassesToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px dashed var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.moreClassesToggle:hover {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   8. Apple Calendar Detail Popover / Modal
+   -------------------------------------------------------------------------- */
+.popoverBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: backdropFadeIn 0.15s ease-out;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.detailPopover {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.24), 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  animation: popoverSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes popoverSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.popoverHeader {
+  padding: 18px 20px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+
+.popoverHeaderBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.popoverTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popoverBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.popoverTitle {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill, 999px);
+  border: none;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.popoverBody {
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.popoverGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.infoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--color-surface-muted);
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+
+.infoLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.infoValue {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.lecturerCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-primary-soft);
+  border-radius: 12px;
+  border: 1px solid rgba(35, 103, 173, 0.2);
+}
+
+.lecturerAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.lecturerDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lecturerTitle {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lecturerFullName {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popoverFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   10. Week Badges, Slot Relations & Busy Slots
+   -------------------------------------------------------------------------- */
+.weekBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+:global([data-theme="dark"]) .weekBadge {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+
+.weekSelectWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill, 999px);
+  padding: 4px 12px;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  transition: all 0.15s ease;
+}
+
+.weekSelectWrap:focus-within {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(35, 103, 173, 0.15);
+}
+
+.weekSelectWrap select {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.slotRelationBanner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 5px;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.relationMerged {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px dashed rgba(16, 185, 129, 0.4);
+}
+
+.relationAlternating {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  border: 1px dashed rgba(99, 102, 241, 0.4);
+}
+
+:global([data-theme="dark"]) .relationAlternating {
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.relationCollision {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+:global([data-theme="dark"]) .relationCollision {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.conflictCard {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1.5px #ef4444, 0 2px 8px rgba(239, 68, 68, 0.2) !important;
+  background: rgba(239, 68, 68, 0.04) !important;
+}
+
+.conflictBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  border-radius: 4px;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.tagMerged {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+:global([data-theme="dark"]) .tagMerged {
+  color: #34d399;
+}
+
+.tagAlternating {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4338ca;
+}
+
+:global([data-theme="dark"]) .tagAlternating {
+  color: #a5b4fc;
+}
+
+.busySlotCell {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(245, 158, 11, 0.04),
+    rgba(245, 158, 11, 0.04) 8px,
+    rgba(245, 158, 11, 0.1) 8px,
+    rgba(245, 158, 11, 0.1) 16px
+  );
+  border: 1px dashed rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 84px;
+  gap: 5px;
+}
+
+.busySlotBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #b45309;
+  background: rgba(254, 243, 199, 0.95);
+  padding: 3px 8px;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme="dark"]) .busySlotBadge {
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.7);
+}
+
+.busySlotDesc {
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+  max-width: 140px;
+  line-height: 1.2;
+}
+
