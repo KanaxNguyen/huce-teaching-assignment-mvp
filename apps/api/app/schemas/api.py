@@ -52,6 +52,16 @@ class MergedDecision(BaseModel):
     confirmed: bool
 
 
+class MergeClassesRequest(BaseModel):
+    class_ids: list[int] = Field(min_length=2)
+    merged_group_id: str | None = None
+
+
+class UnmergeClassesRequest(BaseModel):
+    class_ids: list[int] = Field(default_factory=list)
+    merged_group_id: str | None = None
+
+
 class SeminarCreate(BaseModel):
     name: str = Field(min_length=2, max_length=200)
     chair_name: str = ""

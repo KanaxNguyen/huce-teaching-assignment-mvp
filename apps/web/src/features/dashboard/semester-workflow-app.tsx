@@ -307,6 +307,8 @@ export function SemesterWorkflowApp() {
               onManual={(classId, lecturerId, lock, allowOverride = false, overrideReason = "") => execute(`assignment-${classId}`, () => api.assign(classId, lecturerId, lock, activeSemester?.id ?? 0, allowOverride, overrideReason), lock ? "Đã phân công và khóa lớp học phần." : "Đã cập nhật phân công thủ công.")}
               onOverrideLock={(classId, lecturerId, reason, lock) => execute(`override-${classId}`, () => api.overrideLock(classId, lecturerId, reason, lock, activeSemester?.id ?? 0), "Đã mở khóa và ghi đè phân công thủ công có kiểm toán.")}
               onUnlock={(classId) => execute(`unlock-${classId}`, () => api.unlock(classId, activeSemester?.id ?? 0), "Đã mở khóa phân công.")}
+              onMergeClasses={(classIds) => execute("merge-classes", () => api.mergeClasses(classIds, activeSemester?.id ?? 0), "Đã ghép các lớp học phần thành công để giải tỏa điểm nghẽn.")}
+              onUnmergeClasses={(classIds, mergedGroupId) => execute("unmerge-classes", () => api.unmergeClasses(classIds, activeSemester?.id ?? 0, mergedGroupId), "Đã hủy ghép lớp học phần.")}
               onNext={() => setView("publish")}
               onSwitchView={(v) => setView(v)}
             />
@@ -2171,6 +2173,7 @@ function UnassignedWorkflowPanel({
   onSwitchTab,
   onRefresh,
   onUpdateStatus,
+  onMergeClasses,
 }: {
   classes: ClassItem[];
   items: UnassignedDiagnosticItem[];
@@ -2179,6 +2182,7 @@ function UnassignedWorkflowPanel({
   onSwitchTab: (tab: WorkspaceTab) => void;
   onRefresh: () => void;
   onUpdateStatus: (classId: number, status: string, notes?: string) => Promise<void>;
+  onMergeClasses?: (classIds: number[]) => Promise<void> | void;
 }) {
   const [filterCause, setFilterCause] = useState<string>("ALL");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
@@ -2312,6 +2316,7 @@ function UnassignedWorkflowPanel({
           <tbody>
             {filtered.map((item) => {
               const classObj = classes.find((c) => c.id === item.class_id);
+              const mergeAction = item.recommended_actions?.find((a) => a.type === "MERGE_CLASSES");
               return (
                 <tr key={item.class_id}>
                   <td>
@@ -2330,6 +2335,11 @@ function UnassignedWorkflowPanel({
                     <span className={`${styles.rootCauseBadge} ${rootCauseBadgeClass(item.root_cause_severity)}`}>
                       <AlertCircle size={13} /> {item.root_cause_label}
                     </span>
+                    {mergeAction ? (
+                      <small style={{ display: "block", color: "#166534", marginTop: "4px", fontSize: "0.72rem", fontWeight: 600 }}>
+                        🔗 Gợi ý ghép ({mergeAction.candidate_class_codes?.length ?? 1} lớp)
+                      </small>
+                    ) : null}
                   </td>
                   <td>
                     <span style={{ fontWeight: 600, color: item.eligible_candidates_count > 0 ? "#16a34a" : "#dc2626" }}>
@@ -2357,6 +2367,27 @@ function UnassignedWorkflowPanel({
                   </td>
                   <td>
                     <div className={styles.actionBtnGroup}>
+                      {mergeAction && onMergeClasses ? (
+                        <button
+                          type="button"
+                          className={styles.btnSm}
+                          style={{
+                            background: "#f0fdf4",
+                            borderColor: "#86efac",
+                            color: "#166534",
+                            fontWeight: 700,
+                          }}
+                          onClick={() => {
+                            const cids = mergeAction.candidate_class_ids || [];
+                            if (cids.length > 0) {
+                              void onMergeClasses([item.class_id, ...cids]);
+                            }
+                          }}
+                          title={`Ghép lớp ${item.class_code} với ${mergeAction.candidate_class_codes?.join(", ") ?? "lớp cùng môn"}`}
+                        >
+                          <Merge size={13} /> Ghép gỡ nghẽn
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className={`${styles.btnSm} ${styles.btnSmPrimary}`}
@@ -2421,6 +2452,8 @@ function SchedulingWorkspace({
   onManual,
   onOverrideLock,
   onUnlock,
+  onMergeClasses,
+  onUnmergeClasses,
   onNext,
   onSwitchView,
 }: {
@@ -2439,6 +2472,8 @@ function SchedulingWorkspace({
   onManual: (classId: number, lecturerId: number, lock: boolean, allowOverride?: boolean, overrideReason?: string) => void;
   onOverrideLock?: (classId: number, lecturerId: number, reason: string, lock: boolean) => void;
   onUnlock: (classId: number) => void;
+  onMergeClasses?: (classIds: number[]) => Promise<unknown> | void;
+  onUnmergeClasses?: (classIds: number[], mergedGroupId?: string) => Promise<unknown> | void;
   onNext: () => void;
   onSwitchView?: (view: View) => void;
 }) {
@@ -2535,6 +2570,42 @@ function SchedulingWorkspace({
     }
   };
 
+  const [mergeLoadingId, setMergeLoadingId] = useState<number | null>(null);
+
+  const handleMergeClasses = async (classIds: number[]) => {
+    if (!semesterId || classIds.length < 2) return;
+    setMergeLoadingId(classIds[0]);
+    try {
+      if (onMergeClasses) {
+        await onMergeClasses(classIds);
+      } else {
+        await api.mergeClasses(classIds, semesterId);
+      }
+      refreshUnassigned();
+    } catch {
+      // Ignored
+    } finally {
+      setMergeLoadingId(null);
+    }
+  };
+
+  const handleUnmergeClasses = async (classIds: number[], mergedGroupId?: string) => {
+    if (!semesterId) return;
+    setMergeLoadingId(classIds[0] ?? -1);
+    try {
+      if (onUnmergeClasses) {
+        await onUnmergeClasses(classIds, mergedGroupId);
+      } else {
+        await api.unmergeClasses(classIds, semesterId, mergedGroupId);
+      }
+      refreshUnassigned();
+    } catch {
+      // Ignored
+    } finally {
+      setMergeLoadingId(null);
+    }
+  };
+
   return <section className={styles.schedulingShell}>
     <header className={styles.workspaceHeading}>
       <div><span className={styles.eyebrow}>BƯỚC 05 · WORKSPACE</span><h2>Phân công giảng dạy</h2><p>Rà soát dữ liệu, chỉnh phân công và xử lý vấn đề trên một không gian làm việc.</p></div>
@@ -2620,6 +2691,7 @@ function SchedulingWorkspace({
             onSwitchTab={setTab}
             onRefresh={refreshUnassigned}
             onUpdateStatus={handleUpdateStatus}
+            onMergeClasses={handleMergeClasses}
           />
         ) : null}
         {tab === "readiness" ? <ReadinessPanel readiness={readiness} lecturers={lecturers} issues={issues} semesterId={semesterId} onProblems={() => setTab("problems")} onResolved={async () => { if (semesterId) setReadiness(await api.readiness(semesterId)); }} /> : null}
@@ -2660,19 +2732,130 @@ function SchedulingWorkspace({
             </button>
           ) : null}
 
+          {selectedClass.merged_group_id ? (
+            <div
+              style={{
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                borderRadius: "8px",
+                padding: "10px 12px",
+                margin: "10px 0",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.78rem", fontWeight: 700, color: "#166534" }}>
+                  <Merge size={14} /> Nhóm ghép: {selectedClass.merged_group_id}
+                </span>
+                <small style={{ display: "block", color: "#15803d", fontSize: "0.72rem" }}>
+                  {selectedClass.merge_status === "confirmed" ? "Đã duyệt ghép lớp" : "Đã ghép lớp"}
+                </small>
+              </div>
+              <button
+                type="button"
+                className={styles.btnSm}
+                style={{ color: "#dc2626", borderColor: "#fca5a5", fontSize: "0.72rem" }}
+                disabled={mergeLoadingId === selectedClass.id}
+                onClick={() => void handleUnmergeClasses([selectedClass.id], selectedClass.merged_group_id || undefined)}
+              >
+                {mergeLoadingId === selectedClass.id ? <LoaderCircle size={12} className={styles.spin} /> : null}
+                Hủy ghép
+              </button>
+            </div>
+          ) : null}
+
           {(() => {
             const diag = unassignedItems.find((u) => u.class_id === selectedClass.id);
             if (!diag) return null;
+            const mergeAction = diag.recommended_actions?.find((a) => a.type === "MERGE_CLASSES");
             return (
-              <div className={styles.drawerSubHeader}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span className={styles.eyebrow}>CHẨN ĐOÁN GỐC</span>
-                  <span className={`${styles.rootCauseBadge} ${diag.root_cause_severity === "critical" ? styles.badgeCritical : styles.badgeWarning}`}>
-                    {diag.root_cause_label}
-                  </span>
+              <>
+                <div className={styles.drawerSubHeader}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span className={styles.eyebrow}>CHẨN ĐOÁN GỐC</span>
+                    <span className={`${styles.rootCauseBadge} ${diag.root_cause_severity === "critical" ? styles.badgeCritical : styles.badgeWarning}`}>
+                      {diag.root_cause_label}
+                    </span>
+                  </div>
+                  <small>{diag.recommended_actions?.[0]?.description ?? "Cần rà soát năng lực và lịch của các giảng viên."}</small>
                 </div>
-                <small>{diag.recommended_actions?.[0]?.description ?? "Cần rà soát năng lực và lịch của các giảng viên."}</small>
-              </div>
+
+                {mergeAction && !selectedClass.merged_group_id ? (
+                  <div
+                    style={{
+                      background: "#f0fdf4",
+                      border: "1px solid #86efac",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      margin: "10px 0",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#166534", fontWeight: 700, fontSize: "0.84rem" }}>
+                      <Merge size={16} />
+                      <span>{mergeAction.label || "Gợi ý ghép lớp cùng ca để gỡ nghẽn"}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "#15803d", lineHeight: 1.45 }}>
+                      {mergeAction.description}
+                    </p>
+                    {mergeAction.candidate_class_codes && mergeAction.candidate_class_codes.length > 0 ? (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                        <span style={{ fontSize: "0.74rem", color: "#166534", fontWeight: 600 }}>Lớp ứng viên:</span>
+                        {mergeAction.candidate_class_codes.map((code, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              fontSize: "0.74rem",
+                              background: "#dcfce7",
+                              color: "#14532d",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              fontWeight: 700,
+                              border: "1px solid #86efac",
+                            }}
+                          >
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div style={{ marginTop: "4px" }}>
+                      <button
+                        type="button"
+                        className={`${styles.btnSm} ${styles.btnSmPrimary}`}
+                        style={{
+                          background: "#16a34a",
+                          borderColor: "#15803d",
+                          color: "#fff",
+                          width: "100%",
+                          justifyContent: "center",
+                          padding: "7px 12px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                        }}
+                        disabled={mergeLoadingId === selectedClass.id}
+                        onClick={() => {
+                          const candidateIds = mergeAction.candidate_class_ids || [];
+                          if (candidateIds.length > 0) {
+                            void handleMergeClasses([selectedClass.id, ...candidateIds]);
+                          }
+                        }}
+                      >
+                        {mergeLoadingId === selectedClass.id ? (
+                          <LoaderCircle size={14} className={styles.spin} />
+                        ) : (
+                          <Merge size={14} />
+                        )}
+                        Ghép lớp để gỡ nghẽn ({[selectedClass.class_code, ...(mergeAction.candidate_class_codes || [])].join(" + ")})
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
             );
           })()}
 

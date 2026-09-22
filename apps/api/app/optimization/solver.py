@@ -8,7 +8,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.entities import (
-    Assignment, ClassSection, Constraint, Lecturer, LecturerCourseCapability,
+    Assignment, ClassSection, Constraint, Course, Lecturer, LecturerCourseCapability,
     LecturerSemesterProfile, OptimizationRun, Semester, Seminar, ValidationIssue,
 )
 
@@ -16,7 +16,9 @@ from app.models.entities import (
 def _overlap(left, right) -> bool:
     if left.weekday != right.weekday or left.end_period < right.start_period or right.end_period < left.start_period:
         return False
-    if not set(left.active_weeks).intersection(right.active_weeks):
+    w_left = set(left.active_weeks or [])
+    w_right = set(right.active_weeks or [])
+    if w_left and w_right and not w_left.intersection(w_right):
         return False
     return not ((left.start_date and right.end_date and left.start_date > right.end_date) or (right.start_date and left.end_date and right.start_date > left.end_date))
 
@@ -47,8 +49,8 @@ def _slot_match(session, target: dict, semester: Semester | None = None) -> bool
             allowed_days = (
                 {2, 3, 4, 5, 6} if scope == "ALL_WEEKDAYS"
                 else {2, 3, 4, 5, 6, 7, 8} if scope == "ALL_DAYS"
-                else {8} if scope == "CN"
-                else {int(scope[1:])} if scope in {"T2", "T3", "T4", "T5", "T6", "T7"}
+                else {8} if scope in {"CN", "T8"}
+                else {int(scope[1:])} if scope in {"T2", "T3", "T4", "T5", "T6", "T7", "T8"}
                 else None
             )
             if allowed_days and session.weekday not in allowed_days:
@@ -192,6 +194,66 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         else:
             provisional_cap_count += 1
 
+    forbidden_caps = {
+        (c.course_id, c.lecturer_id)
+        for c in db.scalars(select(LecturerCourseCapability).where(LecturerCourseCapability.allowed.is_(False))).all()
+    }
+
+    # Capability equivalence bridging:
+    # Connect courses with identical normalized names (e.g. regular 440213 vs retake 448805)
+    # scoped strictly to the current semester's courses and department.
+    from app.services.capability_resolution import _plain_text
+    all_db_courses = db.scalars(select(Course)).all()
+    courses_by_norm: dict[str, list[Course]] = defaultdict(list)
+    for c in all_db_courses:
+        if c.name:
+            c_norm = _plain_text(c.name)
+            if c_norm and len(c_norm) >= 3:
+                courses_by_norm[c_norm].append(c)
+
+    semester_course_ids = {g.course_id for g in classes if g.course_id}
+    for norm_name, eq_courses in courses_by_norm.items():
+        if len(eq_courses) < 2:
+            continue
+        eq_ids = {c.id for c in eq_courses}
+        if not eq_ids.intersection(semester_course_ids):
+            continue
+        for src_course in eq_courses:
+            for cap in list(capabilities.get(src_course.id, [])):
+                if not cap.allowed or cap.source == "HYPOTHETICAL_ALL":
+                    continue
+                for dst_course in eq_courses:
+                    if dst_course.id == src_course.id:
+                        continue
+                    if (dst_course.id, cap.lecturer_id) in forbidden_caps:
+                        continue
+                    if (dst_course.id, cap.lecturer_id) not in cap_obj_map:
+                        bridged_cap = LecturerCourseCapability(
+                            department_id=cap.department_id,
+                            lecturer_id=cap.lecturer_id,
+                            course_id=dst_course.id,
+                            allowed=True,
+                            confirmed=cap.confirmed,
+                            source="INFERRED_HISTORY",
+                        )
+                        capabilities[dst_course.id].append(bridged_cap)
+                        cap_source_map[(dst_course.id, cap.lecturer_id)] = "INFERRED_HISTORY"
+                        cap_obj_map[(dst_course.id, cap.lecturer_id)] = bridged_cap
+                        if bridged_cap.confirmed:
+                            historical_cap_count += 1
+                        else:
+                            provisional_cap_count += 1
+
+    def _is_merged(left: ClassSection, right: ClassSection) -> bool:
+        if not (left.merged_group_id and left.merged_group_id == right.merged_group_id):
+            return False
+        return bool(
+            (left.merged_confirmed and right.merged_confirmed)
+            or getattr(left, "merge_status", "") == "confirmed"
+            or getattr(right, "merge_status", "") == "confirmed"
+            or confirm_merged
+        )
+
     unsupported = [
         c.constraint_type for c in constraints
         if _normalized_type(c.constraint_type) not in {
@@ -204,7 +266,7 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
     locked_conflicts = []
     for index, left in enumerate(classes):
         for right in classes[index + 1:]:
-            if left.merged_confirmed and right.merged_confirmed and left.merged_group_id and left.merged_group_id == right.merged_group_id:
+            if _is_merged(left, right):
                 continue
             if left.locked_assignment and right.locked_assignment and left.assigned_lecturer_id == right.assigned_lecturer_id and any(_overlap(a, b) for a in left.sessions for b in right.sessions):
                 locked_conflicts.append((left.id, right.id))
@@ -222,7 +284,11 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         )
         and participation_reason(db, lecturer, semester_id) is None
     }
-    base_candidates = {group.id: eligible_teachers(group, capabilities, policy) & participating_ids for group in classes}
+    base_candidates = {
+        group.id: (eligible_teachers(group, capabilities, policy) & participating_ids)
+        - {lid for (cid, lid) in forbidden_caps if cid == group.course_id}
+        for group in classes
+    }
 
     groups_with_zero = sum(1 for gid, cands in base_candidates.items() if len(cands) == 0)
     groups_with_one = sum(1 for gid, cands in base_candidates.items() if len(cands) == 1)
@@ -537,18 +603,24 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
 
     for index, left in enumerate(classes):
         for right in classes[index + 1:]:
-            if left.merged_confirmed and right.merged_confirmed and left.merged_group_id and left.merged_group_id == right.merged_group_id:
+            if _is_merged(left, right):
                 continue
             if any(_overlap(a, b) for a in left.sessions for b in right.sessions):
                 for lecturer_id in candidates[left.id].intersection(candidates[right.id]):
                     model.add(x[left.id, lecturer_id] + x[right.id, lecturer_id] <= 1)
     groups = defaultdict(list)
     for group in classes:
-        if group.merged_confirmed and group.merged_group_id:
+        if group.merged_group_id and (group.merged_confirmed or confirm_merged):
             groups[group.merged_group_id].append(group)
     for items in groups.values():
+        common_candidates = set(candidates[items[0].id])
         for other in items[1:]:
-            for lecturer_id in candidates[items[0].id].intersection(candidates[other.id]):
+            common_candidates &= candidates[other.id]
+        for sec in items:
+            for lecturer_id in candidates[sec.id] - common_candidates:
+                model.add(x[sec.id, lecturer_id] == 0)
+        for other in items[1:]:
+            for lecturer_id in common_candidates:
                 model.add(x[items[0].id, lecturer_id] == x[other.id, lecturer_id])
 
     # A seminar is one shared event: one slot is selected for all participants,
@@ -666,6 +738,11 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
     run = OptimizationRun(semester_id=semester_id, **context, status=solver.status_name(status).lower(), score=solver.objective_value if valid else None, summary=summary)
     db.add(run); db.flush()
     if valid:
+        if confirm_merged:
+            for items in groups.values():
+                for sec in items:
+                    sec.merged_confirmed = True
+                    sec.merge_status = "confirmed"
         for seminar, slots, choices in seminar_choices:
             selected = next((slot for slot, choice in zip(slots, choices) if solver.value(choice)), None)
             summary["seminars"].append({"id": seminar.id, "name": seminar.name, "slot": selected, "scheduled": selected is not None})
@@ -676,6 +753,11 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
                 c_code = group.course.code if group.course else str(group.course_id)
                 c_name = group.course.name if group.course else c_code
                 affected_cnt = sum(1 for other in classes if other.course_id == group.course_id)
+                remediation = "Import historical assignments, import a capability matrix, or manually approve capability."
+                if len(c_caps) > 0 and len(candidates[group.id]) == 0:
+                    remediation = "Toàn bộ giảng viên có năng lực bị bận cứng hoặc trùng lịch vào khung giờ này. Hãy nới lỏng nguyện vọng hoặc ghép lớp học phần."
+                elif len(c_caps) > 0 and len(candidates[group.id]) > 0:
+                    remediation = "Nghẽn tài nguyên khung giờ do nhiều lớp cùng ca. Hãy ghép lớp học phần cùng khung giờ hoặc nới lỏng nguyện vọng giảng viên."
                 summary["unassigned"].append({
                     "class_id": group.id,
                     "course": c_code,
@@ -684,7 +766,7 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
                     "capability_coverage": len(c_caps),
                     "capability_records": len(c_caps),
                     "affected_groups": affected_cnt,
-                    "recommended_remediation": "Import historical assignments, import a capability matrix, or manually approve capability.",
+                    "recommended_remediation": remediation,
                     "reasons": summary["candidate_reasons"][group.id],
                 })
                 continue

@@ -112,6 +112,25 @@ def diagnose_unassigned_classes(
         if cap.lecturer_id in active_lecturer_ids:
             capabilities[cap.course_id].append(cap.lecturer_id)
 
+    # Course equivalence bridging for unassigned diagnostics
+    from app.services.capability_resolution import _plain_text
+    all_courses = {c.id: c for c in db.scalars(select(Course)).all()}
+    courses_by_norm = defaultdict(list)
+    for c in all_courses.values():
+        if c.name:
+            cnorm = _plain_text(c.name)
+            if cnorm and len(cnorm) >= 3:
+                courses_by_norm[cnorm].append(c)
+
+    for cnorm, eq_courses in courses_by_norm.items():
+        if len(eq_courses) < 2:
+            continue
+        for src_c in eq_courses:
+            for lec_id in list(capabilities.get(src_c.id, [])):
+                for dst_c in eq_courses:
+                    if dst_c.id != src_c.id and lec_id not in capabilities[dst_c.id]:
+                        capabilities[dst_c.id].append(lec_id)
+
     # Load active confirmed constraints
     constraints = db.scalars(
         select(Constraint).where(
@@ -189,10 +208,12 @@ def diagnose_unassigned_classes(
             for other in assigned_classes_by_lecturer.get(lec_id, []):
                 if other.id == section.id:
                     continue
+                if section.merged_group_id and section.merged_group_id == other.merged_group_id:
+                    continue
                 for s1 in section.sessions:
                     for s2 in other.sessions:
                         if _overlap(s1, s2):
-                            overlap_w = sorted(set(s1.active_weeks).intersection(s2.active_weeks))
+                            overlap_w = sorted(set(s1.active_weeks or []).intersection(s2.active_weeks or []))
                             collisions.append((other.class_code, overlap_w))
             if collisions:
                 colliding_lecs.add(lec_id)
@@ -216,11 +237,35 @@ def diagnose_unassigned_classes(
             eligible_lecs.add(lec_id)
             reasons_per_lecturer[lec_id] = "ELIGIBLE"
 
-        # Determine Root Cause
+        # Determine Root Cause and analyze simultaneous classes
         root_cause = "UNKNOWN"
         root_cause_label = "Chưa xác định"
         root_cause_severity = "warning"
         bottleneck_details = None
+
+        simultaneous_classes = []
+        all_semester_classes = all_assigned_classes + unassigned_classes
+        for s1 in section.sessions:
+            for other in all_semester_classes:
+                if other.id == section.id or any(o.id == other.id for o in simultaneous_classes):
+                    continue
+                if any(_overlap(s1, s2) for s2 in other.sessions):
+                    simultaneous_classes.append(other)
+
+        total_simultaneous = len(simultaneous_classes) + 1
+        avail_cap_lecs = capable_lec_ids - hard_unavailable_lecs
+
+        same_course_sim = [
+            c for c in simultaneous_classes
+            if c.course_id == section.course_id or (
+                c.course and section.course and _plain_text(c.course.name) == _plain_text(section.course.name)
+            )
+        ]
+
+        free_lecs = [
+            lec.canonical_name for lec in active_lecturers
+            if lec.id not in colliding_lecs and lec.id not in hard_unavailable_lecs and lec.id not in capable_lec_ids
+        ]
 
         if not capable_lec_ids:
             root_cause = "NO_CAPABILITY"
@@ -235,22 +280,7 @@ def diagnose_unassigned_classes(
             root_cause_label = f"Có {len(eligible_lecs)} ứng viên khả thi (Có thể gán thủ công)"
             root_cause_severity = "info"
         else:
-            # Check for simultaneous bottleneck (Global Infeasibility)
-            # Find classes sharing the same slot as this section
-            simultaneous_classes = []
-            all_semester_classes = all_assigned_classes + unassigned_classes
-            for s1 in section.sessions:
-                for other in all_semester_classes:
-                    if other.id == section.id or any(o.id == other.id for o in simultaneous_classes):
-                        continue
-                    if any(_overlap(s1, s2) for s2 in other.sessions):
-                        simultaneous_classes.append(other)
-
-            total_simultaneous = len(simultaneous_classes) + 1
-            # Count lecturers capable of course and not hard unavailable at this slot
-            avail_cap_lecs = capable_lec_ids - hard_unavailable_lecs
-
-            if total_simultaneous > len(avail_cap_lecs):
+            if total_simultaneous > len(avail_cap_lecs) or (len(same_course_sim) + 1 > len(avail_cap_lecs)):
                 root_cause = "GLOBAL_INFEASIBILITY"
                 root_cause_label = f"Nghẽn tài nguyên khung giờ ({total_simultaneous} lớp cùng giờ / {len(avail_cap_lecs)} GV khả dụng)"
                 root_cause_severity = "warning"
@@ -261,7 +291,7 @@ def diagnose_unassigned_classes(
                         "period_range": f"{first_session.start_period}–{first_session.end_period}",
                         "overlapping_classes_count": total_simultaneous,
                         "available_lecturers_count": len(avail_cap_lecs),
-                        "shortage": total_simultaneous - len(avail_cap_lecs),
+                        "shortage": max(1, total_simultaneous - len(avail_cap_lecs)),
                     }
             elif colliding_lecs:
                 root_cause = "TIMETABLE_COLLISION"
@@ -278,34 +308,90 @@ def diagnose_unassigned_classes(
 
         # Recommended actions
         actions = []
+        same_course_codes = [c.class_code for c in same_course_sim]
+
         if root_cause == "NO_CAPABILITY":
             actions.append({
                 "type": "REVIEW_CAPABILITY",
                 "label": "Bổ sung năng lực môn",
                 "description": f"Cập nhật năng lực giảng dạy môn {section.course.name} cho giảng viên phù hợp.",
             })
+            if free_lecs:
+                actions.append({
+                    "type": "DEPARTMENT_POOL",
+                    "label": "Huy động GV bộ môn",
+                    "description": f"Các GV đang rảnh ca này có thể bổ sung năng lực: {', '.join(free_lecs[:3])}.",
+                })
         elif root_cause == "HARD_AVAILABILITY_CONFLICT":
             actions.append({
                 "type": "REVIEW_PREFERENCES",
                 "label": "Xem nguyện vọng & nới lỏng",
                 "description": "Xem lại nguyện vọng bận cứng của các giảng viên có năng lực và điều chỉnh nếu cần.",
             })
+            if hard_unavailable_lecs:
+                blocked_names = [lecturers_by_id[lid].canonical_name for lid in hard_unavailable_lecs if lid in lecturers_by_id]
+                if blocked_names:
+                    actions.append({
+                        "type": "RELAX_PREFERENCES",
+                        "label": "Nới lỏng bận cứng GV",
+                        "description": f"Nới lỏng nguyện vọng bận của GV có năng lực: {', '.join(blocked_names[:3])} vào khung giờ này.",
+                    })
+            if same_course_codes:
+                actions.append({
+                    "type": "MERGE_CLASSES",
+                    "label": "Gợi ý ghép lớp cùng ca",
+                    "description": f"Ghép lớp {section.class_code} với các lớp cùng môn: {', '.join(same_course_codes[:3])} để tiết kiệm tài nguyên GV.",
+                    "target_class_id": section.id,
+                    "target_class_code": section.class_code,
+                    "candidate_class_ids": [c.id for c in same_course_sim],
+                    "candidate_class_codes": same_course_codes,
+                })
             actions.append({
                 "type": "REVIEW_CAPABILITY",
                 "label": "Bổ sung GV năng lực khác",
                 "description": "Bổ sung thêm giảng viên khác dạy được môn này.",
             })
+            if free_lecs:
+                actions.append({
+                    "type": "DEPARTMENT_POOL",
+                    "label": "Huy động GV bộ môn",
+                    "description": f"Các GV đang rảnh ca này có thể bổ sung năng lực: {', '.join(free_lecs[:3])}.",
+                })
         elif root_cause in {"TIMETABLE_COLLISION", "GLOBAL_INFEASIBILITY"}:
             actions.append({
                 "type": "OPEN_CALENDAR",
                 "label": "Xem trên lịch",
                 "description": "Kiểm tra khung giờ trên Apple Calendar để phát hiện lớp có thể hoán đổi ca/lịch.",
             })
+            if same_course_codes:
+                actions.append({
+                    "type": "MERGE_CLASSES",
+                    "label": "Gợi ý ghép lớp cùng ca",
+                    "description": f"Ghép lớp {section.class_code} với các lớp cùng môn: {', '.join(same_course_codes[:3])} để tiết kiệm tài nguyên GV.",
+                    "target_class_id": section.id,
+                    "target_class_code": section.class_code,
+                    "candidate_class_ids": [c.id for c in same_course_sim],
+                    "candidate_class_codes": same_course_codes,
+                })
+            if hard_unavailable_lecs:
+                blocked_names = [lecturers_by_id[lid].canonical_name for lid in hard_unavailable_lecs if lid in lecturers_by_id]
+                if blocked_names:
+                    actions.append({
+                        "type": "RELAX_PREFERENCES",
+                        "label": "Nới lỏng bận cứng GV",
+                        "description": f"Nới lỏng nguyện vọng bận của GV có năng lực: {', '.join(blocked_names[:3])} vào khung giờ này.",
+                    })
             actions.append({
                 "type": "REVIEW_CAPABILITY",
                 "label": "Mở rộng phân công",
                 "description": "Bổ sung thêm giảng viên có năng lực để giải tỏa điểm nghẽn.",
             })
+            if free_lecs:
+                actions.append({
+                    "type": "DEPARTMENT_POOL",
+                    "label": "Huy động GV bộ môn",
+                    "description": f"Các GV đang rảnh ca này có thể bổ sung năng lực: {', '.join(free_lecs[:3])}.",
+                })
         if eligible_lecs:
             actions.append({
                 "type": "MANUAL_ASSIGN",
@@ -443,9 +529,21 @@ def get_candidate_analysis(
     if dept_id:
         policy = db.scalar(select(DepartmentProfile).where(DepartmentProfile.department_id == dept_id))
 
-    # Load capabilities for this course scoped to department
+    target_course = section.course or db.get(Course, section.course_id)
+    equiv_course_ids = [section.course_id]
+    equiv_map = {section.course_id: target_course}
+    if target_course and target_course.name:
+        from app.services.capability_resolution import _plain_text
+        norm_name = _plain_text(target_course.name)
+        if norm_name and len(norm_name) >= 3:
+            for c in db.scalars(select(Course).where(Course.id != section.course_id)).all():
+                if _plain_text(c.name) == norm_name:
+                    equiv_course_ids.append(c.id)
+                    equiv_map[c.id] = c
+
+    # Load capabilities for this course and equivalent courses scoped to department
     caps_query = select(LecturerCourseCapability).where(
-        LecturerCourseCapability.course_id == section.course_id,
+        LecturerCourseCapability.course_id.in_(equiv_course_ids),
         or_(
             LecturerCourseCapability.source.is_(None),
             LecturerCourseCapability.source != "HYPOTHETICAL_ALL",
@@ -459,7 +557,15 @@ def get_candidate_analysis(
             )
         )
     capabilities_for_course = db.scalars(caps_query).all()
-    caps_by_lecturer = {c.lecturer_id: c for c in capabilities_for_course}
+    caps_by_lecturer = {}
+    cap_equiv_info = {}
+    for c in capabilities_for_course:
+        if c.course_id == section.course_id:
+            caps_by_lecturer[c.lecturer_id] = c
+    for c in capabilities_for_course:
+        if c.course_id != section.course_id and c.lecturer_id not in caps_by_lecturer:
+            caps_by_lecturer[c.lecturer_id] = c
+            cap_equiv_info[c.lecturer_id] = equiv_map.get(c.course_id)
 
     # Load constraints
     constraints = db.scalars(
@@ -566,14 +672,16 @@ def get_candidate_analysis(
         for other in current_assigned:
             if other.id == section.id:
                 continue
+            if section.merged_group_id and section.merged_group_id == other.merged_group_id:
+                continue
             for s1 in section.sessions:
                 for s2 in other.sessions:
                     if _overlap(s1, s2):
-                        overlap_w = sorted(set(s1.active_weeks).intersection(s2.active_weeks))
+                        overlap_w = sorted(set(s1.active_weeks or []).intersection(s2.active_weeks or []))
                         collision_items.append({
                             "class_id": other.id,
                             "class_code": other.class_code,
-                            "course_name": other.course.name,
+                            "course_name": other.course.name if other.course else "",
                             "weekday": s2.weekday,
                             "periods": f"{s2.start_period}–{s2.end_period}",
                             "overlapping_weeks": overlap_w,
@@ -621,31 +729,39 @@ def get_candidate_analysis(
             is_eligible = False
             details = f"Chưa có xác nhận năng lực dạy môn {section.course.name} ({section.course.code})"
         elif hard_unavailable:
+            eq_course = cap_equiv_info.get(lec.id)
+            eq_note = f" (Năng lực từ [{eq_course.code}] {eq_course.name})" if eq_course else ""
             status = "HARD_AVAILABILITY_CONFLICT"
             status_label = "Bị loại — Bận cứng"
             status_badge_variant = "danger"
             is_eligible = False
-            details = unavail_details or "Bận cứng vào khung giờ học của lớp này"
+            details = (unavail_details or "Bận cứng vào khung giờ học của lớp này") + eq_note
         elif has_collision:
+            eq_course = cap_equiv_info.get(lec.id)
+            eq_note = f" (Năng lực từ [{eq_course.code}] {eq_course.name})" if eq_course else ""
             status = "TIMETABLE_COLLISION"
             status_label = "Bị loại — Trùng lịch"
             status_badge_variant = "warning"
             is_eligible = False
             first_col = collision_items[0]
             weeks_str = f"tuần {min(first_col['overlapping_weeks'])}-{max(first_col['overlapping_weeks'])}" if first_col["overlapping_weeks"] else ""
-            details = f"Trùng lịch với lớp {first_col['class_code']} ({first_col['course_name']}) T{first_col['weekday']} {weeks_str}"
+            details = f"Trùng lịch với lớp {first_col['class_code']} ({first_col['course_name']}) T{first_col['weekday']} {weeks_str}{eq_note}"
         elif workload_exceeded:
+            eq_course = cap_equiv_info.get(lec.id)
+            eq_note = f" (Năng lực từ [{eq_course.code}] {eq_course.name})" if eq_course else ""
             status = "WORKLOAD_EXCEEDED"
             status_label = "Bị loại — Vượt tải"
             status_badge_variant = "secondary"
             is_eligible = False
-            details = workload_details
+            details = workload_details + eq_note
         else:
+            eq_course = cap_equiv_info.get(lec.id)
+            eq_note = f" (Năng lực suy diễn từ [{eq_course.code}] {eq_course.name})" if eq_course else ""
             status = "ELIGIBLE"
             status_label = "Có thể phân công"
             status_badge_variant = "success"
             is_eligible = True
-            details = "Đủ năng lực môn, không bận cứng, không trùng lịch"
+            details = f"Đủ năng lực môn{eq_note}, không bận cứng, không trùng lịch"
 
         analysis_rows.append({
             "lecturer_id": lec.id,

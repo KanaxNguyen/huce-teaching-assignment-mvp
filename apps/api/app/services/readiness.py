@@ -1,11 +1,11 @@
 from collections import defaultdict
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
-from app.models.entities import Assignment, ClassSection, LecturerCourseCapability, OptimizationRun
+from app.models.entities import Assignment, ClassSection, Course, LecturerCourseCapability, OptimizationRun
 from app.optimization.solver import _overlap
 
 def capability_readiness(db: Session, semester_id: int) -> dict:
-    from app.services.capability_resolution import CapabilityResolutionService
+    from app.services.capability_resolution import CapabilityResolutionService, _plain_text
     res = CapabilityResolutionService.evaluate_capability_readiness(db, semester_id)
     groups = db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id)).all()
     caps = db.scalars(select(LecturerCourseCapability).where(
@@ -14,6 +14,24 @@ def capability_readiness(db: Session, semester_id: int) -> dict:
     by_course = defaultdict(list)
     for cap in caps:
         by_course[cap.course_id].append(cap)
+
+    courses_by_id = {c.id: c for c in db.scalars(select(Course)).all()}
+    courses_by_norm = defaultdict(list)
+    for c in courses_by_id.values():
+        if c.name:
+            cnorm = _plain_text(c.name)
+            if cnorm and len(cnorm) >= 3:
+                courses_by_norm[cnorm].append(c)
+
+    for cnorm, eq_courses in courses_by_norm.items():
+        if len(eq_courses) < 2:
+            continue
+        for src_c in eq_courses:
+            for cap in list(by_course[src_c.id]):
+                for dst_c in eq_courses:
+                    if dst_c.id != src_c.id and cap not in by_course[dst_c.id]:
+                        by_course[dst_c.id].append(cap)
+
     eligible = sum(any(c.allowed and c.confirmed for c in by_course[g.course_id]) for g in groups)
 
     output = {
@@ -79,6 +97,27 @@ def validate_schedule(db: Session, semester_id: int, run_id: int) -> dict:
         if not c.allowed
     }
 
+    # Expand allowed_caps with equivalent course capabilities
+    from app.services.capability_resolution import _plain_text
+    courses_by_id = {c.id: c for c in db.scalars(select(Course)).all()}
+    courses_by_norm = defaultdict(list)
+    for c in courses_by_id.values():
+        if c.name:
+            cnorm = _plain_text(c.name)
+            if cnorm and len(cnorm) >= 3:
+                courses_by_norm[cnorm].append(c)
+
+    for cnorm, eq_courses in courses_by_norm.items():
+        if len(eq_courses) < 2:
+            continue
+        for src_c in eq_courses:
+            for dst_c in eq_courses:
+                if src_c.id == dst_c.id:
+                    continue
+                for lec_id in [lid for (lid, cid) in list(allowed_caps) if cid == src_c.id]:
+                    if (lec_id, dst_c.id) not in forbidden_caps:
+                        allowed_caps.add((lec_id, dst_c.id))
+
     errors: list[dict] = []
     warnings: list[dict] = []
 
@@ -107,6 +146,11 @@ def validate_schedule(db: Session, semester_id: int, run_id: int) -> dict:
     # 2. Lecturer overlap & week-mask overlap
     for i, left in enumerate(assignments):
         for right in assignments[i + 1:]:
+            if (
+                left.class_section.merged_group_id
+                and left.class_section.merged_group_id == right.class_section.merged_group_id
+            ):
+                continue
             if left.lecturer_id == right.lecturer_id and any(
                 _overlap(a, b) for a in left.class_section.sessions for b in right.class_section.sessions
             ):

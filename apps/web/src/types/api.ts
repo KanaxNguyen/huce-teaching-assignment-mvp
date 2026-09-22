@@ -109,9 +109,22 @@ export type UnassignedDiagnosticItem = {
   resolution_status: "NEW" | "UNDER_REVIEW" | "WAITING_FOR_DATA" | "MANUALLY_RESOLVED" | "RESOLVED_BY_SOLVER" | "ACCEPTED_UNRESOLVED";
   resolution_notes?: string | null;
   recommended_actions: Array<{
-    type: "OPEN_CALENDAR" | "REVIEW_PREFERENCES" | "REVIEW_CAPABILITY" | "MANUAL_ASSIGN" | "REQUEST_FACULTY_CHANGE";
+    type:
+      | "OPEN_CALENDAR"
+      | "REVIEW_PREFERENCES"
+      | "REVIEW_CAPABILITY"
+      | "MANUAL_ASSIGN"
+      | "REQUEST_FACULTY_CHANGE"
+      | "MERGE_CLASSES"
+      | "RELAX_PREFERENCES"
+      | "DEPARTMENT_POOL"
+      | string;
     label: string;
     description: string;
+    target_class_id?: number;
+    target_class_code?: string;
+    candidate_class_ids?: number[];
+    candidate_class_codes?: string[];
   }>;
   bottleneck_details?: {
     weekday: number;

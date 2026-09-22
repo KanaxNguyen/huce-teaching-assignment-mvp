@@ -91,7 +91,17 @@ class CapabilityResolutionService:
         if not policy and department_id:
             policy = get_department_profile(db, department_id)
 
-        query = select(LecturerCourseCapability).where(LecturerCourseCapability.course_id == course_id)
+        target_course = group.course or db.get(Course, course_id)
+        equiv_course_ids = [course_id]
+        if target_course and target_course.name:
+            norm_name = _plain_text(target_course.name)
+            if norm_name and len(norm_name) >= 3:
+                all_matching = db.scalars(select(Course).where(Course.id != course_id)).all()
+                for c in all_matching:
+                    if _plain_text(c.name) == norm_name:
+                        equiv_course_ids.append(c.id)
+
+        query = select(LecturerCourseCapability).where(LecturerCourseCapability.course_id.in_(equiv_course_ids))
         if department_id:
             query = query.where(
                 or_(
@@ -112,13 +122,18 @@ class CapabilityResolutionService:
                 continue
             if cap.source == "HYPOTHETICAL_ALL":
                 continue
+            effective_source = cap.source if cap.course_id == course_id else INFERRED_HISTORY
             if cap.confirmed:
-                if cap.source in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY}:
+                if effective_source in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY}:
                     historical_ids.add(cap.lecturer_id)
                 else:
                     confirmed_ids.add(cap.lecturer_id)
             else:
                 provisional_ids.add(cap.lecturer_id)
+
+        confirmed_ids -= forbidden_ids
+        historical_ids -= (confirmed_ids | forbidden_ids)
+        provisional_ids -= (confirmed_ids | historical_ids | forbidden_ids)
 
         allow_provisional = policy.allow_provisional_capability if policy else False
 
@@ -735,10 +750,23 @@ class CapabilityResolutionService:
 
         courses_without_capability: list[dict[str, Any]] = []
 
+        all_db_courses = {c.id: c for c in db.scalars(select(Course)).all()}
+        db_courses_by_norm = defaultdict(list)
+        for c_id, course in all_db_courses.items():
+            if course and course.name:
+                norm_name = _plain_text(course.name)
+                if norm_name and len(norm_name) >= 3:
+                    db_courses_by_norm[norm_name].append(c_id)
+
         for c_id, course in all_courses.items():
-            c_caps = caps_by_course.get(c_id, [])
+            c_caps = list(caps_by_course.get(c_id, []))
+            if not c_caps and course and course.name:
+                norm_name = _plain_text(course.name)
+                for eq_cid in db_courses_by_norm.get(norm_name, []):
+                    if eq_cid != c_id:
+                        c_caps.extend(caps_by_course.get(eq_cid, []))
             has_conf = any(c.allowed and c.confirmed and c.source not in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY} for c in c_caps)
-            has_hist = any(c.allowed and c.confirmed and c.source in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY} for c in c_caps)
+            has_hist = any(c.allowed and c.confirmed and (c.source in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY} or c.course_id != c_id) for c in c_caps)
             has_prov = any(c.allowed and not c.confirmed for c in c_caps)
 
             if has_conf:
@@ -758,9 +786,14 @@ class CapabilityResolutionService:
                 })
 
         for g in groups:
-            c_caps = caps_by_course.get(g.course_id, [])
+            c_caps = list(caps_by_course.get(g.course_id, []))
+            if not c_caps and g.course and g.course.name:
+                norm_name = _plain_text(g.course.name)
+                for eq_cid in db_courses_by_norm.get(norm_name, []):
+                    if eq_cid != g.course_id:
+                        c_caps.extend(caps_by_course.get(eq_cid, []))
             has_conf = any(c.allowed and c.confirmed and c.source not in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY} for c in c_caps)
-            has_hist = any(c.allowed and c.confirmed and c.source in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY} for c in c_caps)
+            has_hist = any(c.allowed and c.confirmed and (c.source in {HISTORICAL_ASSIGNMENT, HISTORICAL_TEMPLATE, INFERRED_HISTORY} or c.course_id != g.course_id) for c in c_caps)
             has_prov = any(c.allowed and not c.confirmed for c in c_caps)
 
             if has_conf:

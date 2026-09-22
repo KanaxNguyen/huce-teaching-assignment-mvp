@@ -1,5 +1,20 @@
-"""Calendar occurrences shared by availability checks and week-scoped rules."""
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+
+
+def _to_date(val):
+    if isinstance(val, date):
+        return val
+    if not val:
+        return None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(str(val), fmt).date()
+        except Exception:
+            pass
+    try:
+        return date.fromisoformat(str(val))
+    except Exception:
+        return None
 
 
 def meeting_occurrences(meeting, semester, target=None):
@@ -10,16 +25,16 @@ def meeting_occurrences(meeting, semester, target=None):
     """
     target = target or {}
     scope=target.get('day_scope')
-    allowed_days=({2,3,4,5,6} if scope=='ALL_WEEKDAYS' else {2,3,4,5,6,7,8} if scope=='ALL_DAYS' else {8} if scope=='CN' else {int(scope[1:])} if scope in {'T2','T3','T4','T5','T6','T7'} else None)
+    allowed_days=({2,3,4,5,6} if scope=='ALL_WEEKDAYS' else {2,3,4,5,6,7,8} if scope=='ALL_DAYS' else {8} if scope in {'CN', 'T8'} else {int(scope[1:])} if scope in {'T2','T3','T4','T5','T6','T7','T8'} else None)
     if target.get('weekday') is not None: allowed_days={target['weekday']}
     if allowed_days is not None and meeting.weekday not in allowed_days: return []
     
     # Check meeting start/end against target start/end if both exist
-    m_start = meeting.start_date if isinstance(getattr(meeting, 'start_date', None), date) else (date.fromisoformat(str(meeting.start_date)) if getattr(meeting, 'start_date', None) else None)
-    m_end = meeting.end_date if isinstance(getattr(meeting, 'end_date', None), date) else (date.fromisoformat(str(meeting.end_date)) if getattr(meeting, 'end_date', None) else None)
+    m_start = _to_date(getattr(meeting, 'start_date', None))
+    m_end = _to_date(getattr(meeting, 'end_date', None))
     
-    t_start = target['start_date'] if isinstance(target.get('start_date'), date) else (date.fromisoformat(str(target['start_date'])) if target.get('start_date') else None)
-    t_end = target['end_date'] if isinstance(target.get('end_date'), date) else (date.fromisoformat(str(target['end_date'])) if target.get('end_date') else None)
+    t_start = _to_date(target.get('start_date'))
+    t_end = _to_date(target.get('end_date'))
     
     if m_start and t_end and m_start > t_end:
         return []

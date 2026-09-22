@@ -50,6 +50,8 @@ from app.schemas.api import (
     DepartmentPolicyUpdate,
     ImportResponse,
     MergedDecision,
+    MergeClassesRequest,
+    UnmergeClassesRequest,
     ManualPreferenceDraftCreate,
     OptimizationRequest,
     PreferenceDraftApply,
@@ -1105,8 +1107,96 @@ def decide_merged_group(payload: MergedDecision, semester_id: int | None = Query
     return {"merged_group_id": payload.merged_group_id, "confirmed": payload.confirmed, "classes": len(items)}
 
 
+@router.post("/classes/merge")
+def merge_classes(
+    payload: MergeClassesRequest,
+    semester_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> dict:
+    sid = _semester_id(db, semester_id)
+    classes = db.scalars(
+        select(ClassSection).where(
+            ClassSection.id.in_(payload.class_ids),
+            ClassSection.semester_id == sid,
+        )
+    ).all()
+    if len(classes) < 2:
+        raise HTTPException(400, "Cần ít nhất 2 lớp để thực hiện ghép lớp.")
+    group_id = payload.merged_group_id or f"MG-M{uuid4().hex[:6].upper()}"
+    for item in classes:
+        item.merged_group_id = group_id
+        item.merged_confirmed = True
+        item.merge_status = "confirmed"
+    db.commit()
+    return {
+        "merged_group_id": group_id,
+        "confirmed": True,
+        "classes": len(classes),
+        "class_ids": [c.id for c in classes],
+        "class_codes": [c.class_code for c in classes],
+    }
+
+
+@router.post("/classes/unmerge")
+def unmerge_classes(
+    payload: UnmergeClassesRequest,
+    semester_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+) -> dict:
+    sid = _semester_id(db, semester_id)
+    affected_groups = set()
+    if payload.merged_group_id:
+        affected_groups.add(payload.merged_group_id)
+    elif payload.class_ids:
+        found_classes = db.scalars(select(ClassSection).where(ClassSection.id.in_(payload.class_ids), ClassSection.semester_id == sid)).all()
+        for c in found_classes:
+            if c.merged_group_id:
+                affected_groups.add(c.merged_group_id)
+    else:
+        raise HTTPException(400, "Cần cung cấp class_ids hoặc merged_group_id để hủy ghép lớp.")
+
+    query = select(ClassSection).where(ClassSection.semester_id == sid)
+    if payload.merged_group_id:
+        query = query.where(ClassSection.merged_group_id == payload.merged_group_id)
+    elif payload.class_ids:
+        query = query.where(ClassSection.id.in_(payload.class_ids))
+
+    classes = db.scalars(query).all()
+    for item in classes:
+        item.merged_group_id = None
+        item.merged_confirmed = False
+        item.merge_status = "single"
+    db.flush()
+
+    # Clean up any remaining groups that have < 2 classes
+    for gid in affected_groups:
+        remaining = db.scalars(
+            select(ClassSection).where(
+                ClassSection.semester_id == sid,
+                ClassSection.merged_group_id == gid,
+            )
+        ).all()
+        if len(remaining) < 2:
+            for rem in remaining:
+                rem.merged_group_id = None
+                rem.merged_confirmed = False
+                rem.merge_status = "single"
+
+    db.commit()
+    return {
+        "unmerged": len(classes),
+        "class_ids": [c.id for c in classes],
+    }
+
+
 def _meeting_signature(session: ClassSession) -> tuple:
-    return (session.weekday, session.start_period, session.end_period, session.room.casefold(), tuple(session.active_weeks))
+    return (
+        session.weekday,
+        session.start_period,
+        session.end_period,
+        (session.room or "").casefold(),
+        tuple(session.active_weeks or []),
+    )
 
 
 @router.get("/merge-candidates")
@@ -1122,21 +1212,21 @@ def get_merge_candidates(semester_id: int | None = Query(None), db: Session = De
         signatures = {_meeting_signature(session) for item in items for session in item.sessions}
         result.append({
             "kind": "FULL", "id": group_id, "status": items[0].merge_status,
-            "classes": [{"id": item.id, "class_code": item.class_code, "course": item.course.name} for item in items],
+            "classes": [{"id": item.id, "class_code": item.class_code, "course": item.course.name if item.course else ""} for item in items],
             "matched_meetings": len(signatures), "different_meetings": 0,
             "meeting_details": [
-                {"weekday": session.weekday, "periods": f"{session.start_period}-{session.end_period}", "room": session.room, "weeks": session.active_weeks}
+                {"weekday": session.weekday, "periods": f"{session.start_period}-{session.end_period}", "room": session.room, "weeks": session.active_weeks or []}
                 for session in items[0].sessions
             ],
         })
     for index, left in enumerate(classes):
-        left_signatures = {_meeting_signature(item) for item in left.sessions if item.room.strip()}
+        left_signatures = {_meeting_signature(item) for item in left.sessions if item.room and item.room.strip()}
         if not left_signatures:
             continue
         for right in classes[index + 1:]:
             if left.course_id != right.course_id:
                 continue
-            right_signatures = {_meeting_signature(item) for item in right.sessions if item.room.strip()}
+            right_signatures = {_meeting_signature(item) for item in right.sessions if item.room and item.room.strip()}
             matched = left_signatures.intersection(right_signatures)
             if not matched or left_signatures == right_signatures:
                 continue

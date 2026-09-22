@@ -47,6 +47,25 @@ export const api = {
   workload: (semesterId: number) => request<Workload[]>(`/workload?semester_id=${semesterId}`),
   mergeCandidates: (semesterId: number) => request<MergeCandidate[]>(`/merge-candidates?semester_id=${semesterId}`),
   decideMerge: (mergedGroupId: string, confirmed: boolean, semesterId: number) => request<{ merged_group_id: string; confirmed: boolean }>(`/merged-groups?semester_id=${semesterId}`, { method: "PATCH", body: JSON.stringify({ merged_group_id: mergedGroupId, confirmed }) }),
+  mergeClasses: (classIds: number[], semesterId: number, mergedGroupId?: string) =>
+    request<{
+      merged_group_id: string;
+      confirmed: boolean;
+      classes: number;
+      class_ids: number[];
+      class_codes: string[];
+    }>(`/classes/merge?semester_id=${semesterId}`, {
+      method: "POST",
+      body: JSON.stringify({ class_ids: classIds, merged_group_id: mergedGroupId }),
+    }),
+  unmergeClasses: (classIds: number[], semesterId: number, mergedGroupId?: string) =>
+    request<{
+      unmerged: number;
+      class_ids: number[];
+    }>(`/classes/unmerge?semester_id=${semesterId}`, {
+      method: "POST",
+      body: JSON.stringify({ class_ids: classIds, merged_group_id: mergedGroupId }),
+    }),
   problems: (semesterId: number) => request<Problem[]>(`/problems?semester_id=${semesterId}`),
   assignments: () => request<AssignmentItem[]>("/assignments"),
   semesters: () => request<Semester[]>("/semesters"),
