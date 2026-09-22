@@ -247,6 +247,8 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
     def _is_merged(left: ClassSection, right: ClassSection) -> bool:
         if not (left.merged_group_id and left.merged_group_id == right.merged_group_id):
             return False
+        if getattr(left, "merge_status", "") == "rejected" or getattr(right, "merge_status", "") == "rejected":
+            return False
         return bool(
             (left.merged_confirmed and right.merged_confirmed)
             or getattr(left, "merge_status", "") == "confirmed"
@@ -416,6 +418,36 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
                 db.add(run); db.commit(); return run
             model.add(x[group.id, group.assigned_lecturer_id] == 1)
 
+    groups = defaultdict(list)
+    for group in classes:
+        if (
+            group.merged_group_id
+            and getattr(group, "merge_status", "") != "rejected"
+            and (group.merged_confirmed or getattr(group, "merge_status", "") == "confirmed" or confirm_merged)
+        ):
+            groups[group.merged_group_id].append(group)
+    active_groups = {gid: items for gid, items in groups.items() if len(items) >= 2}
+    for items in active_groups.values():
+        common_candidates = set(candidates[items[0].id])
+        for other in items[1:]:
+            common_candidates &= candidates[other.id]
+        for sec in items:
+            for lecturer_id in candidates[sec.id] - common_candidates:
+                if (sec.id, lecturer_id) in x:
+                    model.add(x[sec.id, lecturer_id] == 0)
+        for other in items[1:]:
+            for lecturer_id in common_candidates:
+                if (items[0].id, lecturer_id) in x and (other.id, lecturer_id) in x:
+                    model.add(x[items[0].id, lecturer_id] == x[other.id, lecturer_id])
+
+    # Workload and class counts for merged groups must be counted once per group
+    secondary_merged_ids = {
+        sec.id
+        for items in active_groups.values()
+        for sec in items[1:]
+    }
+    representative_classes = [g for g in classes if g.id not in secondary_merged_ids]
+
     invalid_constraints = []
     def bounded_violation(expression, limit: int, upper_bound: int, constraint: Constraint, *, minimum: bool = False):
         """Enforce HARD bounds and score SOFT bounds without conflating weight/hardness."""
@@ -438,18 +470,18 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         limit = target.get("max")
         if kind == "MAX_CLASSES":
             if not lecturer_id or not isinstance(limit, int): invalid_constraints.append(constraint.id); continue
-            expression = sum(x[g.id, lecturer_id] for g in classes if (g.id, lecturer_id) in x)
-            bounded_violation(expression, limit, len(classes), constraint)
+            expression = sum(x[g.id, lecturer_id] for g in representative_classes if (g.id, lecturer_id) in x)
+            bounded_violation(expression, limit, len(representative_classes), constraint)
         elif kind == "MIN_CLASSES":
             limit = target.get("min")
             if not lecturer_id or not isinstance(limit, int): invalid_constraints.append(constraint.id); continue
-            expression = sum(x[g.id, lecturer_id] for g in classes if (g.id, lecturer_id) in x)
-            bounded_violation(expression, limit, len(classes), constraint, minimum=True)
+            expression = sum(x[g.id, lecturer_id] for g in representative_classes if (g.id, lecturer_id) in x)
+            bounded_violation(expression, limit, len(representative_classes), constraint, minimum=True)
         elif kind == "MAX_SESSIONS_PER_DAY":
             if not lecturer_id or not isinstance(limit, int): invalid_constraints.append(constraint.id); continue
             for weekday in range(2, 9):
-                expression = sum(sum(s.weekday == weekday for s in g.sessions) * x[g.id, lecturer_id] for g in classes if (g.id, lecturer_id) in x)
-                bounded_violation(expression, limit, len(classes), constraint)
+                expression = sum(sum(s.weekday == weekday for s in g.sessions) * x[g.id, lecturer_id] for g in representative_classes if (g.id, lecturer_id) in x)
+                bounded_violation(expression, limit, len(representative_classes), constraint)
         elif kind == "MAX_DAYS_PER_WEEK":
             if not lecturer_id or not isinstance(limit, int): invalid_constraints.append(constraint.id); continue
             active_days = []
@@ -589,7 +621,7 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
             # Convex soft cost: assignments after the first become progressively
             # less attractive.  This is intentionally not a hidden MAX_CLASSES.
             scoped=[]
-            for group in classes:
+            for group in representative_classes:
                 if (group.id, lecturer_id) not in x: continue
                 if any(_slot_match(session, target, semester) for session in group.sessions) if (target.get('start_date') or target.get('end_date')) else True:
                     scoped.append(x[group.id, lecturer_id])
@@ -607,21 +639,8 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
                 continue
             if any(_overlap(a, b) for a in left.sessions for b in right.sessions):
                 for lecturer_id in candidates[left.id].intersection(candidates[right.id]):
-                    model.add(x[left.id, lecturer_id] + x[right.id, lecturer_id] <= 1)
-    groups = defaultdict(list)
-    for group in classes:
-        if group.merged_group_id and (group.merged_confirmed or confirm_merged):
-            groups[group.merged_group_id].append(group)
-    for items in groups.values():
-        common_candidates = set(candidates[items[0].id])
-        for other in items[1:]:
-            common_candidates &= candidates[other.id]
-        for sec in items:
-            for lecturer_id in candidates[sec.id] - common_candidates:
-                model.add(x[sec.id, lecturer_id] == 0)
-        for other in items[1:]:
-            for lecturer_id in common_candidates:
-                model.add(x[items[0].id, lecturer_id] == x[other.id, lecturer_id])
+                    if (left.id, lecturer_id) in x and (right.id, lecturer_id) in x:
+                        model.add(x[left.id, lecturer_id] + x[right.id, lecturer_id] <= 1)
 
     # A seminar is one shared event: one slot is selected for all participants,
     # rather than storing a duplicate personal seminar constraint per lecturer.
@@ -654,7 +673,7 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
     for lecturer in lecturers:
         if lecturer.id not in participating_ids:
             continue
-        lec_vars = [x[group.id, lecturer.id] for group in classes if (group.id, lecturer.id) in x]
+        lec_vars = [x[group.id, lecturer.id] for group in representative_classes if (group.id, lecturer.id) in x]
         if not lec_vars:
             continue
         load = sum(int(group.credits * 10) * v for v in lec_vars)

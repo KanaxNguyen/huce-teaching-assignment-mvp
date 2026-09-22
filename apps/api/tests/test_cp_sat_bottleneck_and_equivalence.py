@@ -438,3 +438,87 @@ def test_diagnostics_safe_when_active_weeks_none():
     analysis = get_candidate_analysis(db, sem.id, cls1.id)
     assert len(analysis.analysis_rows) == 1
 
+
+def test_merge_classes_incompatible_rejected_by_api():
+    """Verify that merging classes with incompatible session schedules is rejected with HTTP 400."""
+    from app.api.routes import merge_classes
+    from app.schemas.api import MergeClassesRequest
+    from fastapi import HTTPException
+
+    db = _get_db()
+    dept = Department(name="D", code="D")
+    db.add(dept)
+    db.commit()
+
+    sem = Semester(name="S", department_name="D", department_id=dept.id, start_date=date(2026, 9, 7), end_date=date(2027, 1, 24), head_name="H", is_active=True)
+    db.add(sem)
+
+    c = Course(code="C1", name="Course 1")
+    db.add(c)
+    db.commit()
+
+    # Class 1: Monday periods 1-3
+    cls1 = ClassSection(semester_id=sem.id, course_id=c.id, class_code="CLS1", credits=3.0, source_file="s", source_sheet="s", source_row=1)
+    s1 = ClassSession(class_section=cls1, weekday=2, start_period=1, end_period=3, room="101", raw_weeks="123", active_weeks=[1, 2, 3], source_row=1)
+    # Class 2: Thursday periods 7-9 (incompatible day and periods!)
+    cls2 = ClassSection(semester_id=sem.id, course_id=c.id, class_code="CLS2", credits=3.0, source_file="s", source_sheet="s", source_row=2)
+    s2 = ClassSession(class_section=cls2, weekday=5, start_period=7, end_period=9, room="102", raw_weeks="123", active_weeks=[1, 2, 3], source_row=2)
+    db.add_all([cls1, cls2, s1, s2])
+    db.commit()
+
+    with pytest.raises(HTTPException) as excinfo:
+        merge_classes(MergeClassesRequest(class_ids=[cls1.id, cls2.id]), semester_id=sem.id, db=db)
+    assert excinfo.value.status_code == 400
+    assert "lịch học không đồng bộ" in excinfo.value.detail
+
+
+def test_merged_group_workload_counted_only_once():
+    """Verify that a merged group of two 3-credit classes counts as 1 class and 3 credits,
+
+    allowing a lecturer with hard MAX_CLASSES=1 to teach both sections together.
+    """
+    db = _get_db()
+    dept = Department(name="D", code="D")
+    db.add(dept)
+    db.commit()
+
+    sem = Semester(name="S", department_name="D", department_id=dept.id, start_date=date(2026, 9, 7), end_date=date(2027, 1, 24), head_name="H", is_active=True)
+    db.add(sem)
+
+    c = Course(code="C1", name="Course 1")
+    lec = Lecturer(code="L1", canonical_name="Lec 1", department_id=dept.id, confirmed=True)
+    db.add_all([c, lec])
+    db.commit()
+
+    db.add(LecturerCourseCapability(lecturer_id=lec.id, course_id=c.id, department_id=dept.id, allowed=True, confirmed=True, source="MANUAL"))
+    # Hard constraint: MAX_CLASSES = 1
+    db.add(Constraint(
+        semester_id=sem.id,
+        lecturer_id=lec.id,
+        name="Tối đa 1 lớp",
+        constraint_type="MAX_CLASSES",
+        hardness="hard",
+        target={"max": 1},
+        confirmed=True,
+        active=True,
+    ))
+
+    # Two compatible sections in a confirmed merged group
+    sec1 = ClassSection(semester_id=sem.id, course_id=c.id, class_code="71XD1", credits=3.0, merged_group_id="MG-001", merged_confirmed=True, source_file="s", source_sheet="s", source_row=1)
+    sess1 = ClassSession(class_section=sec1, weekday=2, start_period=1, end_period=3, room="101", raw_weeks="123", active_weeks=[1, 2, 3], source_row=1)
+    sec2 = ClassSection(semester_id=sem.id, course_id=c.id, class_code="71XD2", credits=3.0, merged_group_id="MG-001", merged_confirmed=True, source_file="s", source_sheet="s", source_row=2)
+    sess2 = ClassSession(class_section=sec2, weekday=2, start_period=1, end_period=3, room="101", raw_weeks="123", active_weeks=[1, 2, 3], source_row=2)
+    db.add_all([sec1, sess1, sec2, sess2])
+    db.commit()
+
+    # Solver MUST assign both sections to lec without violating MAX_CLASSES=1
+    run = solve(db, time_limit_seconds=5, confirm_merged=True, semester_id=sem.id)
+    assert run.status in {"optimal", "feasible"}
+    summary = run.summary or {}
+    assert len(summary.get("unassigned", [])) == 0
+
+    ass1 = db.scalar(select(Assignment).where(Assignment.run_id == run.id, Assignment.class_id == sec1.id))
+    ass2 = db.scalar(select(Assignment).where(Assignment.run_id == run.id, Assignment.class_id == sec2.id))
+    assert ass1 is not None and ass2 is not None
+    assert ass1.lecturer_id == ass2.lecturer_id == lec.id
+

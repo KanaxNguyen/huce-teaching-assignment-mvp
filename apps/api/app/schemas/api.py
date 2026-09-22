@@ -44,7 +44,7 @@ class TemplateMappingUpdate(BaseModel):
 
 class OptimizationRequest(BaseModel):
     time_limit_seconds: int = Field(default=20, ge=1, le=120)
-    confirm_merged_suggestions: bool = False
+    confirm_merged_suggestions: bool = True
 
 
 class MergedDecision(BaseModel):

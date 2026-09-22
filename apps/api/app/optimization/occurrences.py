@@ -65,3 +65,53 @@ def meeting_occurrences(meeting, semester, target=None):
             
         result.append((week, actual))
     return result
+
+
+def are_classes_mergeable(left, right) -> bool:
+    """Validate whether two class sections can legitimately be merged.
+
+    Classes can only be merged if:
+    1. They belong to the same course (or equivalent curriculum course).
+    2. Both classes have sessions defined.
+    3. They have the same number of meeting sessions.
+    4. Every session in `left` matches a session in `right` with the same
+       weekday, start period, end period, and non-conflicting active weeks.
+    """
+    if getattr(left, "course_id", None) != getattr(right, "course_id", None):
+        l_course = getattr(left, "course", None)
+        r_course = getattr(right, "course", None)
+        l_name = getattr(l_course, "name", "") if l_course else ""
+        r_name = getattr(r_course, "name", "") if r_course else ""
+        from unicodedata import category, normalize
+
+        def _clean(t):
+            norm = "".join(c for c in normalize("NFD", str(t or "").lower()) if category(c) != "Mn")
+            return norm.replace("đ", "d").replace(" ", "")
+
+        if not (l_name and r_name and _clean(l_name) == _clean(r_name)):
+            return False
+
+    l_sess = getattr(left, "sessions", []) or []
+    r_sess = getattr(right, "sessions", []) or []
+    if not l_sess or not r_sess:
+        return False
+    if len(l_sess) != len(r_sess):
+        return False
+
+    used_right = set()
+    for s1 in l_sess:
+        found = False
+        for idx, s2 in enumerate(r_sess):
+            if idx in used_right:
+                continue
+            if s1.weekday == s2.weekday and s1.start_period == s2.start_period and s1.end_period == s2.end_period:
+                w1 = set(s1.active_weeks or [])
+                w2 = set(s2.active_weeks or [])
+                if w1 and w2 and not w1.intersection(w2):
+                    continue
+                used_right.add(idx)
+                found = True
+                break
+        if not found:
+            return False
+    return len(used_right) == len(r_sess)

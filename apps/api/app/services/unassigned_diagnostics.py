@@ -20,6 +20,7 @@ from app.models.entities import (
     Semester,
 )
 from app.optimization.solver import _overlap, _slot_match
+from app.optimization.occurrences import are_classes_mergeable
 from app.services.lecturer_master import participation_reason
 from app.services.source_authority import latest_current_run
 
@@ -257,9 +258,7 @@ def diagnose_unassigned_classes(
 
         same_course_sim = [
             c for c in simultaneous_classes
-            if c.course_id == section.course_id or (
-                c.course and section.course and _plain_text(c.course.name) == _plain_text(section.course.name)
-            )
+            if are_classes_mergeable(section, c)
         ]
 
         free_lecs = [

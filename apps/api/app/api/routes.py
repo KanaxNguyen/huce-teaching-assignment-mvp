@@ -38,6 +38,7 @@ from app.models.entities import (
     ValidationIssue,
 )
 from app.optimization.solver import solve
+from app.optimization.occurrences import are_classes_mergeable
 from app.services.historical_learning import learn_from_template_profile
 from app.parsers.preferences import describe_preference
 from app.schemas.api import (
@@ -1115,13 +1116,22 @@ def merge_classes(
 ) -> dict:
     sid = _semester_id(db, semester_id)
     classes = db.scalars(
-        select(ClassSection).where(
+        select(ClassSection)
+        .options(selectinload(ClassSection.sessions), selectinload(ClassSection.course))
+        .where(
             ClassSection.id.in_(payload.class_ids),
             ClassSection.semester_id == sid,
         )
     ).all()
     if len(classes) < 2:
         raise HTTPException(400, "Cần ít nhất 2 lớp để thực hiện ghép lớp.")
+    first = classes[0]
+    for other in classes[1:]:
+        if not are_classes_mergeable(first, other):
+            raise HTTPException(
+                400,
+                f"Không thể ghép lớp {first.class_code} và {other.class_code}: lịch học không đồng bộ (khác thứ, khác tiết hoặc lệch buổi).",
+            )
     group_id = payload.merged_group_id or f"MG-M{uuid4().hex[:6].upper()}"
     for item in classes:
         item.merged_group_id = group_id

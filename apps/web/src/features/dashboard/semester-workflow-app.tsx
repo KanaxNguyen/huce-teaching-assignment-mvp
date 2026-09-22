@@ -300,7 +300,7 @@ export function SemesterWorkflowApp() {
               problems={problems}
               semesterId={activeSemester?.id ?? null}
               busy={busy}
-              onRun={() => execute("optimize", () => api.optimize(false), "Đã tạo phương án phân công mới.")}
+              onRun={() => execute("optimize", () => api.optimize(true), "Đã tạo phương án phân công mới.")}
               onCreate={(payload) => execute("new-constraint", () => api.createConstraint(payload), "Đã thêm ràng buộc và cập nhật vùng xem trước.")}
               onUpdateConstraint={(item, payload) => execute(`constraint-${item.id}`, () => api.updateConstraint(item.id, payload), "Đã cập nhật ràng buộc.")}
               onDeleteConstraint={(item) => execute(`delete-${item.id}`, () => api.deleteConstraint(item.id), "Đã xóa ràng buộc.")}
