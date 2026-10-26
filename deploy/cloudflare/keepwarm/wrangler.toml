@@ -1,0 +1,10 @@
+# Cron Worker that keeps the free Hugging Face Space awake during the working morning.
+# Cron runs in UTC. Vietnam is UTC+7, so 23,0-4 UTC is 06:00-11:50 ICT.
+name = "huce-keepwarm"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["*/10 23,0-4 * * *"]
+
+# Secrets (dashboard or `wrangler secret put`): BACKEND_API_URL, and HF_TOKEN if the Space is private.

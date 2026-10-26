@@ -1,0 +1,9 @@
+# Cloudflare Pages project for the frontend (root directory: apps/web).
+name = "huce-timetable"
+pages_build_output_dir = "out"
+compatibility_date = "2026-09-01"
+
+# Secrets are set in the dashboard, never here:
+#   BACKEND_API_URL     https://<owner>-<space>.hf.space
+#   INTERNAL_API_TOKEN  same value as the Space secret
+#   HF_TOKEN            only if the Space is private

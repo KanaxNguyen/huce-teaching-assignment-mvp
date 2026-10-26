@@ -33,3 +33,7 @@ data/manifests/source-files.json
 
 # Downloadable Excel templates served by the web app
 !apps/web/public/templates/*.xlsx
+
+# Cloudflare Pages build/dev output
+apps/web/out/
+apps/web/.wrangler/

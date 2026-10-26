@@ -13,6 +13,9 @@ class Base(DeclarativeBase):
 
 connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
 engine_options = {"connect_args": connect_args}
+if not settings.database_url.startswith("sqlite"):
+    # Serverless Postgres (Neon) closes idle connections; check before use and recycle early.
+    engine_options.update(pool_pre_ping=True, pool_recycle=240)
 if settings.database_url == "sqlite://":
     engine_options["poolclass"] = StaticPool
 engine = create_engine(settings.database_url, **engine_options)

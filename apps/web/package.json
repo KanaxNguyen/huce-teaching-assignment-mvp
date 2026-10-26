@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "build:static": "node scripts/build-static.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
