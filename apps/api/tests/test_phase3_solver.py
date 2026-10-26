@@ -172,3 +172,21 @@ def test_prefer_low_workload_builds_valid_reified_thresholds():
 
         assert run.status in {"optimal", "feasible"}
         assert len(db.scalars(select(Assignment).where(Assignment.run_id == run.id)).all()) == 2
+
+
+def test_run_records_reproducible_metrics_and_separate_penalty():
+    with SessionLocal() as db:
+        s, c, a, b, items = setup(db)
+        capability(db, a, c)
+        db.add(Constraint(semester_id=s.id, name="avoid", constraint_type="AVOID_PERIOD", hardness="soft", weight=1, lecturer_id=a.id, target={"weekday":2,"periods":[4,5,6]}, confirmed=True))
+        db.commit()
+        run = solve(db, 2, False, s.id)
+        metrics = run.summary["experiment"]
+        assert metrics["solver_wall_time_seconds"] >= 0
+        assert metrics["configuration"]["max_time_in_seconds"] == 2
+        assert metrics["configuration"]["num_search_workers"] == 8
+        assert metrics["environment"]["ortools_version"]
+        parts = metrics["objective_components"]
+        assert parts["unassigned"] == 0
+        assert parts["soft_preferences"] > 0
+        assert sum(parts.values()) == pytest.approx(run.score)

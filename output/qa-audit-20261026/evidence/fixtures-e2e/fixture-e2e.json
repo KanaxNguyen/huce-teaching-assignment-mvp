@@ -1,0 +1,354 @@
+[
+ {
+  "case": "TC01_basic_assignment",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 0.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan",
+   "71KT2": "Lê Viết Cường"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC02_hard_unavailable",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 0.0,
+  "assigned": {
+   "71KT1": "Lê Viết Cường"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC03_soft_preferred_period",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 130000.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC04_fallback_weak_preference",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 3,
+  "applied_status": 200,
+  "constraints_active": 3,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 80.0,
+  "assigned": {
+   "71KT1": "Lê Viết Cường",
+   "71KT2": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC05_avoid_period_soft",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 1,
+  "applied_status": 200,
+  "constraints_active": 1,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 48.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC06_real_timetable_collision",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 1,
+  "applied_status": 200,
+  "constraints_active": 1,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 1000000.0,
+  "assigned": {
+   "71KT2": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC07_alternating_weeks_no_collision",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 1,
+  "applied_status": 200,
+  "constraints_active": 1,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 0.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan",
+   "71KT2": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC08_partial_week_overlap",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 1,
+  "applied_status": 200,
+  "constraints_active": 1,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 1000000.0,
+  "assigned": {
+   "71KT2": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC09_multi_meeting_class",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 0.0,
+  "assigned": {
+   "69CLC2": "Lê Viết Cường"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC10_capability_filter",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 0.0,
+  "assigned": {
+   "71KD1": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC11_locked_assignment",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [
+   [
+    "71KT1",
+    1,
+    200
+   ]
+  ],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 130000.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC12_required_forbidden",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 3,
+  "applied_status": 200,
+  "constraints_active": 1,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 0.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan",
+   "71KT2": "Lê Viết Cường"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC13_preferred_days_compact",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 3,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 0.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan",
+   "71KT2": "Phạm Đức Thoan",
+   "71KT3": "Lê Viết Cường",
+   "71KT4": "Lê Viết Cường"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC14_low_workload_preference",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 30000.0,
+  "assigned": {
+   "71KT1": "Lê Viết Cường",
+   "71KT2": "Lê Viết Cường",
+   "71KT3": "Phạm Đức Thoan"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC15_full_mixed_mini_semester",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 4,
+  "applied_status": 200,
+  "constraints_active": 4,
+  "locks": [
+   [
+    "71KT1",
+    1,
+    200
+   ]
+  ],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 30000.0,
+  "assigned": {
+   "71KT1": "Phạm Đức Thoan",
+   "71KT2": "Lê Viết Cường",
+   "71KT3": "Vũ Thị Hương Giang",
+   "71KT4": "Lê Viết Cường",
+   "71KT5": "Nguyễn Bằng Giang",
+   "71KT6": "Nguyễn Bằng Giang"
+  },
+  "checker": [],
+  "mismatches": [],
+  "verdict": "PASS"
+ },
+ {
+  "case": "TC16_no_eligible_lecturer",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [
+   "391001",
+   "391002"
+  ],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "blocked",
+  "score": null,
+  "assigned": {},
+  "checker": [],
+  "mismatches": [
+   "draft export HTTP 422"
+  ],
+  "verdict": "FAIL"
+ },
+ {
+  "case": "TC17_all_capable_hard_unavailable",
+  "activate_schedule": 200,
+  "activate_preference": 200,
+  "missing_courses": [],
+  "drafts": 2,
+  "applied_status": 200,
+  "constraints_active": 2,
+  "locks": [],
+  "run_http": 200,
+  "run_status": "optimal",
+  "score": 1000000.0,
+  "assigned": {},
+  "checker": [],
+  "mismatches": [
+   "draft export HTTP 422"
+  ],
+  "verdict": "FAIL"
+ }
+]

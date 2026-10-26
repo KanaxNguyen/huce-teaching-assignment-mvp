@@ -67,6 +67,26 @@ def meeting_occurrences(meeting, semester, target=None):
     return result
 
 
+def meetings_overlap(left, right, semester=None) -> bool:
+    """Compare actual occurrences; without an anchor use week/day conservatively."""
+    if left.weekday != right.weekday or left.end_period < right.start_period or right.end_period < left.start_period:
+        return False
+    if semester is not None and semester.start_date:
+        return bool({d for _, d in meeting_occurrences(left, semester)} &
+                    {d for _, d in meeting_occurrences(right, semester)})
+    if not set(left.active_weeks or []) & set(right.active_weeks or []):
+        return False
+    return not ((left.start_date and right.end_date and left.start_date > right.end_date) or
+                (right.start_date and left.end_date and right.start_date > left.end_date))
+
+
+def confirmed_merge(left, right) -> bool:
+    return bool(left.merged_group_id and left.merged_group_id == right.merged_group_id and
+                left.merged_confirmed and right.merged_confirmed and
+                left.merge_status != "rejected" and right.merge_status != "rejected" and
+                are_classes_mergeable(left, right))
+
+
 def are_classes_mergeable(left, right) -> bool:
     """Validate whether two class sections can legitimately be merged.
 
@@ -75,7 +95,9 @@ def are_classes_mergeable(left, right) -> bool:
     2. Both classes have sessions defined.
     3. They have the same number of meeting sessions.
     4. Every session in `left` matches a session in `right` with the same
-       weekday, start period, end period, and non-conflicting active weeks.
+       weekday, periods, complete week masks and date bounds.
+       Automatic suggestions additionally require matching rooms in the parser;
+       explicit manual merging retains the existing room-override policy.
     """
     if getattr(left, "course_id", None) != getattr(right, "course_id", None):
         l_course = getattr(left, "course", None)
@@ -104,10 +126,12 @@ def are_classes_mergeable(left, right) -> bool:
         for idx, s2 in enumerate(r_sess):
             if idx in used_right:
                 continue
-            if s1.weekday == s2.weekday and s1.start_period == s2.start_period and s1.end_period == s2.end_period:
+            if (s1.weekday == s2.weekday and s1.start_period == s2.start_period and
+                    s1.end_period == s2.end_period and
+                    s1.start_date == s2.start_date and s1.end_date == s2.end_date):
                 w1 = set(s1.active_weeks or [])
                 w2 = set(s2.active_weeks or [])
-                if w1 and w2 and not w1.intersection(w2):
+                if not w1 or w1 != w2:
                     continue
                 used_right.add(idx)
                 found = True

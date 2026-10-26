@@ -105,14 +105,22 @@ function analyzeSlotEvents(events: ScheduledEvent[]): SlotAnalysis {
     return { relationship: "MERGED", mergedRoom: firstRoom };
   }
 
-  // Check week intersection
-  // If no two classes share any active week -> Alternating (so le tuần)
+  // Check week intersection, but only between classes taught by the same lecturer:
+  // different lecturers (or still unassigned classes) sharing a slot is normal, not a collision.
+  // If no two of a lecturer's classes share any active week -> Alternating (so le tuần)
   let hasOverlap = false;
+  let comparedPairs = 0;
   const overlappingWeeks = new Set<number>();
 
   for (let i = 0; i < events.length; i++) {
     const weeksA = events[i].session.active_weeks || [];
     for (let j = i + 1; j < events.length; j++) {
+      const lecturerA = events[i].classItem.lecturer_id;
+      if (lecturerA == null || lecturerA !== events[j].classItem.lecturer_id) continue;
+      // Confirmed merged classes are one lesson taught together, not a collision.
+      const left = events[i].classItem; const right = events[j].classItem;
+      if (left.merged_group_id && left.merged_group_id === right.merged_group_id && left.merged_confirmed && right.merged_confirmed) continue;
+      comparedPairs += 1;
       const weeksB = events[j].session.active_weeks || [];
       const intersection = weeksA.filter((w) => weeksB.includes(w));
       if (intersection.length > 0) {
@@ -122,6 +130,7 @@ function analyzeSlotEvents(events: ScheduledEvent[]): SlotAnalysis {
     }
   }
 
+  if (comparedPairs === 0) return { relationship: "SINGLE" };
   if (!hasOverlap) {
     return { relationship: "ALTERNATING" };
   }

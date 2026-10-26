@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="27" failures="0" errors="0" time="1.823925542">
+    <testsuite name="tests/api-failure.test.ts" timestamp="2026-10-26T08:57:36.265Z" hostname="Kanaxs-MacBook-Pro.local" tests="2" failures="0" errors="0" skipped="0" time="0.005552083">
+        <testcase classname="tests/api-failure.test.ts" name="uses same-origin API and reports a recoverable network failure" time="0.004590167">
+        </testcase>
+        <testcase classname="tests/api-failure.test.ts" name="reports timeout as an uncertain state requiring reload before retry" time="0.000384917">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/input-source-gate.test.tsx" timestamp="2026-10-26T08:57:36.266Z" hostname="Kanaxs-MacBook-Pro.local" tests="1" failures="0" errors="0" skipped="0" time="0.136192">
+        <testcase classname="tests/input-source-gate.test.tsx" name="blocks Preference Review until both staged sources are active" time="0.1351275">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/preference-context.test.ts" timestamp="2026-10-26T08:57:36.266Z" hostname="Kanaxs-MacBook-Pro.local" tests="1" failures="0" errors="0" skipped="0" time="0.008591542">
+        <testcase classname="tests/preference-context.test.ts" name="preference draft context &gt; keeps teaching and seminar rule choices separate and never offers one mixed rule" time="0.007746292">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/preference-rejection.test.ts" timestamp="2026-10-26T08:57:36.267Z" hostname="Kanaxs-MacBook-Pro.local" tests="4" failures="0" errors="0" skipped="0" time="0.002698459">
+        <testcase classname="tests/preference-rejection.test.ts" name="preference rejection and sorting &gt; assigns sort ranks correctly: Actionable (0) -&gt; Confirmed (1) -&gt; Rejected (2)" time="0.000835791">
+        </testcase>
+        <testcase classname="tests/preference-rejection.test.ts" name="preference rejection and sorting &gt; sorts drafts under lecturer view in order: Actionable -&gt; Confirmed -&gt; Rejected" time="0.000348333">
+        </testcase>
+        <testcase classname="tests/preference-rejection.test.ts" name="preference rejection and sorting &gt; strictly excludes REJECTED drafts from applicable solver inputs" time="0.000659792">
+        </testcase>
+        <testcase classname="tests/preference-rejection.test.ts" name="preference rejection and sorting &gt; supports rejection metadata and reversible restoration" time="0.000164208">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/preference-review-component.test.tsx" timestamp="2026-10-26T08:57:36.267Z" hostname="Kanaxs-MacBook-Pro.local" tests="5" failures="0" errors="0" skipped="0" time="0.819163083">
+        <testcase classname="tests/preference-review-component.test.tsx" name="actual PreferenceReview component &gt; reflects confirmation, semantic re-review and counters from canonical server rows" time="0.229177792">
+        </testcase>
+        <testcase classname="tests/preference-review-component.test.tsx" name="actual PreferenceReview component &gt; hydrates all relinked rows and removes stale unresolved selection" time="0.040716208">
+        </testcase>
+        <testcase classname="tests/preference-review-component.test.tsx" name="actual PreferenceReview component &gt; renders rejected badge/reason, filters, counters and restores into active review" time="0.094590917">
+        </testcase>
+        <testcase classname="tests/preference-review-component.test.tsx" name="actual PreferenceReview component &gt; keeps stable status order under lecturer and excludes rejected from apply action" time="0.116305416">
+        </testcase>
+        <testcase classname="tests/preference-review-component.test.tsx" name="actual PreferenceReview component &gt; uses backend validation for incomplete seminar and revalidates edited input without invented periods" time="0.337541041">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/resolution-tools.test.tsx" timestamp="2026-10-26T08:57:36.267Z" hostname="Kanaxs-MacBook-Pro.local" tests="2" failures="0" errors="0" skipped="0" time="0.167847875">
+        <testcase classname="tests/resolution-tools.test.tsx" name="requires a named approver and a reason before bending a rule" time="0.16083425">
+        </testcase>
+        <testcase classname="tests/resolution-tools.test.tsx" name="states the proven minimum of unassigned classes and marks short slots" time="0.00643775">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/run-metrics.test.tsx" timestamp="2026-10-26T08:57:36.268Z" hostname="Kanaxs-MacBook-Pro.local" tests="2" failures="0" errors="0" skipped="0" time="0.075220792">
+        <testcase classname="tests/run-metrics.test.tsx" name="separates objective, soft penalty and solver timing with a real bound formula" time="0.069685625">
+        </testcase>
+        <testcase classname="tests/run-metrics.test.tsx" name="never invents objective or solver measurements for manual/legacy snapshots" time="0.004946125">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/source-authority.test.tsx" timestamp="2026-10-26T08:57:36.268Z" hostname="Kanaxs-MacBook-Pro.local" tests="6" failures="0" errors="0" skipped="0" time="0.316821208">
+        <testcase classname="tests/source-authority.test.tsx" name="shows candidates without activating and requires reviewed confirmation" time="0.151559625">
+        </testcase>
+        <testcase classname="tests/source-authority.test.tsx" name="reference sources have no implicit schedule activation action" time="0.012852">
+        </testcase>
+        <testcase classname="tests/source-authority.test.tsx" name="lists affected locks and activates fixed imports only after explicit selection and review" time="0.092758125">
+        </testcase>
+        <testcase classname="tests/source-authority.test.tsx" name="keeps source selection available if the separate lecturer request fails" time="0.013097166">
+        </testcase>
+        <testcase classname="tests/source-authority.test.tsx" name="shows an actionable source API error instead of a raw network exception" time="0.02007025">
+        </testcase>
+        <testcase classname="tests/source-authority.test.tsx" name="special-case resolution requires an actor and note and remains explicitly deferred" time="0.025541958">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/wordmark.test.tsx" timestamp="2026-10-26T08:57:36.268Z" hostname="Kanaxs-MacBook-Pro.local" tests="1" failures="0" errors="0" skipped="0" time="0.025397">
+        <testcase classname="tests/wordmark.test.tsx" name="HUCE wordmark &gt; labels the product" time="0.024680084">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/workflow-gating.test.tsx" timestamp="2026-10-26T08:57:36.268Z" hostname="Kanaxs-MacBook-Pro.local" tests="3" failures="0" errors="0" skipped="0" time="0.2664415">
+        <testcase classname="tests/workflow-gating.test.tsx" name="explains the missing prerequisite instead of opening the assignment step with no classes" time="0.2007245">
+        </testcase>
+        <testcase classname="tests/workflow-gating.test.tsx" name="shows step state from data rather than from position in the list" time="0.037716167">
+        </testcase>
+        <testcase classname="tests/workflow-gating.test.tsx" name="does not report an error on first run when no semester exists yet" time="0.026159791">
+        </testcase>
+    </testsuite>
+</testsuites>

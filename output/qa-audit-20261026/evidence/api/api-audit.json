@@ -1,0 +1,483 @@
+[
+ {
+  "id": "IMP-EMPTY",
+  "area": "Import",
+  "scenario": "upload empty.xlsx",
+  "expected": "4xx, active source unchanged (None)",
+  "actual": "422, active=None",
+  "verdict": "PASS"
+ },
+ {
+  "id": "IMP-EXT",
+  "area": "Import",
+  "scenario": "upload notes.txt",
+  "expected": "4xx, active source unchanged (None)",
+  "actual": "415, active=None",
+  "verdict": "PASS"
+ },
+ {
+  "id": "IMP-CORRUPT",
+  "area": "Import",
+  "scenario": "upload corrupt.xlsx",
+  "expected": "4xx, active source unchanged (None)",
+  "actual": "422, active=None",
+  "verdict": "PASS"
+ },
+ {
+  "id": "IMP-SIZE",
+  "area": "Import",
+  "scenario": "21 MiB upload",
+  "expected": "413",
+  "actual": 413,
+  "verdict": "PASS"
+ },
+ {
+  "id": "SRC-CANDIDATE",
+  "area": "Source",
+  "scenario": "upload + preview without activate",
+  "expected": "active source stays None",
+  "actual": true,
+  "verdict": "PASS"
+ },
+ {
+  "id": "SRC-ACTIVATE",
+  "area": "Source",
+  "scenario": "activate with fresh token",
+  "expected": 200,
+  "actual": 200,
+  "verdict": "PASS"
+ },
+ {
+  "id": "IMP-GROUP",
+  "area": "Import",
+  "scenario": "6 rows -> 5 classes (K4 has 2 meetings, evening 13-15 kept)",
+  "expected": "5 classes; K4 2 sessions",
+  "actual": "5 classes; K4 2 sessions",
+  "verdict": "PASS"
+ },
+ {
+  "id": "IMP-LEADING-ZERO",
+  "area": "Import",
+  "scenario": "class code '0K5' keeps leading zero",
+  "expected": "0K5 present",
+  "actual": [
+   "0K5",
+   "K1",
+   "K2",
+   "K3",
+   "K4"
+  ],
+  "verdict": "PASS"
+ },
+ {
+  "id": "IMP-WEEKS-GAP",
+  "area": "Import",
+  "scenario": "week mask '  345' -> weeks 3,4,5",
+  "expected": "[1..5] union with [3,4,5]",
+  "actual": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "verdict": "PASS"
+ },
+ {
+  "id": "IMP-WEEKS-SPACED",
+  "area": "Import",
+  "scenario": "week mask '1 3 5' (space = week off)",
+  "expected": "[1,3,5]",
+  "actual": [
+   1,
+   3,
+   5
+  ],
+  "verdict": "PASS"
+ },
+ {
+  "id": "SRC-REIMPORT",
+  "area": "Source",
+  "scenario": "re-import identical schedule",
+  "expected": "still 5 classes, no duplicates",
+  "actual": "200/5",
+  "verdict": "PASS"
+ },
+ {
+  "id": "SRC-STALE-TOKEN",
+  "area": "Source",
+  "scenario": "activate with token issued before a lock change",
+  "expected": "409/422 rejected",
+  "actual": "lock=200, activate=422",
+  "verdict": "PASS"
+ },
+ {
+  "id": "SRC-CANCEL",
+  "area": "Source",
+  "scenario": "abandon preview keeps data",
+  "expected": "5 classes",
+  "actual": 5,
+  "verdict": "PASS"
+ },
+ {
+  "id": "ISO-LOCK",
+  "area": "Isolation",
+  "scenario": "POST /classes/3/lock with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "422 {'detail': 'Chưa có phân công hợp lệ để khóa.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-UNLOCK",
+  "area": "Isolation",
+  "scenario": "POST /classes/3/unlock with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "404 {'detail': 'Không tìm thấy lớp.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-ASSIGN",
+  "area": "Isolation",
+  "scenario": "PATCH /classes/3/assignment with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "422 {'detail': {'valid': False, 'blocking_reasons': ['TEACHING_GROUP_NOT_FOUND'], 'w",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-CHECK",
+  "area": "Isolation",
+  "scenario": "POST /classes/3/assignment/check with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "404 {'detail': 'Không tìm thấy lớp.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-CANDIDATES",
+  "area": "Isolation",
+  "scenario": "GET /classes/3/candidates with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "404 {'detail': 'Không tìm thấy lớp.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-ANALYSIS",
+  "area": "Isolation",
+  "scenario": "GET /classes/3/candidate-analysis with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "200 []",
+  "verdict": "PASS",
+  "note": "200 with empty body: no leak, but inconsistent with the 404 used by sibling endpoints"
+ },
+ {
+  "id": "ISO-SCENARIOS",
+  "area": "Isolation",
+  "scenario": "GET /classes/3/scenarios with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "404 {'detail': 'Không tìm thấy lớp học phần.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-SCEN-APPLY",
+  "area": "Isolation",
+  "scenario": "POST /classes/3/scenarios/apply with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "422 {'detail': 'Không tìm thấy lớp học phần.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-RESOLUTION",
+  "area": "Isolation",
+  "scenario": "PATCH /classes/3/resolution-status with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "422 {'detail': 'Không tìm thấy lớp học phần.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-OVERRIDE",
+  "area": "Isolation",
+  "scenario": "POST /classes/3/override-lock with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "422 {'detail': 'Không tìm thấy lớp học phần.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-MERGE",
+  "area": "Isolation",
+  "scenario": "POST /classes/merge with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "400 {'detail': 'Cần ít nhất 2 lớp để thực hiện ghép lớp.'}",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-UNMERGE",
+  "area": "Isolation",
+  "scenario": "POST /classes/unmerge with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "200 {'unmerged': 0, 'class_ids': []}",
+  "verdict": "PASS",
+  "note": "200 with empty body: no leak, but inconsistent with the 404 used by sibling endpoints"
+ },
+ {
+  "id": "ISO-SOURCE-ACT",
+  "area": "Isolation",
+  "scenario": "POST /sources/1/activate with other semester",
+  "expected": "rejected (4xx) or empty no-op; no foreign data",
+  "actual": "422 {'detail': {'code': 'SOURCE_SEMESTER_MISMATCH', 'message': 'Nguồn không thuộc kỳ",
+  "verdict": "PASS",
+  "note": null
+ },
+ {
+  "id": "ISO-CONSTRAINT-TARGET",
+  "area": "Isolation",
+  "scenario": "create hard REQUIRED in semester B targeting a class of semester A",
+  "expected": "422 rejected",
+  "actual": 200,
+  "verdict": "FAIL"
+ },
+ {
+  "id": "API-DEFAULT-MERGE",
+  "area": "Solver API",
+  "scenario": "POST /optimization/run with {}",
+  "expected": "confirm_merged False (merge suggestions need review)",
+  "actual": true,
+  "verdict": "FAIL"
+ },
+ {
+  "id": "API-DEFAULT-MERGE-SIDE-EFFECT",
+  "area": "Solver API",
+  "scenario": "merge status after a default run",
+  "expected": "no class silently confirmed",
+  "actual": {
+   "K1": "confirmed",
+   "K2": "confirmed",
+   "K3": "confirmed"
+  },
+  "verdict": "FAIL"
+ },
+ {
+  "id": "SOLVE-INDEP",
+  "area": "Solver",
+  "scenario": "solve real-format synthetic semester",
+  "expected": "0 independent violations",
+  "actual": [],
+  "verdict": "PASS",
+  "run": 4
+ },
+ {
+  "id": "MAN-EDIT",
+  "area": "Manual",
+  "scenario": "manual change visible in /assignments",
+  "expected": "Phạm Đức Thoan",
+  "actual": "Phạm Đức Thoan",
+  "verdict": "PASS"
+ },
+ {
+  "id": "MAN-VERSION",
+  "area": "Manual",
+  "scenario": "manual edit stored as separate version; solver run metrics untouched",
+  "expected": "solver run score unchanged",
+  "actual": 30000.0,
+  "verdict": "PASS"
+ },
+ {
+  "id": "LOCK-RESOLVE",
+  "area": "Manual",
+  "scenario": "lock manual choice then re-solve",
+  "expected": 1,
+  "actual": 1,
+  "verdict": "PASS"
+ },
+ {
+  "id": "UNLOCK-RESOLVE",
+  "area": "Manual",
+  "scenario": "after unlock the solver may reconsider (no hard violation)",
+  "expected": "0 violations",
+  "actual": [],
+  "verdict": "PASS"
+ },
+ {
+  "id": "MAN-REJECT-CLASH",
+  "area": "Manual",
+  "scenario": "manual assign K2 to K1's lecturer (same slot)",
+  "expected": "422 rejected",
+  "actual": 422,
+  "verdict": "PASS"
+ },
+ {
+  "id": "MERGE-PARTIAL-API",
+  "area": "Merge",
+  "scenario": "merge 2 of 3 suggested classes into the existing group id, then solve",
+  "expected": "no double booking for the still-unconfirmed member",
+  "actual": {
+   "statuses": {
+    "K1": [
+     "MG-001",
+     "confirmed"
+    ],
+    "K2": [
+     "MG-001",
+     "confirmed"
+    ],
+    "K3": [
+     "MG-001",
+     "candidate"
+    ]
+   },
+   "issues": []
+  },
+  "verdict": "PASS"
+ },
+ {
+  "id": "MERGE-PARTIAL-API-TIGHT",
+  "area": "Merge",
+  "scenario": "merge 2 of 3 identical suggested classes into the existing group id; one capable lecturer",
+  "expected": "T2 (still candidate) not double-booked with T0/T1",
+  "actual": {
+   "statuses": {
+    "T0": [
+     "MG-001",
+     "confirmed"
+    ],
+    "T1": [
+     "MG-001",
+     "confirmed"
+    ],
+    "T2": [
+     "MG-001",
+     "candidate"
+    ]
+   },
+   "plan": {
+    "16": 4,
+    "17": 4,
+    "18": 4
+   },
+   "issues": [
+    [
+     "DOUBLE_BOOKING",
+     16,
+     18,
+     4
+    ],
+    [
+     "DOUBLE_BOOKING",
+     17,
+     18,
+     4
+    ]
+   ]
+  },
+  "verdict": "FAIL"
+ },
+ {
+  "id": "EXPORT-DETAILED",
+  "area": "Export",
+  "scenario": "draft detailed export contains current plan",
+  "expected": "all classes and lecturers present",
+  "actual": {
+   "missing_classes": [],
+   "absent_lecturers": []
+  },
+  "verdict": "PASS"
+ },
+ {
+  "id": "EXPORT-MATRIX",
+  "area": "Export",
+  "scenario": "draft matrix export contains current plan",
+  "expected": "all classes and lecturers present",
+  "actual": {
+   "missing_classes": [],
+   "absent_lecturers": []
+  },
+  "verdict": "PASS"
+ },
+ {
+  "id": "EXPORT-FINAL-GATE",
+  "area": "Export",
+  "scenario": "final export allowed iff readiness is ready",
+  "expected": "200 (ready=True)",
+  "actual": 200,
+  "verdict": "PASS",
+  "readiness": "{'ready': True, 'lecturers': {'total': 1, 'resolved': 1, 'need_review': 0}, 'teaching_groups': 5, 'meetings': 6, 'valid_meetings': True, 'groups_without_capability': 0, 'warnings': []}"
+ },
+ {
+  "id": "EXPORT-FINAL-GATE-UNREADY",
+  "area": "Export",
+  "scenario": "final export with an unassigned class and no override",
+  "expected": "422",
+  "actual": 422,
+  "verdict": "PASS"
+ },
+ {
+  "id": "PREF-UNRESOLVED",
+  "area": "Preference",
+  "scenario": "unknown lecturer code stays a draft, never a global constraint",
+  "expected": "lecturer_id None, needs review, no active constraint",
+  "actual": {
+   "lecturer_id": 5,
+   "status": "CONFIRMED",
+   "needs_review": false,
+   "global_constraints": 0
+  },
+  "verdict": "FAIL"
+ },
+ {
+  "id": "PREF-DAYS-CONFIRM",
+  "area": "Preference",
+  "scenario": "confirm V2 PREFERRED_DAYS 'T3' after re-selecting the day",
+  "expected": "200 confirmable",
+  "actual": 422,
+  "verdict": "FAIL",
+  "errors": {
+   "code": "PREFERENCE_DRAFT_NOT_READY",
+   "is_confirmable": false,
+   "validation_errors": [
+    {
+     "code": "MISSING_DAY",
+     "field": "day_scope",
+     "message": "Cần chọn ít nhất một thứ hợp lệ."
+    }
+   ],
+   "validation_warnings": []
+  }
+ },
+ {
+  "id": "PREF-REQUIRED-CONFIRM",
+  "area": "Preference",
+  "scenario": "V2 REQUIRED_ASSIGNMENT row: reviewer can pick the class and confirm",
+  "expected": "a field to choose the TeachingGroup exists",
+  "actual": "PreferenceDraftUpdate has no class/target field; status 422",
+  "verdict": "FAIL"
+ },
+ {
+  "id": "PREF-AUTO-LECTURER",
+  "area": "Lecturer",
+  "scenario": "preference import with unknown code 99999 does not create a confirmed master lecturer",
+  "expected": "no ACTIVE confirmed lecturer 99999",
+  "actual": {
+   "id": 5,
+   "code": "99999",
+   "name": "Người Lạ",
+   "aliases": [
+    "Người Lạ"
+   ],
+   "confirmed": true,
+   "status": "ACTIVE",
+   "department": null,
+   "email": null,
+   "note": null,
+   "max_credits": 24.0
+  },
+  "verdict": "FAIL"
+ }
+]

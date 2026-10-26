@@ -1,0 +1,25 @@
+ .gitignore                                         |    3 +
+ apps/api/app/api/routes.py                         |  132 ++-
+ apps/api/app/api/source_routes.py                  |    3 +-
+ apps/api/app/exporters/excel.py                    |   11 +
+ apps/api/app/optimization/occurrences.py           |   30 +-
+ apps/api/app/optimization/solver.py                |   97 +-
+ apps/api/app/parsers/preferences.py                |   87 +-
+ apps/api/app/schemas/api.py                        |   14 +
+ apps/api/app/services/importer.py                  |   10 +-
+ apps/api/app/services/manual_assignment.py         |  162 +++-
+ apps/api/app/services/readiness.py                 |   30 +-
+ apps/api/app/services/source_authority.py          |   27 +-
+ apps/api/app/services/unassigned_diagnostics.py    |   72 +-
+ apps/api/tests/test_grid_preferences.py            |   11 +
+ apps/api/tests/test_phase3_solver.py               |   18 +
+ apps/api/tests/test_phase4_manual.py               |   20 +
+ .../src/features/dashboard/apple-calendar-view.tsx |   13 +-
+ .../features/dashboard/semester-workflow-app.tsx   | 1010 ++++++++++++++++----
+ .../dashboard/semester-workflow.module.css         |   84 ++
+ .../features/dashboard/source-authority-panel.tsx  |   20 +-
+ apps/web/src/services/api.ts                       |   71 +-
+ apps/web/src/types/api.ts                          |   71 +-
+ apps/web/tests/api-failure.test.ts                 |    4 +
+ apps/web/tests/source-authority.test.tsx           |   14 +
+ 24 files changed, 1627 insertions(+), 387 deletions(-)

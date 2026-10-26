@@ -1,0 +1,709 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="7" skipped="1" tests="343" time="31.981" timestamp="2026-10-26T15:56:00.252204+07:00" hostname="Kanaxs-MacBook-Pro.local"><testcase classname="apps.api.tests.test_20_lecturers_assigned" name="test_chi_tiet_workbook_structure_and_parse" time="0.471" /><testcase classname="apps.api.tests.test_20_lecturers_assigned" name="test_backup_workbook_structure_and_parse" time="0.488" /><testcase classname="apps.api.tests.test_20_lecturers_assigned" name="test_fresh_import_and_solve_all_20_lecturers_assigned" time="0.970" /><testcase classname="apps.api.tests.test_api" name="test_health" time="0.099" /><testcase classname="apps.api.tests.test_api" name="test_create_semester" time="0.011" /><testcase classname="apps.api.tests.test_api" name="test_v11_readiness_and_workload_routes_are_http_safe_and_semester_scoped" time="0.024" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_solver_bridges_equivalent_curriculum_codes" time="0.032" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_solver_respects_confirm_merged_flag" time="0.028" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_diagnostics_actionable_unblocking" time="0.021" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_solver_never_bypasses_forbidden_capability_with_bridging" time="0.017" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_merged_classes_pass_schedule_validation" time="0.059" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_manual_class_merge_and_unmerge_workflow" time="0.028" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_diagnostics_safe_when_active_weeks_none" time="0.026" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_merge_classes_incompatible_rejected_by_api" time="0.012" /><testcase classname="apps.api.tests.test_cp_sat_bottleneck_and_equivalence" name="test_merged_group_workload_counted_only_once" time="0.024" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_a_historical_workbook_regression_max_row_none" time="0.313" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_b_blank_new_timetable_ingestion" time="0.125" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_c_selective_historical_capability_learning_no_cartesian_product" time="0.019" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_d_new_department_without_capabilities_blocks_solver" time="0.018" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_e_capability_matrix_import" time="0.023" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_f_cross_department_isolation" time="0.020" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_g_full_3_file_foreign_languages_solve" time="1.746" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_h_unknown_capability_diagnostics" time="0.020" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_historical_learning_immune_to_max_row_none" time="0.043" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_synthetic_physical_education_department" time="0.039" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_unassigned_problem_log_structure" time="0.020" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_api_departments_and_capabilities" time="0.092" /><testcase classname="apps.api.tests.test_department_agnostic" name="test_validate_schedule_catches_locked_and_availability_violations" time="0.019" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_local_storage_template_round_trip_without_overwrite" time="0.007" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_temporary_upload_strips_path_and_avoids_collisions" time="0.001" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_s3_compatible_storage_adapter_round_trip" time="0.004" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_s3_missing_object_becomes_controlled_missing_file" time="0.001" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_staging_configuration_fails_fast_when_persistence_or_security_is_missing" time="0.001" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_staging_configuration_rejects_replica_startup_migrations" time="0.001" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_staging_configuration_rejects_wildcard_cors" time="0.001" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_managed_postgresql_urls_select_psycopg_v3[postgres://]" time="0.001" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_managed_postgresql_urls_select_psycopg_v3[postgresql://]" time="0.001" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_release_migration_command_uses_database_url_environment" time="0.549" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_development_startup_creates_sqlite_parent_directory" time="1.279" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_staging_api_protection_uses_server_side_header" time="0.015" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_cors_allows_configured_origin_and_rejects_unlisted_origin" time="0.003" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_cors_allows_configured_origin_and_rejects_other_origin" time="0.004" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_upload_size_extension_and_malformed_workbook_are_controlled" time="0.017" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_template_upload_persists_storage_reference_and_reloads" time="0.035" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_missing_persisted_template_is_controlled_export_error" time="0.007" /><testcase classname="apps.api.tests.test_deployment_hardening" name="test_persisted_template_export_round_trip_opens_workbook" time="0.019" /><testcase classname="apps.api.tests.test_dual_export" name="test_matrix_export_dynamic_lecturer_count_and_cell_multiline" time="0.026" /><testcase classname="apps.api.tests.test_dual_export" name="test_matrix_export_endpoint" time="0.026" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_precheck_slot_shortage_is_a_tight_lower_bound" time="0.020" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_precheck_blocks_models_that_cannot_be_solved" time="0.011" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_swap_scenario_frees_the_only_capable_lecturer" time="0.021" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_rule_bending_scenarios_need_named_approver_and_never_double_book" time="0.019" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_non_mergeable_classes_in_one_merge_group_are_not_forced_unassigned" time="0.015" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_export_post_keeps_reason_out_of_the_url" time="0.032" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_precheck_blocks_when_semester_dates_do_not_match_the_file" time="0.011" /><testcase classname="apps.api.tests.test_feasibility_scenarios" name="test_approved_exception_is_honoured_by_precheck_and_solver" time="0.021" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_explicit_uncertainty_overrides_heuristics[Seminar chi\u1ec1u th\u1ee9 3, ch\u01b0a ch\u1ed1t ti\u1ebft-period]" time="0.014" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_explicit_uncertainty_overrides_heuristics[bu\u1ed5i s\xe1ng nh\u01b0ng ch\u01b0a r\xf5 ti\u1ebft-period]" time="0.014" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_explicit_uncertainty_overrides_heuristics[SEMINAR: Th\u1ee9 2, th\u1eddi gian ch\u01b0a x\xe1c \u0111\u1ecbnh-period]" time="0.012" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_explicit_uncertainty_overrides_heuristics[kh\xf4ng d\u1ea1y s\xe1ng th\u1ee9 2 nh\u01b0ng ch\u01b0a ch\u1ed1t gi\u1edd-period]" time="0.014" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_explicit_uncertainty_overrides_heuristics[Xin d\u1ea1y s\xe1ng T2, ch\u01b0a x\xe1c \u0111\u1ecbnh ng\xe0y-day]" time="0.013" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_explicit_uncertainty_overrides_heuristics[Xin d\u1ea1y ti\u1ebft 4-6 T3, ch\u01b0a r\xf5 gi\u1ea3ng vi\xean-identity]" time="0.013" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_each_semantic_edit_needs_reconfirmation[change0]" time="0.024" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_each_semantic_edit_needs_reconfirmation[change1]" time="0.016" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_each_semantic_edit_needs_reconfirmation[change2]" time="0.016" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_malformed_validation_api_is_structured_not_500[change0]" time="0.009" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_malformed_validation_api_is_structured_not_500[change1]" time="0.008" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_malformed_validation_api_is_structured_not_500[change2]" time="0.008" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_malformed_validation_api_is_structured_not_500[change3]" time="0.009" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_malformed_validation_api_is_structured_not_500[change4]" time="0.010" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_malformed_validation_api_is_structured_not_500[change5]" time="0.009" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_blank_source_identity_does_not_link_other_unknown_rows" time="0.012" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_day_spellings[T2-2]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_day_spellings[Th\u1ee9 2-2]" time="0.006" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_day_spellings[th\u1ee9 hai-2]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_day_spellings[CN-8]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_day_spellings[Ch\u1ee7 nh\u1eadt-8]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ti\u1ebft 1-3-expected0]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[TI\u1ebeT 4 - 6-expected1]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[tiet 4-6-expected2]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[Ti\u1ebft 4\u20136-expected3]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[  ti\u1ebft   4 - 6  -expected4]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[t\u1eeb ti\u1ebft 4 \u0111\u1ebfn ti\u1ebft 9-expected5]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ti\u1ebft 10-12-expected6]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ti\u1ebft 13-15-expected7]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ti\u1ebft 1-5-expected8]" time="0.006" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ti\u1ebft 2-6-expected9]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[t\u1eeb ti\u1ebft 10 tr\u1edf \u0111i-expected10]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ch\u01b0a r\xf5 ti\u1ebft-expected11]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ch\u01b0a ch\u1ed1t gi\u1edd-expected12]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ti\u1ebft 4-16-expected13]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_period_families[ti\u1ebft 16-expected14]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_generic_dates[\u0111\u1ebfn 11/10]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_generic_dates[\u0111\u1ebfn ng\xe0y 11 th\xe1ng 10]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_generic_dates[tr\u01b0\u1edbc 12/10]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_generic_dates[\u0111\u1ebfn 11/10/2028]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_ambiguous_dates_are_review_only[kh\xf4ng d\u1ea1y \u0111\u1ebfn 31/02]" time="0.006" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_ambiguous_dates_are_review_only[kh\xf4ng d\u1ea1y \u0111\u1ebfn 11/10]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_validator_contract[alter0-MISSING_LECTURER]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_validator_contract[alter1-MISSING_PERIOD]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_validator_contract[alter2-MISSING_DAY]" time="0.006" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_validator_contract[alter3-INVALID_PERIOD]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_validator_contract[alter4-UNSUPPORTED_CONSTRAINT_TYPE]" time="0.005" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_validator_contract[alter5-INVALID_NUMERIC_VALUE]" time="0.004" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_unknown_seminar_cannot_confirm_via_api" time="0.021" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_semantic_edit_invalidates_confirmation_but_note_does_not" time="0.019" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_identity_relink_correction_preserves_all_drafts_and_other_semester[Unfamiliar Source-Unrelated Canonical]" time="0.026" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_identity_relink_correction_preserves_all_drafts_and_other_semester[Mai H\u1ed3ng-Mai Th\u1ecb H\u1ed3ng]" time="0.024" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_generic_identity_priority_and_similar_names" time="0.008" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_file_structure_variations[0-False-False]" time="0.016" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_file_structure_variations[4-True-False]" time="0.015" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_file_structure_variations[2-False-True]" time="0.016" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_unknown_structure_rejected_without_guessing" time="0.014" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_reimport_preserves_human_edits_ids_and_rejected_state" time="0.378" /><testcase classname="apps.api.tests.test_generic_input_safety" name="test_metadata_edit_does_not_resolve_identity" time="0.020" /><testcase classname="apps.api.tests.test_grid_preferences" name="test_grid_v3_reads_all_forms_and_only_explicit_scheduling_choices" time="0.013" /><testcase classname="apps.api.tests.test_grid_preferences" name="test_v3_grid_template_reads_shared_seminar_sheet" time="0.036" /><testcase classname="apps.api.tests.test_historical_learning" name="test_historical_learning_extracts_evidence_without_creating_locks_or_assignments" time="0.015" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_lecturer_hitl_review_endpoint" time="0.014" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_lecturer_import_preview_and_atomic_commit" time="0.034" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_lecturer_export_xlsx" time="0.017" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_preference_draft_rejection_and_restore" time="0.022" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_date_scoped_unavailable_parsing" time="0.006" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_date_scoped_unavailable_solver_blocking" time="0.014" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_min_free_morning_per_week_constraint" time="0.016" /><testcase classname="apps.api.tests.test_hitl_and_semantics" name="test_prefer_consecutive_periods_zero_penalty_for_isolated_class" time="0.021" /><testcase classname="apps.api.tests.test_identity_mapping" name="test_resolve_identity_known_aliases" time="0.007" /><testcase classname="apps.api.tests.test_identity_mapping" name="test_preference_import_does_not_create_clones" time="0.670" /><testcase classname="apps.api.tests.test_identity_mapping" name="test_capabilities_and_constraints_share_id" time="0.760" /><testcase classname="apps.api.tests.test_identity_mapping" name="test_import_twice_no_duplicates" time="1.407" /><testcase classname="apps.api.tests.test_lecturer_lifecycle" name="test_lecturer_crud_and_safe_delete" time="0.026" /><testcase classname="apps.api.tests.test_lecturer_lifecycle" name="test_lecturer_delete_rejected_when_referenced" time="0.014" /><testcase classname="apps.api.tests.test_lecturer_lifecycle" name="test_lecturer_participation_and_capabilities" time="0.020" /><testcase classname="apps.api.tests.test_lecturer_lifecycle" name="test_lecturer_merge_and_audit" time="0.107" /><testcase classname="apps.api.tests.test_parser" name="test_week_decoder_preserves_positions" time="0.000" /><testcase classname="apps.api.tests.test_parser" name="test_parse_lecturer_quarantines_co_teaching_cell" time="0.000" /><testcase classname="apps.api.tests.test_parser" name="test_parse_lecturer_treats_unassigned_placeholders_as_empty" time="0.000" /><testcase classname="apps.api.tests.test_parser" name="test_schedule_parser_keeps_first_data_row_after_header" time="0.006" /><testcase classname="apps.api.tests.test_parser" name="test_schedule_parser_supports_blank_subheader_before_data" time="0.005" /><testcase classname="apps.api.tests.test_parser" name="test_schedule_parser_deduplicates_identical_meetings" time="0.005" /><testcase classname="apps.api.tests.test_parser" name="test_co_teaching_is_preserved_for_review" time="0.005" /><testcase classname="apps.api.tests.test_parser" name="test_schedule_parser_only_suggests_full_merge_when_every_meeting_and_room_match" time="0.007" /><testcase classname="apps.api.tests.test_parser" name="test_schedule_parser_never_merges_when_a_room_is_missing" time="0.006" /><testcase classname="apps.api.tests.test_parser" name="test_preference_normalization_extracts_unavailability_rule" time="0.000" /><testcase classname="apps.api.tests.test_parser" name="test_preference_normalization_does_not_mistake_weekday_for_period" time="0.000" /><testcase classname="apps.api.tests.test_parser" name="test_parse_real_schedule_when_present" time="0.000" /><testcase classname="apps.api.tests.test_parser" name="test_detect_output_template_columns" time="0.006" /><testcase classname="apps.api.tests.test_parser" name="test_detect_output_template_matrix" time="0.006" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_import_b_preserves_a" time="0.020" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_reimport_is_scoped_and_preserves_masters" time="0.023" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_capability_is_preserved_and_ambiguous_preference_is_flagged" time="0.015" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_confirmed_alias_matches_existing_lecturer_without_creating_a_duplicate" time="0.015" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_many_rows_form_one_teaching_group_and_many_meetings" time="0.013" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_atomic_rollback_after_persistence_started" time="0.013" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_constraint_isolation_api" time="0.009" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_solver_loads_constraints_only_from_target_semester" time="0.027" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_run_assignment_and_template_isolation" time="0.011" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_foreign_keys_are_enabled_by_application_engine" time="0.007" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_semester_delete_is_restricted_and_masters_survive" time="0.009" /><testcase classname="apps.api.tests.test_phase1_acceptance" name="test_end_to_end_multi_semester_isolation" time="0.029" /><testcase classname="apps.api.tests.test_phase1_migration" name="test_legacy_database_upgrades_to_phase1" time="0.148" /><testcase classname="apps.api.tests.test_phase1_migration" name="test_interrupted_human_in_loop_migration_resumes_safely" time="0.159" /><testcase classname="apps.api.tests.test_phase1_migration" name="test_merge_status_migration_backfills_existing_review_decisions" time="0.244" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_capability_filters_and_partial_unassigned" time="0.013" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_soft_preference_never_beats_completeness" time="0.014" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_locked_conflict_and_unconfirmed_merge" time="0.016" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_confirmed_merge_and_different_weeks" time="0.019" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_multi_meeting_hard_unavailable_and_week_aware_conflict" time="0.012" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_unsupported_constraint_and_failed_run_preserves_previous_snapshot" time="0.017" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_hard_required_assignment_wins_and_soft_weight_never_makes_rule_hard" time="0.014" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_shared_hard_seminar_blocks_participant_once_at_selected_slot" time="0.013" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_max_consecutive_blocks_hard_binds_but_soft_remains_violable" time="0.022" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_course_scoped_forbidden_assignment_applies_to_every_teaching_group" time="0.014" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_calendar_constraint_date_scope_does_not_block_outside_its_range" time="0.013" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_prefer_low_workload_builds_valid_reified_thresholds" time="0.015" /><testcase classname="apps.api.tests.test_phase3_solver" name="test_run_records_reproducible_metrics_and_separate_penalty" time="0.013" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_manual_assign_lock_unlock_and_resolve" time="0.022" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_unlocked_manual_assignment_is_reconsidered_by_solver" time="0.017" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_manual_validation_and_constraint_limits" time="0.015" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_session_day_days_required_forbidden_and_malformed_constraints" time="0.016" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_candidate_problem_log_and_semester_isolation" time="0.017" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_problem_log_explains_locked_conflict_in_human_language" time="0.010" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_atomic_assign_and_lock_rolls_back_when_commit_fails" time="0.010" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_manual_operations_are_scoped_to_semester" time="0.010" /><testcase classname="apps.api.tests.test_phase4_manual" name="test_lock_assigned_classes_locks_valid_imports_and_skips_conflicts" time="0.020" /><testcase classname="apps.api.tests.test_phase5_export" name="test_template_export_updates_only_lecturer_source_rows" time="0.028" /><testcase classname="apps.api.tests.test_phase5_export" name="test_prior_output_template_disambiguates_repeated_class_by_schedule_columns" time="0.028" /><testcase classname="apps.api.tests.test_phase5_export" name="test_prior_output_template_allows_repeated_meetings_of_one_teaching_group" time="0.028" /><testcase classname="apps.api.tests.test_phase5_export" name="test_prior_output_template_preserves_unmatched_historical_rows" time="0.025" /><testcase classname="apps.api.tests.test_phase5_real_data" name="test_real_huce_schedule_and_preferences_normalize_without_losing_rows" time="0.006"><failure message="AssertionError: assert (False)&#10; +  where False = exists()&#10; +    where exists = PosixPath('/private/tmp/huce-audit-20261026/Phan_Cong_Giang_Day_HK1_2026_2027.xlsx').exists">def test_real_huce_schedule_and_preferences_normalize_without_losing_rows():
+        root = Path(__file__).resolve().parents[4]
+        schedule = root / "Phan_Cong_Giang_Day_HK1_2026_2027.xlsx"
+        preferences = root / "Nguyện vọng TKB 2026-2027.xlsx"
+&gt;       assert schedule.exists() and preferences.exists()
+E       AssertionError: assert (False)
+E        +  where False = exists()
+E        +    where exists = PosixPath('/private/tmp/huce-audit-20261026/Phan_Cong_Giang_Day_HK1_2026_2027.xlsx').exists
+
+apps/api/tests/test_phase5_real_data.py:41: AssertionError</failure></testcase><testcase classname="apps.api.tests.test_phase5_real_data" name="test_real_data_import_solve_problem_export_round_trip_and_persistence" time="0.007"><failure message="FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/huce-audit-20261026/Phan_Cong_Giang_Day_HK1_2026_2027.xlsx'">tmp_path = PosixPath('/private/var/folders/wx/803xfwn54ql_rhyqw6c8b4rr0000gn/T/pytest-of-mac/pytest-90/test_real_data_import_solve_pr0')
+
+    def test_real_data_import_solve_problem_export_round_trip_and_persistence(tmp_path):
+        """The real workbook is never mutated; its copied draft is round-trippable."""
+        root = Path(__file__).resolve().parents[4]
+        schedule = root / "Phan_Cong_Giang_Day_HK1_2026_2027.xlsx"
+        preferences = root / "Nguyện vọng TKB 2026-2027.xlsx"
+    
+        with SessionLocal() as db:
+            semester = Semester(
+                name="HK1 2026-2027 real acceptance",
+                department_name="Toán",
+                start_date=date(2026, 8, 1),
+                end_date=date(2027, 1, 31),
+                head_name="Trưởng bộ môn",
+            )
+            db.add(semester)
+            db.commit()
+            semester_id = semester.id
+    
+&gt;           imported = import_files(
+                db,
+                [schedule, preferences],
+                semester_id=semester_id,
+                schedule_paths=[schedule],
+                preference_paths=[preferences],
+            )
+
+apps/api/tests/test_phase5_real_data.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+apps/api/app/services/importer.py:524: in _import_files_impl
+    return _materialize_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+apps/api/app/services/importer.py:88: in _materialize_impl
+    parsed = parse_schedule(primary) if replace_schedule else ScheduleParseResult([], [], [], 0, 0, 0)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+apps/api/app/parsers/schedule.py:257: in parse_schedule
+    sheet_name, rows, datemode = _read_rows(path)
+                                 ^^^^^^^^^^^^^^^^
+apps/api/app/parsers/schedule.py:237: in _read_rows
+    book = openpyxl.load_workbook(path, read_only=False, data_only=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/openpyxl/reader/excel.py:346: in load_workbook
+    reader = ExcelReader(filename, read_only, keep_vba,
+.venv/lib/python3.12/site-packages/openpyxl/reader/excel.py:123: in __init__
+    self.archive = _validate_archive(fn)
+                   ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/openpyxl/reader/excel.py:95: in _validate_archive
+    archive = ZipFile(filename, 'r')
+              ^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;zipfile.ZipFile [closed]&gt;
+file = '/private/tmp/huce-audit-20261026/Phan_Cong_Giang_Day_HK1_2026_2027.xlsx'
+mode = 'r', compression = 0, allowZip64 = True, compresslevel = None
+
+    def __init__(self, file, mode="r", compression=ZIP_STORED, allowZip64=True,
+                 compresslevel=None, *, strict_timestamps=True, metadata_encoding=None):
+        """Open the ZIP file with mode read 'r', write 'w', exclusive create 'x',
+        or append 'a'."""
+        if mode not in ('r', 'w', 'x', 'a'):
+            raise ValueError("ZipFile requires mode 'r', 'w', 'x', or 'a'")
+    
+        _check_compression(compression)
+    
+        self._allowZip64 = allowZip64
+        self._didModify = False
+        self.debug = 0  # Level of printing: 0 through 3
+        self.NameToInfo = {}    # Find file info given name
+        self.filelist = []      # List of ZipInfo instances for archive
+        self.compression = compression  # Method of compression
+        self.compresslevel = compresslevel
+        self.mode = mode
+        self.pwd = None
+        self._comment = b''
+        self._strict_timestamps = strict_timestamps
+        self.metadata_encoding = metadata_encoding
+    
+        # Check that we don't try to write with nonconforming codecs
+        if self.metadata_encoding and mode != 'r':
+            raise ValueError(
+                "metadata_encoding is only supported for reading files")
+    
+        # Check if we were passed a file-like object
+        if isinstance(file, os.PathLike):
+            file = os.fspath(file)
+        if isinstance(file, str):
+            # No, it's a filename
+            self._filePassed = 0
+            self.filename = file
+            modeDict = {'r' : 'rb', 'w': 'w+b', 'x': 'x+b', 'a' : 'r+b',
+                        'r+b': 'w+b', 'w+b': 'wb', 'x+b': 'xb'}
+            filemode = modeDict[mode]
+            while True:
+                try:
+&gt;                   self.fp = io.open(file, filemode)
+                              ^^^^^^^^^^^^^^^^^^^^^^^
+E                   FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/huce-audit-20261026/Phan_Cong_Giang_Day_HK1_2026_2027.xlsx'
+
+/Users/mac/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/zipfile/__init__.py:1353: FileNotFoundError</failure></testcase><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_review_has_only_semester_relevant_lecturers" time="0.016" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_import_gate_rejects_entire_batch[duplicate]" time="0.019" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_import_gate_rejects_entire_batch[missing_name]" time="0.019" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_import_gate_rejects_entire_batch[conflicting_code]" time="0.018" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_vietnamese_participation_import[Kh\xf4ng]" time="0.015" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_vietnamese_participation_import[KH\xd4NG]" time="0.015" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_vietnamese_participation_import[Khong]" time="0.014" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_import_forced_commit_failure_rolls_back" time="0.015" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_rejected_must_restore_before_confirmation" time="0.026" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_weekday_range_not_a_period_range[T2-T6]" time="0.005" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_weekday_range_not_a_period_range[Th\u1ee9 2 - Th\u1ee9 6]" time="0.004" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_weekday_range_not_a_period_range[t\u1eeb th\u1ee9 2 \u0111\u1ebfn th\u1ee9 6]" time="0.004" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_all_days_includes_weekend" time="0.005" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_open_ended_periods[7]" time="0.005" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_open_ended_periods[10]" time="0.005" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_alternative_ranges_survive_confirm_and_apply" time="0.015" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_unsupported_never_high[C\xe1c th\u1eddi gian c\xf2n l\u1ea1i, k\u1ec3 c\u1ea3 t\u1ed1i, T7 v\xe0 CN]" time="0.005" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_unsupported_never_high[C\xf3 th\u1ec3 d\u1ea1y v\xe0i bu\u1ed5i chi\u1ec1u]" time="0.005" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_unsupported_never_high[Ngh\u1ec9 \u0111\u1ebfn 11/10]" time="0.004" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_year_comes_from_semester[2026]" time="0.005" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_year_comes_from_semester[2028]" time="0.004" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_occurrences_and_manual_check_agree" time="0.017" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods0-0.8-0]" time="0.020" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods1-0.8-1]" time="0.020" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods2-0.8-3]" time="0.021" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods3-0.8-3]" time="0.020" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods4-0.8-3]" time="0.024" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods5-0.8-0]" time="0.021" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods6-0.8-1]" time="0.021" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods7-0.8-0]" time="0.022" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_period_gap[periods8-0-0]" time="0.013" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_free_morning_real_occurrences[4-periods0-False-False-4]" time="0.014" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_free_morning_real_occurrences[5-periods1-False-False-4]" time="0.015" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_free_morning_real_occurrences[5-periods2-False-False-5]" time="0.015" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_free_morning_real_occurrences[5-periods3-True-False-5]" time="0.014" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_free_morning_real_occurrences[5-periods4-False-True-5]" time="0.014" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_exact_original_files_and_historical_scope" time="0.761" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_unsupported_and_hypothetical_capabilities_cannot_enter_candidates" time="0.014" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_dashboard_alignment_real_dataset" time="0.293" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_export_completeness_includes_all_158_groups_and_supplementary_71kme" time="0.909" /><testcase classname="apps.api.tests.test_post_audit_fixes" name="test_every_one_of_the_158_teaching_groups_appears_exactly_once_in_export" time="0.949" /><testcase classname="apps.api.tests.test_postgresql_migration" name="test_fresh_postgresql_migration_foreign_keys_and_unique_constraints" time="0.000"><skipped type="pytest.skip" message="POSTGRES_TEST_URL is not configured">/private/tmp/huce-audit-20261026/src/apps/api/tests/test_postgresql_migration.py:23: POSTGRES_TEST_URL is not configured</skipped></testcase><testcase classname="apps.api.tests.test_preference_v2" name="test_canonical_template_has_exact_structure_validations_and_examples" time="0.074" /><testcase classname="apps.api.tests.test_preference_v2" name="test_structured_period_range_is_inclusive_and_invalid_rows_require_review" time="0.016" /><testcase classname="apps.api.tests.test_preference_v2" name="test_structured_context_and_rule_mismatch_requires_review" time="0.015" /><testcase classname="apps.api.tests.test_preference_v2" name="test_legacy_golden_semantics_and_zero_clause_loss" time="0.013" /><testcase classname="apps.api.tests.test_preference_v2" name="test_legacy_golden_day_and_period_phrases_are_deterministic" time="0.015" /><testcase classname="apps.api.tests.test_preference_v2" name="test_apply_route_is_semester_scoped_and_unresolved_identity_never_becomes_global" time="0.025" /><testcase classname="apps.api.tests.test_preference_v2" name="test_apply_rolls_back_all_mutations_on_failure" time="0.008" /><testcase classname="apps.api.tests.test_preference_v2" name="test_manual_teaching_and_seminar_context_are_owned_and_persisted" time="0.019" /><testcase classname="apps.api.tests.test_preference_v2" name="test_manual_mixed_creates_atomic_drafts_and_cannot_be_applied_as_one_rule" time="0.017" /><testcase classname="apps.api.tests.test_preference_v2" name="test_manual_context_correction_persists_and_clears_seminar_only_metadata" time="0.020" /><testcase classname="apps.api.tests.test_preference_v2" name="test_edit_rebuilds_scope_dates_and_numeric_target_without_stale_values" time="0.013" /><testcase classname="apps.api.tests.test_preference_v2" name="test_reimport_cleanup_preserves_human_confirmed_context" time="0.007" /><testcase classname="apps.api.tests.test_preference_v2" name="test_legacy_mixed_statement_splits_and_seminar_note_never_reaches_solver" time="0.015" /><testcase classname="apps.api.tests.test_preference_v2" name="test_old_draft_without_context_is_read_as_teaching" time="0.013" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_manual_version_is_atomic_preserves_solver_metrics_and_effective_views" time="0.048" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_manual_commit_failure_preserves_current_version" time="0.022" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_lock_endpoint_locks_solver_choice_not_imported_choice" time="0.035" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_manual_api_invalid_request_is_structured_422[payload0]" time="0.011" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_manual_api_invalid_request_is_structured_422[payload1]" time="0.010" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_manual_api_invalid_request_is_structured_422[payload2]" time="0.012" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_manual_api_invalid_request_is_structured_422[payload3]" time="0.011" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_manual_api_invalid_request_is_structured_422[payload4]" time="0.011" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_lock_impact_is_specific_and_lock_edit_invalidates_preview" time="0.137" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_confirmed_fixed_import_locks_only_assigned_groups" time="0.044" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_fixed_import_conflict_rolls_back_activation" time="0.045" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_semester_switch_edit_and_anchor_guard" time="0.028" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_actual_day_limit_agrees_solver_manual_and_readiness" time="0.023" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_final_validation_rejects_manual_snapshot_conflicting_with_hard_seminar" time="0.021" /><testcase classname="apps.api.tests.test_qa_fix_lifecycle" name="test_batch_candidate_checks_reuse_request_snapshot_and_refresh_after_edit" time="0.022" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_import_summary_counts_assignments_separately_from_locks" time="0.007" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_workload_objective_uses_each_class_credits" time="0.038" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_seven_candidate_diagnostic_respects_unconfirmed_merge" time="0.041" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_manual_check_uses_current_solver_assignments" time="0.022" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_manual_assignment_visible_without_lock_after_solver" time="0.024" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_hard_avoid_period_enforced_by_manual_checker" time="0.015" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_manual_checker_respects_shared_hard_seminar" time="0.012" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_known_soft_avoid_penalty_is_60" time="0.017" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_approved_draft_forced_soft_violation" time="0.029" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_no_solution_metrics_do_not_read_variables" time="0.020" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_unknown_zero_search_budget_safe" time="0.019" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_empty_semester_safe" time="0.013" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_same_source_reactivation_preserves_explicit_lock" time="0.143" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_source_change_preview_enumerates_lock_loss" time="0.045" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_nonoverlapping_actual_dates_allow_same_lecturer" time="0.020" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_alternating_weeks_do_not_exceed_one_session_per_day" time="0.020" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_partial_week_merge_rejected_by_api" time="0.012" /><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_xls_template_export_preserves_date_display_format" time="0.001"><failure message="AssertionError: Read-only real XLS fixture is required&#10;assert False&#10; +  where False = exists()&#10; +    where exists = PosixPath('/private/tmp/huce-audit-20261026/src/storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls').exists">tmp_path = PosixPath('/private/var/folders/wx/803xfwn54ql_rhyqw6c8b4rr0000gn/T/pytest-of-mac/pytest-90/test_xls_template_export_prese0')
+
+    def test_xls_template_export_preserves_date_display_format(tmp_path):
+        from app.services.template_detector import detect_output_template
+        from app.exporters.excel import _export_template
+        from app.models.entities import OutputTemplateProfile
+        source = Path(__file__).resolve().parents[3] / 'storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls'
+&gt;       assert source.exists(), "Read-only real XLS fixture is required"
+E       AssertionError: Read-only real XLS fixture is required
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/private/tmp/huce-audit-20261026/src/storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls').exists
+
+apps/api/tests/test_qa_full_audit_regressions.py:203: AssertionError</failure></testcase><testcase classname="apps.api.tests.test_qa_full_audit_regressions" name="test_assignment_api_missing_lecturer_returns_validation_error" time="0.009" /><testcase classname="apps.api.tests.test_rc_migration" name="test_fresh_database_migration_and_repeat" time="0.141" /><testcase classname="apps.api.tests.test_rc_migration" name="test_0002_rows_defaults_and_foreign_keys_preserved" time="0.163" /><testcase classname="apps.api.tests.test_rc_migration" name="test_partial_0003_recovery_preserves_manual_source[class_only]" time="0.307" /><testcase classname="apps.api.tests.test_rc_migration" name="test_partial_0003_recovery_preserves_manual_source[both]" time="0.171" /><testcase classname="apps.api.tests.test_rc_migration" name="test_partial_0003_recovery_preserves_manual_source[nullable_source]" time="0.164" /><testcase classname="apps.api.tests.test_rc_migration" name="test_persistent_api_startup_health_and_restart[fresh]" time="1.572" /><testcase classname="apps.api.tests.test_rc_migration" name="test_persistent_api_startup_health_and_restart[official_0002]" time="1.337" /><testcase classname="apps.api.tests.test_rc_migration" name="test_persistent_api_startup_health_and_restart[partial_0003]" time="1.311" /><testcase classname="apps.api.tests.test_regression" name="test_hard_unavailable_not_bypassed" time="0.003"><failure message="sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: semesters&#10;[SQL: SELECT semesters.id, semesters.department_id, semesters.active_schedule_source_id, semesters.active_preference_source_id, semesters.source_revision, semesters.name, semesters.department_name, semesters.start_date, semesters.end_date, semesters.head_name, semesters.status, semesters.is_active, semesters.created_at &#10;FROM semesters &#10;WHERE semesters.id = ?]&#10;[parameters: (2,)]&#10;(Background on this error at: https://sqlalche.me/e/20/e3q8)">self = &lt;sqlalchemy.engine.base.Connection object at 0x118b7b260&gt;
+dialect = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x1105d85f0&gt;
+statement = &lt;sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x118507980&gt;
+parameters = [(2,)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -&gt; CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+&gt;                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+cursor = &lt;sqlite3.Cursor object at 0x118f52040&gt;
+statement = 'SELECT semesters.id, semesters.department_id, semesters.active_schedule_source_id, semesters.active_preference_source...sters.head_name, semesters.status, semesters.is_active, semesters.created_at \nFROM semesters \nWHERE semesters.id = ?'
+parameters = (2,)
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x1105d85f0&gt;
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+&gt;       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: no such table: semesters
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+db = &lt;sqlalchemy.orm.session.Session object at 0x1192d5370&gt;
+
+    def test_hard_unavailable_not_bypassed(db):
+        from app.models.entities import ClassSection, Constraint, Semester, Lecturer
+        from app.optimization.occurrences import meeting_occurrences
+        from app.optimization.solver import _slot_match
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+    
+&gt;       semester = db.scalar(select(Semester).where(Semester.id == 2))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+apps/api/tests/test_regression.py:24: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2421: in scalar
+    return self._execute_internal(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2271: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py:306: in orm_execute_statement
+    result = conn.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1421: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+cursor = &lt;sqlite3.Cursor object at 0x118f52040&gt;
+statement = 'SELECT semesters.id, semesters.department_id, semesters.active_schedule_source_id, semesters.active_preference_source...sters.head_name, semesters.status, semesters.is_active, semesters.created_at \nFROM semesters \nWHERE semesters.id = ?'
+parameters = (2,)
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x1105d85f0&gt;
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+&gt;       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: semesters
+E       [SQL: SELECT semesters.id, semesters.department_id, semesters.active_schedule_source_id, semesters.active_preference_source_id, semesters.source_revision, semesters.name, semesters.department_name, semesters.start_date, semesters.end_date, semesters.head_name, semesters.status, semesters.is_active, semesters.created_at 
+E       FROM semesters 
+E       WHERE semesters.id = ?]
+E       [parameters: (2,)]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: OperationalError</failure></testcase><testcase classname="apps.api.tests.test_regression" name="test_export_unassigned_fallback" time="0.033" /><testcase classname="apps.api.tests.test_regression" name="test_run_persistence_unassigned" time="0.000" /><testcase classname="apps.api.tests.test_regression" name="test_dashboard_metrics" time="0.001"><failure message="sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: classes&#10;[SQL: SELECT classes.id, classes.source_version_id, classes.semester_id, classes.course_id, classes.class_code, classes.credits, classes.merged_group_id, classes.merged_confirmed, classes.merge_status, classes.locked_assignment, classes.assigned_lecturer_id, classes.assignment_source, classes.source_file, classes.source_sheet, classes.source_row, classes.raw_values &#10;FROM classes &#10;WHERE classes.semester_id = ?]&#10;[parameters: (2,)]&#10;(Background on this error at: https://sqlalche.me/e/20/e3q8)">self = &lt;sqlalchemy.engine.base.Connection object at 0x110364800&gt;
+dialect = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x110538470&gt;
+statement = &lt;sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x10ffd2a80&gt;
+parameters = [(2,)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -&gt; CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+&gt;                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+cursor = &lt;sqlite3.Cursor object at 0x118cc51c0&gt;
+statement = 'SELECT classes.id, classes.source_version_id, classes.semester_id, classes.course_id, classes.class_code, classes.cre...urce_file, classes.source_sheet, classes.source_row, classes.raw_values \nFROM classes \nWHERE classes.semester_id = ?'
+parameters = (2,)
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x110538470&gt;
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+&gt;       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: no such table: classes
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+db = &lt;sqlalchemy.orm.session.Session object at 0x1106bf890&gt;
+
+    def test_dashboard_metrics(db):
+        from app.services.importer import dashboard
+&gt;       metrics = dashboard(db, 2)
+                  ^^^^^^^^^^^^^^^^
+
+apps/api/tests/test_regression.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+apps/api/app/services/importer.py:571: in dashboard
+    classes = db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id)).all()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2481: in scalars
+    return self._execute_internal(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2271: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py:306: in orm_execute_statement
+    result = conn.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1421: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+cursor = &lt;sqlite3.Cursor object at 0x118cc51c0&gt;
+statement = 'SELECT classes.id, classes.source_version_id, classes.semester_id, classes.course_id, classes.class_code, classes.cre...urce_file, classes.source_sheet, classes.source_row, classes.raw_values \nFROM classes \nWHERE classes.semester_id = ?'
+parameters = (2,)
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x110538470&gt;
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+&gt;       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: classes
+E       [SQL: SELECT classes.id, classes.source_version_id, classes.semester_id, classes.course_id, classes.class_code, classes.credits, classes.merged_group_id, classes.merged_confirmed, classes.merge_status, classes.locked_assignment, classes.assigned_lecturer_id, classes.assignment_source, classes.source_file, classes.source_sheet, classes.source_row, classes.raw_values 
+E       FROM classes 
+E       WHERE classes.semester_id = ?]
+E       [parameters: (2,)]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: OperationalError</failure></testcase><testcase classname="apps.api.tests.test_regression" name="test_solver_maximum_valid_solution" time="0.001"><failure message="sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: optimization_runs&#10;[SQL: SELECT optimization_runs.id, optimization_runs.semester_id, optimization_runs.schedule_source_id, optimization_runs.preference_source_id, optimization_runs.source_revision, optimization_runs.created_at, optimization_runs.status, optimization_runs.score, optimization_runs.summary &#10;FROM optimization_runs &#10;WHERE optimization_runs.semester_id = ? ORDER BY optimization_runs.id DESC]&#10;[parameters: (2,)]&#10;(Background on this error at: https://sqlalche.me/e/20/e3q8)">self = &lt;sqlalchemy.engine.base.Connection object at 0x11069e2a0&gt;
+dialect = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x11069f050&gt;
+statement = &lt;sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x11069cb00&gt;
+parameters = [(2,)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -&gt; CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+&gt;                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+cursor = &lt;sqlite3.Cursor object at 0x118f5f6c0&gt;
+statement = 'SELECT optimization_runs.id, optimization_runs.semester_id, optimization_runs.schedule_source_id, optimization_runs.p...ion_runs.summary \nFROM optimization_runs \nWHERE optimization_runs.semester_id = ? ORDER BY optimization_runs.id DESC'
+parameters = (2,)
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x11069f050&gt;
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+&gt;       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: no such table: optimization_runs
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+db = &lt;sqlalchemy.orm.session.Session object at 0x11000e810&gt;
+
+    def test_solver_maximum_valid_solution(db):
+        from app.models.entities import OptimizationRun, Assignment
+        from sqlalchemy import select, func
+&gt;       run = db.scalars(select(OptimizationRun).where(OptimizationRun.semester_id == 2).order_by(OptimizationRun.id.desc())).first()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+apps/api/tests/test_regression.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2481: in scalars
+    return self._execute_internal(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2271: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/context.py:306: in orm_execute_statement
+    result = conn.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1421: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1848: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x10f3e9520&gt;
+cursor = &lt;sqlite3.Cursor object at 0x118f5f6c0&gt;
+statement = 'SELECT optimization_runs.id, optimization_runs.semester_id, optimization_runs.schedule_source_id, optimization_runs.p...ion_runs.summary \nFROM optimization_runs \nWHERE optimization_runs.semester_id = ? ORDER BY optimization_runs.id DESC'
+parameters = (2,)
+context = &lt;sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x11069f050&gt;
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+&gt;       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: optimization_runs
+E       [SQL: SELECT optimization_runs.id, optimization_runs.semester_id, optimization_runs.schedule_source_id, optimization_runs.preference_source_id, optimization_runs.source_revision, optimization_runs.created_at, optimization_runs.status, optimization_runs.score, optimization_runs.summary 
+E       FROM optimization_runs 
+E       WHERE optimization_runs.semester_id = ? ORDER BY optimization_runs.id DESC]
+E       [parameters: (2,)]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: OperationalError</failure></testcase><testcase classname="apps.api.tests.test_semantic_preference_intentions" name="test_compact_days_are_atomic_and_normalized" time="0.000" /><testcase classname="apps.api.tests.test_semantic_preference_intentions" name="test_fallback_period_is_preferred_not_avoided" time="0.000" /><testcase classname="apps.api.tests.test_semantic_preference_intentions" name="test_soft_date_low_workload_and_explicit_seminar" time="0.000" /><testcase classname="apps.api.tests.test_semantic_preference_intentions" name="test_partial_seminar_morning_blocks_first_three_blocks" time="0.000" /><testcase classname="apps.api.tests.test_source_authority" name="test_active_v3_source_creates_canonical_drafts_and_survives_reload" time="0.072" /><testcase classname="apps.api.tests.test_source_authority" name="test_upload_pair_activate_then_reload_keeps_preference_review_populated" time="0.090" /><testcase classname="apps.api.tests.test_source_authority" name="test_hash_bytes_immutable_upload_order_and_roles" time="0.034" /><testcase classname="apps.api.tests.test_source_authority" name="test_reference_cannot_activate_as_schedule[HISTORICAL]" time="0.012" /><testcase classname="apps.api.tests.test_source_authority" name="test_reference_cannot_activate_as_schedule[OUTPUT_TEMPLATE]" time="0.013" /><testcase classname="apps.api.tests.test_source_authority" name="test_reference_cannot_activate_as_schedule[REFERENCE_MATRIX]" time="0.012" /><testcase classname="apps.api.tests.test_source_authority" name="test_confirmation_semester_hash_and_stale_preview" time="0.022" /><testcase classname="apps.api.tests.test_source_authority" name="test_diff_all_categories_and_changed_identity_fields" time="0.006" /><testcase classname="apps.api.tests.test_source_authority" name="test_multi_lecturer_quarantine_and_backend_solve_blocker[[A]Teacher Alpha, [B]Teacher Beta]" time="0.032" /><testcase classname="apps.api.tests.test_source_authority" name="test_multi_lecturer_quarantine_and_backend_solve_blocker[[A]Teacher Alpha\n[B]Teacher Beta]" time="0.030" /><testcase classname="apps.api.tests.test_source_authority" name="test_multi_lecturer_quarantine_and_backend_solve_blocker[[A]Teacher Alpha; [B]Teacher Beta]" time="0.033" /><testcase classname="apps.api.tests.test_source_authority" name="test_multi_lecturer_quarantine_and_backend_solve_blocker[[A]Teacher Alpha [B]Teacher Beta]" time="0.029" /><testcase classname="apps.api.tests.test_source_authority" name="test_multi_lecturer_quarantine_and_backend_solve_blocker[[A]Teacher Alpha / [B]Teacher Beta]" time="0.032" /><testcase classname="apps.api.tests.test_source_authority" name="test_multi_lecturer_quarantine_and_backend_solve_blocker[Teacher Alpha\nTeacher Beta]" time="0.033" /><testcase classname="apps.api.tests.test_source_authority" name="test_cross_row_identity_and_duplicate_lineage" time="0.028" /><testcase classname="apps.api.tests.test_source_authority" name="test_same_canonical_identity_normal_import_and_reconcile" time="0.081" /><testcase classname="apps.api.tests.test_source_authority" name="test_human_normalization_and_deferred_split" time="0.029" /><testcase classname="apps.api.tests.test_source_authority" name="test_atomic_replacement_archives_runs_and_invalidates_references" time="0.071" /><testcase classname="apps.api.tests.test_source_authority" name="test_preference_switch_does_not_apply_previous_rules" time="0.090" /><testcase classname="apps.api.tests.test_source_authority" name="test_http_upload_is_staging_only_and_explicit_role" time="0.024" /><testcase classname="apps.api.tests.test_source_authority" name="test_real_files_read_only_dry_run" time="1.017" /><testcase classname="apps.api.tests.test_source_authority" name="test_0008_upgrade_preserves_0007_rows_and_adds_foreign_keys" time="0.312" /><testcase classname="apps.api.tests.test_template_multirow" name="test_real_xls_multirow_header_golden" time="0.000"><failure message="AssertionError: Fixture missing: /private/tmp/huce-audit-20261026/src/storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls&#10;assert False&#10; +  where False = exists()&#10; +    where exists = PosixPath('/private/tmp/huce-audit-20261026/src/storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls').exists">def test_real_xls_multirow_header_golden():
+        fixture_path = Path(__file__).resolve().parents[3] / "storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls"
+&gt;       assert fixture_path.exists(), f"Fixture missing: {fixture_path}"
+E       AssertionError: Fixture missing: /private/tmp/huce-audit-20261026/src/storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/private/tmp/huce-audit-20261026/src/storage/uploads/schedule/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026.xls').exists
+
+apps/api/tests/test_template_multirow.py:9: AssertionError</failure></testcase><testcase classname="apps.api.tests.test_template_multirow" name="test_synthetic_xlsx_multirow_header" time="0.012" /><testcase classname="apps.api.tests.test_template_multirow" name="test_single_row_template_backward_compatibility" time="0.007" /><testcase classname="apps.api.tests.test_template_multirow" name="test_user_override_persists_over_redetection" time="0.010" /><testcase classname="apps.api.tests.test_unassigned_workflow" name="test_taxonomy_hard_availability_and_collision" time="0.020" /><testcase classname="apps.api.tests.test_unassigned_workflow" name="test_bottleneck_detection_for_concurrent_classes" time="0.021" /><testcase classname="apps.api.tests.test_unassigned_workflow" name="test_candidate_analysis_matrix_details" time="0.013" /><testcase classname="apps.api.tests.test_unassigned_workflow" name="test_hitl_lock_override_audit_logging" time="0.012" /><testcase classname="apps.api.tests.test_unassigned_workflow" name="test_resolution_status_lifecycle" time="0.008" /><testcase classname="apps.api.tests.test_unassigned_workflow" name="test_export_gating_and_privileged_override" time="0.052" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_detects_grid_v3_format" time="0.015" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_parse_all_20_lecturers" time="0.470" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_real_grid_v3_rule_counts_are_preserved" time="0.605" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_fallback_identity_from_summary" time="0.473" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_ban_cung_is_hard_unavailable" time="0.471" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_uu_tien_is_soft_preferred" time="0.609" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_fallback_text_supersedes_grid_avoid" time="0.472" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_empty_cell_no_constraint" time="0.479" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_section3_help_text_ignored" time="0.679" /><testcase classname="tests.test_grid_parse_real_workbook" name="test_thoan_grid_full" time="0.493" /><testcase classname="tests.test_solver_avoid_period" name="test_normalized_type_avoid_period" time="0.000" /><testcase classname="tests.test_solver_avoid_period" name="test_normalized_type_avoid_legacy" time="0.000" /><testcase classname="tests.test_solver_avoid_period" name="test_avoid_period_in_supported" time="0.000" /></testsuite></testsuites>

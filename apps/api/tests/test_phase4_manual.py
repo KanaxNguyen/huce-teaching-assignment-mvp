@@ -112,3 +112,23 @@ def test_manual_operations_are_scoped_to_semester():
         verify_state = (db.get(ClassSection,foreign.id).assigned_lecturer_id, db.get(ClassSection,foreign.id).locked_assignment)
         assert verify_state == (None,False)
         assert manual_assignment(items[0].id,{"lecturer_id":teacher.id,"lock":False},a.id,db)["valid"]
+
+
+def test_lock_assigned_classes_locks_valid_imports_and_skips_conflicts():
+    from app.services.manual_assignment import lock_assigned_classes
+    with SessionLocal() as db:
+        s, c, a, b, items = setup(db, 3); capability(db, a, c); capability(db, b, c)
+        items[1].sessions[0].weekday = 3; items[2].sessions[0].weekday = items[0].sessions[0].weekday
+        items[2].sessions[0].start_period = items[0].sessions[0].start_period
+        items[2].sessions[0].end_period = items[0].sessions[0].end_period
+        for item, teacher in ((items[0], a), (items[1], a), (items[2], a)):
+            item.assigned_lecturer_id = teacher.id; item.assignment_source = "IMPORTED"; item.locked_assignment = False
+        db.commit()
+        result = lock_assigned_classes(db, s.id)
+        db.expire_all()
+        locked_ids = {g.id for g in db.scalars(select(ClassSection).where(ClassSection.semester_id == s.id)) if g.locked_assignment}
+        # The two overlapping classes are reported instead of silently locked; imported source is preserved.
+        assert result["locked"] == len(locked_ids) == 1 and items[1].id in locked_ids
+        assert {row["class_id"] for row in result["skipped"]} == {items[0].id, items[2].id}
+        assert all(g.assignment_source == "IMPORTED" for g in db.scalars(select(ClassSection).where(ClassSection.semester_id == s.id)))
+        assert lock_assigned_classes(db, s.id)["locked"] == 0

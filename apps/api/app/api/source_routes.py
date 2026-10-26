@@ -17,6 +17,7 @@ class Activation(BaseModel):
     source_type: Role
     confirmed: bool = False
     preview_token: str = ''
+    lock_imported: bool = False
 
 
 class Resolution(BaseModel):
@@ -70,7 +71,7 @@ def preview(source_id: int, payload: Activation, semester_id: int, db: Session =
 @router.post('/{source_id}/activate')
 def activate(source_id: int, payload: Activation, semester_id: int, db: Session = Depends(get_db)):
     require_semester(db, semester_id)
-    try: return activate_source(db, semester_id, source_id, payload.source_type, confirmed=payload.confirmed, preview_token=payload.preview_token)
+    try: return activate_source(db, semester_id, source_id, payload.source_type, confirmed=payload.confirmed, preview_token=payload.preview_token, lock_imported=payload.lock_imported)
     except SourceError as error: raise HTTPException(422, error.detail) from error
     except (ValueError, *WORKBOOK_ERRORS) as error:
         db.rollback(); raise HTTPException(422, str(error)) from error

@@ -20,7 +20,8 @@ from app.models.entities import (
     Semester,
 )
 from app.optimization.solver import _overlap, _slot_match
-from app.optimization.occurrences import are_classes_mergeable
+from app.optimization.occurrences import are_classes_mergeable, confirmed_merge
+from app.services.manual_assignment import check_assignment_change, assignment_check_context
 from app.services.lecturer_master import participation_reason
 from app.services.source_authority import latest_current_run
 
@@ -75,6 +76,7 @@ def diagnose_unassigned_classes(
 
     semester = db.get(Semester, semester_id)
     run = db.get(OptimizationRun, run_id) if run_id else latest_current_run(db, semester_id)
+    check_context = assignment_check_context(db, semester_id, run)
 
     dept_id = semester.department_id if semester else None
     lec_query = select(Lecturer).order_by(Lecturer.id)
@@ -187,6 +189,12 @@ def diagnose_unassigned_classes(
         eligible_lecs: set[int] = set()
 
         for lec_id in active_lecturer_ids:
+            checked = check_assignment_change(db, semester_id, section.id, lec_id, context=check_context)
+            blocking = set(checked["blocking_reasons"])
+            if "COURSE_CAPABILITY_MISSING" in blocking or "LECTURER_DEPARTMENT_MISMATCH" in blocking:
+                capable_lec_ids.discard(lec_id)
+            else:
+                capable_lec_ids.add(lec_id)
             if lec_id not in capable_lec_ids:
                 reasons_per_lecturer[lec_id] = "NO_CAPABILITY"
                 continue
@@ -199,6 +207,7 @@ def diagnose_unassigned_classes(
                     if any(_slot_match(session, c.target or {}, semester) for session in section.sessions):
                         has_hard_unavail = True
                         break
+            has_hard_unavail = has_hard_unavail or bool(blocking & {"HARD_AVAILABILITY_CONFLICT", "HARD_PREFERENCE_CONFLICT", "HARD_SEMINAR_CONFLICT"})
             if has_hard_unavail:
                 hard_unavailable_lecs.add(lec_id)
                 reasons_per_lecturer[lec_id] = "HARD_AVAILABILITY_CONFLICT"
@@ -209,14 +218,14 @@ def diagnose_unassigned_classes(
             for other in assigned_classes_by_lecturer.get(lec_id, []):
                 if other.id == section.id:
                     continue
-                if section.merged_group_id and section.merged_group_id == other.merged_group_id:
+                if confirmed_merge(section, other):
                     continue
                 for s1 in section.sessions:
                     for s2 in other.sessions:
-                        if _overlap(s1, s2):
+                        if _overlap(s1, s2, semester):
                             overlap_w = sorted(set(s1.active_weeks or []).intersection(s2.active_weeks or []))
                             collisions.append((other.class_code, overlap_w))
-            if collisions:
+            if collisions or "TIMETABLE_CONFLICT" in blocking:
                 colliding_lecs.add(lec_id)
                 reasons_per_lecturer[lec_id] = "TIMETABLE_COLLISION"
                 continue
@@ -230,11 +239,14 @@ def diagnose_unassigned_classes(
                     if assigned_count + 1 > max_classes:
                         has_workload_limit = True
                         break
-            if has_workload_limit:
+            if has_workload_limit or "MAX_WORKLOAD_EXCEEDED" in blocking:
                 workload_lecs.add(lec_id)
                 reasons_per_lecturer[lec_id] = "WORKLOAD_HARD_LIMIT"
                 continue
 
+            if not checked["valid"]:
+                reasons_per_lecturer[lec_id] = sorted(blocking)[0]
+                continue
             eligible_lecs.add(lec_id)
             reasons_per_lecturer[lec_id] = "ELIGIBLE"
 
@@ -250,7 +262,7 @@ def diagnose_unassigned_classes(
             for other in all_semester_classes:
                 if other.id == section.id or any(o.id == other.id for o in simultaneous_classes):
                     continue
-                if any(_overlap(s1, s2) for s2 in other.sessions):
+                if any(_overlap(s1, s2, semester) for s2 in other.sessions):
                     simultaneous_classes.append(other)
 
         total_simultaneous = len(simultaneous_classes) + 1
@@ -511,6 +523,7 @@ def get_candidate_analysis(
 
     semester = db.get(Semester, semester_id)
     run = db.get(OptimizationRun, run_id) if run_id else latest_current_run(db, semester_id)
+    check_context = assignment_check_context(db, semester_id, run)
 
     dept_id = semester.department_id if semester else None
     lec_query = select(Lecturer).order_by(Lecturer.id)
@@ -671,11 +684,11 @@ def get_candidate_analysis(
         for other in current_assigned:
             if other.id == section.id:
                 continue
-            if section.merged_group_id and section.merged_group_id == other.merged_group_id:
+            if confirmed_merge(section, other):
                 continue
             for s1 in section.sessions:
                 for s2 in other.sessions:
-                    if _overlap(s1, s2):
+                    if _overlap(s1, s2, semester):
                         overlap_w = sorted(set(s1.active_weeks or []).intersection(s2.active_weeks or []))
                         collision_items.append({
                             "class_id": other.id,
@@ -699,6 +712,11 @@ def get_candidate_analysis(
                     workload_details = f"Vượt quá số lớp tối đa cho phép ({limit} lớp)"
                     break
 
+        checked = check_assignment_change(db, semester_id, section.id, lec.id, context=check_context)
+        blocking = set(checked["blocking_reasons"])
+        hard_unavailable = hard_unavailable or bool(blocking & {"HARD_AVAILABILITY_CONFLICT", "HARD_PREFERENCE_CONFLICT", "HARD_SEMINAR_CONFLICT"})
+        workload_exceeded = "MAX_WORKLOAD_EXCEEDED" in blocking
+        if workload_exceeded: workload_details = "Vượt giới hạn tải/buổi/ngày hiện hành"
         # Check locked conflict
         is_locked_to_this = section.assigned_lecturer_id == lec.id and section.locked_assignment
 
@@ -762,6 +780,12 @@ def get_candidate_analysis(
             is_eligible = True
             details = f"Đủ năng lực môn{eq_note}, không bận cứng, không trùng lịch"
 
+        if is_eligible and not checked["valid"]:
+            is_eligible = False
+            status = "HARD_CONSTRAINT_CONFLICT"
+            status_label = "Bị loại — Ràng buộc cứng"
+            status_badge_variant = "danger"
+            details = ", ".join(checked["blocking_reasons"])
         analysis_rows.append({
             "lecturer_id": lec.id,
             "lecturer_name": lec.canonical_name,
@@ -780,7 +804,7 @@ def get_candidate_analysis(
                 "credits": credits_count,
             },
             "details": details,
-            "is_currently_assigned": section.assigned_lecturer_id == lec.id,
+            "is_currently_assigned": any(g.id == section.id for g in current_assigned),
             "is_locked_to_this": is_locked_to_this,
         })
 
@@ -915,34 +939,8 @@ def override_lock_assignment(
     section.resolution_status = "MANUALLY_RESOLVED"
     section.resolution_notes = f"Ghi đè phân công: {reason.strip()} (Bởi: {user})"
 
-    # Update or add Assignment record for the latest run so UI reflects immediately
-    run = latest_current_run(db, semester_id)
-    if run and run.status in {"optimal", "feasible"}:
-        existing_assignment = db.scalar(
-            select(Assignment).where(Assignment.run_id == run.id, Assignment.class_id == class_id)
-        )
-        if existing_assignment:
-            existing_assignment.lecturer_id = lecturer_id
-            existing_assignment.locked = lock
-            existing_assignment.source = "MANUAL_OVERRIDE"
-        else:
-            new_ass = Assignment(
-                semester_id=semester_id,
-                run_id=run.id,
-                class_id=class_id,
-                lecturer_id=lecturer_id,
-                locked=lock,
-                source="MANUAL_OVERRIDE",
-            )
-            db.add(new_ass)
-
-        # Also remove this class from run.summary["unassigned"] if present
-        if run.summary and isinstance(run.summary.get("unassigned"), list):
-            run.summary["unassigned"] = [
-                u for u in run.summary["unassigned"] if u.get("class_id") != class_id
-            ]
-            from sqlalchemy.orm.attributes import flag_modified
-            flag_modified(run, "summary")
+    from app.services.assignment_state import save_manual_version
+    save_manual_version(db, semester_id, {class_id: (lecturer_id, "MANUAL_OVERRIDE", lock)})
 
     db.commit()
     return {

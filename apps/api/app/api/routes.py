@@ -11,6 +11,7 @@ from zipfile import BadZipFile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 from openpyxl.utils.exceptions import InvalidFileException
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Session, selectinload
@@ -43,6 +44,8 @@ from app.services.historical_learning import learn_from_template_profile
 from app.parsers.preferences import describe_preference
 from app.schemas.api import (
     AliasResolution,
+    AssignmentChange,
+    SemesterUpdate,
     CapabilityBulkConfirmRequest,
     CapabilityUpdateRequest,
     ConstraintCreate,
@@ -164,6 +167,34 @@ def create_semester(payload: SemesterCreate, db: Session = Depends(get_db)) -> d
     db.commit()
     db.refresh(item)
     return {"id": item.id, "created": True}
+
+
+@router.post("/semesters/{semester_id}/activate")
+def activate_semester(semester_id: int, db: Session = Depends(get_db)) -> dict:
+    semester = db.get(Semester, semester_id)
+    if not semester: raise HTTPException(404, "Không tìm thấy kỳ học.")
+    for item in db.scalars(select(Semester)):
+        item.is_active = item.id == semester_id
+    db.commit()
+    return {"id": semester_id, "is_active": True}
+
+
+@router.patch("/semesters/{semester_id}")
+def update_semester(semester_id: int, payload: SemesterUpdate, db: Session = Depends(get_db)) -> dict:
+    semester = db.get(Semester, semester_id)
+    if not semester: raise HTTPException(404, "Không tìm thấy kỳ học.")
+    try:
+        start, end = date.fromisoformat(payload.start_date), date.fromisoformat(payload.end_date)
+    except ValueError as error:
+        raise HTTPException(422, "Ngày bắt đầu hoặc kết thúc không hợp lệ.") from error
+    if end < start or len(payload.name.strip()) < 2 or len(payload.head_name.strip()) < 2:
+        raise HTTPException(422, "Thông tin kỳ học không hợp lệ.")
+    if start != semester.start_date and db.scalar(select(ClassSection.id).where(ClassSection.semester_id == semester_id)):
+        raise HTTPException(422, "Không đổi mốc tuần khi kỳ đã có lịch. Tạo kỳ mới để nhập lịch theo mốc mới.")
+    semester.name, semester.head_name = payload.name.strip(), payload.head_name.strip()
+    semester.start_date, semester.end_date = start, end
+    db.commit()
+    return {"id": semester_id, "updated": True}
 
 
 @router.post("/templates/detect")
@@ -936,7 +967,7 @@ def get_classes(
     result = []
     for item in items:
         ass = ass_by_class.get(item.id)
-        if item.locked_assignment:
+        if item.locked_assignment and run_id is None:
             lec_id = item.assigned_lecturer_id
             lec_name = item.assigned_lecturer.canonical_name if item.assigned_lecturer else None
             ass_src = item.assignment_source or "MANUAL"
@@ -944,7 +975,7 @@ def get_classes(
             if ass and ass.lecturer_id:
                 lec_id = ass.lecturer_id
                 lec_name = ass.lecturer.canonical_name if ass.lecturer else None
-                ass_src = "SOLVER"
+                ass_src = ass.source or "SOLVER"
             else:
                 lec_id = None
                 lec_name = None
@@ -965,7 +996,7 @@ def get_classes(
             "merged_group_id": item.merged_group_id,
             "merged_confirmed": item.merged_confirmed,
             "merge_status": item.merge_status,
-            "locked_assignment": item.locked_assignment,
+            "locked_assignment": bool(ass and ass.locked) if run_id is not None else item.locked_assignment,
             "assignment_source": ass_src,
             "lecturer_id": lec_id,
             "lecturer": lec_name,
@@ -990,10 +1021,12 @@ def get_classes(
 def class_candidates(class_id: int, semester_id: int = Query(...), db: Session = Depends(get_db)) -> list[dict]:
     group = db.get(ClassSection, class_id)
     if not group or group.semester_id != semester_id: raise HTTPException(404, "Không tìm thấy lớp.")
+    from app.services.assignment_state import assignment_state
+    state = assignment_state(db, semester_id)
     result = []
     for item in db.scalars(select(Lecturer).order_by(Lecturer.id)):
         check = check_assignment_change(db, semester_id, class_id, item.id)
-        current = db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id, ClassSection.assigned_lecturer_id == item.id)).all()
+        current = db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id, ClassSection.id.in_([cid for cid, a in state.items() if a[0] == item.id]))).all()
         result.append({
             "lecturer_id": item.id,
             "status": "ELIGIBLE" if check["valid"] else check["blocking_reasons"][0],
@@ -1002,22 +1035,24 @@ def class_candidates(class_id: int, semester_id: int = Query(...), db: Session =
     return result
 
 @router.post("/classes/{class_id}/assignment/check")
-def check_assignment(class_id: int, payload: dict, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+def check_assignment(class_id: int, payload: AssignmentChange, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
     group = db.get(ClassSection, class_id)
     if not group or group.semester_id != semester_id:
         raise HTTPException(404, "Không tìm thấy lớp.")
-    return check_assignment_change(db, semester_id, class_id, int(payload["lecturer_id"]))
+    if isinstance(payload, dict): payload = AssignmentChange.model_validate(payload)
+    return check_assignment_change(db, semester_id, class_id, payload.lecturer_id)
 
 @router.patch("/classes/{class_id}/assignment")
-def manual_assignment(class_id: int, payload: dict, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
-    allow_override = bool(payload.get("allow_override_lock", False))
-    override_reason = str(payload.get("override_reason", ""))
+def manual_assignment(class_id: int, payload: AssignmentChange, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+    if isinstance(payload, dict): payload = AssignmentChange.model_validate(payload)
+    allow_override = payload.allow_override_lock
+    override_reason = payload.override_reason
     result = apply_manual_assignment(
         db,
         semester_id,
         class_id,
-        int(payload["lecturer_id"]),
-        bool(payload.get("lock", False)),
+        payload.lecturer_id,
+        payload.lock,
         allow_override_lock=allow_override,
         override_reason=override_reason,
     )
@@ -1081,16 +1116,52 @@ def override_lock(
 @router.post("/classes/{class_id}/lock")
 def lock_assignment(class_id: int, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
     group=db.get(ClassSection,class_id)
-    if not group or group.semester_id!=semester_id or not group.assigned_lecturer_id: raise HTTPException(422,"Chưa có phân công hợp lệ để khóa.")
-    result=apply_manual_assignment(db,semester_id,class_id,group.assigned_lecturer_id,True)
+    from app.services.assignment_state import assignment_state
+    if not group or group.semester_id != semester_id:
+        raise HTTPException(422,"Chưa có phân công hợp lệ để khóa.")
+    state = assignment_state(db, semester_id)
+    if class_id not in state:
+        raise HTTPException(422,"Chưa có phân công hợp lệ để khóa.")
+    result=apply_manual_assignment(db,semester_id,class_id,state[class_id][0],True)
     if not result["valid"]: raise HTTPException(422,result)
     return result
+
+@router.post("/classes/lock-assigned")
+def lock_all_assigned(semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+    from app.services.manual_assignment import lock_assigned_classes
+    _semester_id(db, semester_id)
+    return lock_assigned_classes(db, semester_id)
+
+@router.get("/classes/{class_id}/scenarios")
+def class_resolution_scenarios(class_id: int, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+    from app.services.resolution_scenarios import build_scenarios
+    try:
+        return build_scenarios(db, _semester_id(db, semester_id), class_id)
+    except ValueError as error:
+        raise HTTPException(404, str(error)) from error
+
+
+@router.post("/classes/{class_id}/scenarios/apply")
+def apply_class_resolution_scenario(class_id: int, payload: dict, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+    from app.services.resolution_scenarios import apply_scenario
+    try:
+        return apply_scenario(db, _semester_id(db, semester_id), class_id, payload)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
 
 @router.post("/classes/{class_id}/unlock")
 def unlock_assignment(class_id: int, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
     group=db.get(ClassSection,class_id)
     if not group or group.semester_id!=semester_id: raise HTTPException(404,"Không tìm thấy lớp.")
-    group.locked_assignment=False; db.commit(); return {"id":class_id,"locked":False}
+    from app.services.assignment_state import assignment_state, save_manual_version
+    group.locked_assignment = False
+    state = assignment_state(db, semester_id)
+    if class_id in state:
+        lid, source, _ = state[class_id]
+        save_manual_version(db, semester_id, {class_id: (lid, source, False)})
+    db.commit()
+    return {"id":class_id,"locked":False}
 
 
 
@@ -1133,6 +1204,16 @@ def merge_classes(
                 f"Không thể ghép lớp {first.class_code} và {other.class_code}: lịch học không đồng bộ (khác thứ, khác tiết hoặc lệch buổi).",
             )
     group_id = payload.merged_group_id or f"MG-M{uuid4().hex[:6].upper()}"
+    selected_ids = {item.id for item in classes}
+    outsiders = db.scalars(select(ClassSection).where(
+        ClassSection.semester_id == sid, ClassSection.merged_group_id == group_id, ClassSection.id.not_in(selected_ids),
+    )).all()
+    if outsiders:
+        raise HTTPException(
+            400,
+            f"Nhóm {group_id} còn lớp chưa được chọn ({', '.join(o.class_code for o in outsiders)}); "
+            "hãy chọn đủ các lớp của nhóm hoặc dùng mã nhóm mới.",
+        )
     for item in classes:
         item.merged_group_id = group_id
         item.merged_confirmed = True
@@ -1330,6 +1411,16 @@ def create_seminar(payload: SeminarCreate, semester_id: int | None = Query(None)
     return {"id": item.id, "created": True}
 
 
+@router.delete("/seminars/{seminar_id}")
+def delete_seminar(seminar_id: int, semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+    item = db.get(Seminar, seminar_id)
+    if not item or item.semester_id != semester_id:
+        raise HTTPException(404, "Không tìm thấy seminar.")
+    db.delete(item)
+    db.commit()
+    return {"id": seminar_id, "deleted": True}
+
+
 @router.get("/seminars")
 def get_seminars(semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> list[dict]:
     return [
@@ -1345,6 +1436,13 @@ def get_seminars(semester_id: int | None = Query(None), db: Session = Depends(ge
         }
         for item in db.scalars(select(Seminar).where(Seminar.semester_id == _semester_id(db, semester_id)).order_by(Seminar.id)).all()
     ]
+
+
+@router.get("/optimization/precheck")
+def optimization_precheck(semester_id: int = Query(...), db: Session = Depends(get_db)) -> dict:
+    """Proven, hard-rule-only problems to fix before running CP-SAT."""
+    from app.services.feasibility import precheck
+    return precheck(db, _semester_id(db, semester_id))
 
 
 @router.post("/optimization/run")
@@ -1600,6 +1698,21 @@ def download_matrix_export(
     )
 
 
+class ExportRequest(BaseModel):
+    mode: str = Field("draft", pattern="^(draft|final)$")
+    export_type: str = Field("detailed", pattern="^(detailed|matrix)$")
+    allow_unassigned_override: bool = False
+    override_reason: str = ""
+
+
+@router.post("/exports/latest")
+def download_export_post(payload: ExportRequest, semester_id: int | None = Query(None), db: Session = Depends(get_db)) -> FileResponse:
+    """Same as GET, but keeps the override reason out of URLs, proxies and browser history."""
+    if payload.export_type == "matrix":
+        return download_matrix_export(semester_id, payload.mode, payload.allow_unassigned_override, payload.override_reason, db)
+    return download_export(semester_id, payload.mode, payload.export_type, payload.allow_unassigned_override, payload.override_reason, db)
+
+
 @router.get("/historical-evidence")
 def list_historical_evidence(
     semester_id: int | None = Query(None),
@@ -1828,4 +1941,3 @@ def update_department_policy(department_id: int, payload: DepartmentPolicyUpdate
         "course_capability_mode": profile.course_capability_mode,
         "policy_config": profile.policy_config or {},
     }
-

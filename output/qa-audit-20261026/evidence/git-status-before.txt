@@ -1,0 +1,82 @@
+ M .gitignore
+ M apps/api/app/api/routes.py
+ M apps/api/app/api/source_routes.py
+ M apps/api/app/exporters/excel.py
+ M apps/api/app/optimization/occurrences.py
+ M apps/api/app/optimization/solver.py
+ M apps/api/app/parsers/preferences.py
+ M apps/api/app/schemas/api.py
+ M apps/api/app/services/importer.py
+ M apps/api/app/services/manual_assignment.py
+ M apps/api/app/services/readiness.py
+ M apps/api/app/services/source_authority.py
+ M apps/api/app/services/unassigned_diagnostics.py
+ M apps/api/tests/test_grid_preferences.py
+ M apps/api/tests/test_phase3_solver.py
+ M apps/api/tests/test_phase4_manual.py
+ M apps/web/src/features/dashboard/apple-calendar-view.tsx
+ M apps/web/src/features/dashboard/semester-workflow-app.tsx
+ M apps/web/src/features/dashboard/semester-workflow.module.css
+ M apps/web/src/features/dashboard/source-authority-panel.tsx
+ M apps/web/src/services/api.ts
+ M apps/web/src/types/api.ts
+ M apps/web/tests/api-failure.test.ts
+ M apps/web/tests/source-authority.test.tsx
+?? AI_LOG.md
+?? apps/api/app/services/assignment_state.py
+?? apps/api/app/services/feasibility.py
+?? apps/api/app/services/resolution_scenarios.py
+?? apps/api/run_adversarial_audit.py
+?? apps/api/tests/test_feasibility_scenarios.py
+?? apps/api/tests/test_qa_fix_lifecycle.py
+?? apps/api/tests/test_qa_full_audit_regressions.py
+?? apps/web/public/templates/
+?? apps/web/src/features/dashboard/resolution-tools.module.css
+?? apps/web/src/features/dashboard/resolution-tools.tsx
+?? apps/web/src/features/dashboard/run-metrics-panel.tsx
+?? apps/web/tests/resolution-tools.test.tsx
+?? apps/web/tests/run-metrics.test.tsx
+?? apps/web/tests/workflow-gating.test.tsx
+?? assignments.json
+?? codex_diff.patch
+?? debug_constraints.py
+?? debug_drafts.py
+?? docs/HUCE_REVIEW_2026-10-05.md
+?? fix.py
+?? fix_export.py
+?? output/
+?? qa_auditor.py
+?? qa_auditor_fix.py
+?? re_audit.py
+?? re_audit_debug.py
+?? report_generator.py
+?? run_final.py
+?? scripts/create_human_and_ocr_friendly_template.py
+?? scripts/create_masked_sample_output.py
+?? scripts/create_sample_files.py
+?? scripts/debug_console.py
+?? scripts/debug_network.py
+?? scripts/debug_page.py
+?? scripts/debug_page1.py
+?? scripts/export_diagnostic_report_excel.py
+?? scripts/measure_current_import.py
+?? scripts/test_85_percent_and_explain.py
+?? scripts/test_click_workspace.py
+?? scripts/test_e2e_api.py
+?? scripts/test_export_modal.py
+?? scripts/test_inspector.py
+?? scripts/test_sample_files.py
+?? scripts/test_tight_constraints_scenario.py
+?? scripts/verify_unassigned_e2e.py
+?? scripts/verify_unassigned_e2e_full.py
+?? test.py
+?? test2.py
+?? test3.py
+?? test4.py
+?? test_adv_06.py
+?? test_adv_08.py
+?? test_mapping.py
+?? test_runner.py
+?? tests/test_grid_parse_real_workbook.py
+?? tests/test_solver_avoid_period.py
+?? tmp/

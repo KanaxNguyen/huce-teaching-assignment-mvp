@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from app.optimization.occurrences import meeting_occurrences
+import platform
+import os
+import time
+import ortools
+from app.optimization.occurrences import meeting_occurrences, meetings_overlap, are_classes_mergeable
 
 from ortools.sat.python import cp_model
 from sqlalchemy import or_, select
@@ -13,14 +17,8 @@ from app.models.entities import (
 )
 
 
-def _overlap(left, right) -> bool:
-    if left.weekday != right.weekday or left.end_period < right.start_period or right.end_period < left.start_period:
-        return False
-    w_left = set(left.active_weeks or [])
-    w_right = set(right.active_weeks or [])
-    if w_left and w_right and not w_left.intersection(w_right):
-        return False
-    return not ((left.start_date and right.end_date and left.start_date > right.end_date) or (right.start_date and left.end_date and right.start_date > left.end_date))
+def _overlap(left, right, semester=None) -> bool:
+    return meetings_overlap(left, right, semester)
 
 
 def eligible_teachers(
@@ -127,7 +125,7 @@ def _event_slots(seminar: Seminar) -> list[dict]:
     return [slot for slot in alternatives if isinstance(slot, dict) and slot.get("weekday") is not None]
 
 
-def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = False, semester_id: int | None = None) -> OptimizationRun:
+def _solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = False, semester_id: int | None = None) -> OptimizationRun:
     from app.services.lecturer_master import participation_reason
     semester = db.get(Semester, semester_id) if semester_id else db.scalar(select(Semester).where(Semester.is_active.is_(True)).order_by(Semester.id.desc()))
     if semester and semester_id is None:
@@ -244,17 +242,20 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
                         else:
                             provisional_cap_count += 1
 
+    def _merge_member_ok(item: ClassSection) -> bool:
+        """A class takes part in a merge only if this very class is confirmed (or the run confirms it)."""
+        if getattr(item, "merge_status", "") == "rejected" or not item.merged_group_id:
+            return False
+        return bool(item.merged_confirmed or getattr(item, "merge_status", "") == "confirmed" or confirm_merged)
+
     def _is_merged(left: ClassSection, right: ClassSection) -> bool:
+        # Both sides must be confirmed: a pending class must never inherit the
+        # no-overlap exemption of a confirmed one (it is not tied to the same lecturer).
         if not (left.merged_group_id and left.merged_group_id == right.merged_group_id):
             return False
-        if getattr(left, "merge_status", "") == "rejected" or getattr(right, "merge_status", "") == "rejected":
+        if not are_classes_mergeable(left, right):
             return False
-        return bool(
-            (left.merged_confirmed and right.merged_confirmed)
-            or getattr(left, "merge_status", "") == "confirmed"
-            or getattr(right, "merge_status", "") == "confirmed"
-            or confirm_merged
-        )
+        return _merge_member_ok(left) and _merge_member_ok(right)
 
     unsupported = [
         c.constraint_type for c in constraints
@@ -270,12 +271,13 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         for right in classes[index + 1:]:
             if _is_merged(left, right):
                 continue
-            if left.locked_assignment and right.locked_assignment and left.assigned_lecturer_id == right.assigned_lecturer_id and any(_overlap(a, b) for a in left.sessions for b in right.sessions):
+            if left.locked_assignment and right.locked_assignment and left.assigned_lecturer_id == right.assigned_lecturer_id and any(_overlap(a, b, semester) for a in left.sessions for b in right.sessions):
                 locked_conflicts.append((left.id, right.id))
     if locked_conflicts:
         run = OptimizationRun(semester_id=semester_id, **context, status="blocked", summary={"code": "LOCKED_ASSIGNMENT_CONFLICT", "pairs": locked_conflicts, "unsupported_constraints": unsupported})
         db.add(run); db.commit(); return run
 
+    model_started = time.perf_counter()
     model = cp_model.CpModel()
     participating_ids = {
         lecturer.id for lecturer in lecturers
@@ -394,6 +396,13 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
                 elif _weight(constraint):
                     soft_terms.append((_weight(constraint), (group.id, constraint.lecturer_id)))
 
+    # An approved, audited exception (MANUAL_OVERRIDE + lock) deliberately bends a
+    # capability/availability rule; honour it instead of rejecting the whole run.
+    # Physical clashes stay impossible through the no-overlap constraints below.
+    for group in classes:
+        if group.locked_assignment and group.assigned_lecturer_id and group.assignment_source == "MANUAL_OVERRIDE":
+            candidates[group.id].add(group.assigned_lecturer_id)
+
     x = {(group.id, lecturer_id): model.new_bool_var(f"x_{group.id}_{lecturer_id}") for group in classes for lecturer_id in candidates[group.id]}
     for group in classes:
         for lecturer_id in candidates[group.id]:
@@ -420,13 +429,16 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
 
     groups = defaultdict(list)
     for group in classes:
-        if (
-            group.merged_group_id
-            and getattr(group, "merge_status", "") != "rejected"
-            and (group.merged_confirmed or getattr(group, "merge_status", "") == "confirmed" or confirm_merged)
-        ):
+        if _merge_member_ok(group):
             groups[group.merged_group_id].append(group)
-    active_groups = {gid: items for gid, items in groups.items() if len(items) >= 2}
+    # Only classes that are genuinely mergeable with the group anchor are tied together.
+    # Tying a non-mergeable pair would combine "same lecturer" with "no overlap" and
+    # silently force both classes to stay unassigned.
+    active_groups = {}
+    for gid, items in groups.items():
+        members = [items[0], *(item for item in items[1:] if are_classes_mergeable(items[0], item))]
+        if len(members) >= 2:
+            active_groups[gid] = members
     for items in active_groups.values():
         common_candidates = set(candidates[items[0].id])
         for other in items[1:]:
@@ -480,8 +492,17 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         elif kind == "MAX_SESSIONS_PER_DAY":
             if not lecturer_id or not isinstance(limit, int): invalid_constraints.append(constraint.id); continue
             for weekday in range(2, 9):
-                expression = sum(sum(s.weekday == weekday for s in g.sessions) * x[g.id, lecturer_id] for g in representative_classes if (g.id, lecturer_id) in x)
-                bounded_violation(expression, limit, len(representative_classes), constraint)
+                by_date = defaultdict(list)
+                for g in representative_classes:
+                    if (g.id, lecturer_id) not in x:
+                        continue
+                    for session in g.sessions:
+                        if session.weekday == weekday:
+                            for _, actual in meeting_occurrences(session, semester):
+                                by_date[actual].append(x[g.id, lecturer_id])
+                for terms in by_date.values():
+                    expression = sum(terms)
+                    bounded_violation(expression, limit, len(terms), constraint)
         elif kind == "MAX_DAYS_PER_WEEK":
             if not lecturer_id or not isinstance(limit, int): invalid_constraints.append(constraint.id); continue
             active_days = []
@@ -510,9 +531,13 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
             class_id = target.get("class_id")
             course_id = target.get("course_id")
             class_ids = [class_id] if isinstance(class_id, int) else [group.id for group in classes if kind == "FORBIDDEN_ASSIGNMENT" and group.course_id == course_id]
-            if not lecturer_id or not class_ids or any((item, lecturer_id) not in x for item in class_ids): invalid_constraints.append(constraint.id); continue
+            if not lecturer_id or not class_ids or any(item not in {g.id for g in classes} for item in class_ids): invalid_constraints.append(constraint.id); continue
+            if kind == "REQUIRED_ASSIGNMENT" and any((item, lecturer_id) not in x for item in class_ids): invalid_constraints.append(constraint.id); continue
             wanted = 1 if kind == "REQUIRED_ASSIGNMENT" else 0
             for scoped_class_id in class_ids:
+                # A forbidden pair without a variable is already excluded (not a candidate).
+                if (scoped_class_id, lecturer_id) not in x:
+                    continue
                 if constraint.hardness == "hard":
                     model.add(x[scoped_class_id, lecturer_id] == wanted)
                 elif _weight(constraint):
@@ -637,7 +662,7 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         for right in classes[index + 1:]:
             if _is_merged(left, right):
                 continue
-            if any(_overlap(a, b) for a in left.sessions for b in right.sessions):
+            if any(_overlap(a, b, semester) for a in left.sessions for b in right.sessions):
                 for lecturer_id in candidates[left.id].intersection(candidates[right.id]):
                     if (left.id, lecturer_id) in x and (right.id, lecturer_id) in x:
                         model.add(x[left.id, lecturer_id] + x[right.id, lecturer_id] <= 1)
@@ -676,7 +701,8 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         lec_vars = [x[group.id, lecturer.id] for group in representative_classes if (group.id, lecturer.id) in x]
         if not lec_vars:
             continue
-        load = sum(int(group.credits * 10) * v for v in lec_vars)
+        load = sum(int(group.credits * 10) * x[group.id, lecturer.id]
+                   for group in representative_classes if (group.id, lecturer.id) in x)
         participating_loads.append(load)
 
         # Strongly penalize leaving an active participating teacher with 0 classes
@@ -733,6 +759,7 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         f"{groups_with_one} groups with exactly 1 candidate\n"
         f"{groups_with_multiple} groups with 2+ candidates"
     )
+    solve_started = time.perf_counter()
     solver = cp_model.CpSolver(); solver.parameters.max_time_in_seconds = time_limit_seconds; solver.parameters.num_search_workers = 8
     status = solver.solve(model); valid = status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
     summary = {
@@ -754,11 +781,37 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
         "candidate_reasons": reasons,
         "seminars": [],
     }
+    summary["experiment"] = {
+        "solver_wall_time_seconds": solver.wall_time,
+        "model_build_seconds": solve_started - model_started,
+        "solve_elapsed_seconds": time.perf_counter() - solve_started,
+        "configuration": {
+            "max_time_in_seconds": solver.parameters.max_time_in_seconds,
+            "num_search_workers": solver.parameters.num_search_workers,
+            "random_seed": solver.parameters.random_seed,
+            "confirm_merged": confirm_merged,
+        },
+        "environment": {
+            "python_version": platform.python_version(),
+            "ortools_version": ortools.__version__,
+            "platform": platform.system(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "logical_cpu_count": os.cpu_count(),
+        },
+        "best_objective_bound": solver.best_objective_bound if valid else None,
+        "objective_components": {
+            "unassigned": solver.value(sum(unassigned.values())) * 1_000_000,
+            "zero_assigned_lecturers": solver.value(sum(zero_assigned_penalties)) * 100_000,
+            "workload_disparity": solver.value(max_load - min_load) * 1_000,
+            "soft_preferences": solver.value(soft),
+        } if valid else None,
+    }
     run = OptimizationRun(semester_id=semester_id, **context, status=solver.status_name(status).lower(), score=solver.objective_value if valid else None, summary=summary)
     db.add(run); db.flush()
     if valid:
         if confirm_merged:
-            for items in groups.values():
+            for items in active_groups.values():
                 for sec in items:
                     sec.merged_confirmed = True
                     sec.merge_status = "confirmed"
@@ -794,3 +847,14 @@ def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fals
     from sqlalchemy.orm.attributes import flag_modified
     flag_modified(run, "summary")
     db.commit(); return run
+
+
+def solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = False, semester_id: int | None = None) -> OptimizationRun:
+    started = time.perf_counter()
+    run = _solve(db, time_limit_seconds, confirm_merged, semester_id)
+    if run.summary.get("experiment"):
+        from sqlalchemy.orm.attributes import flag_modified
+        run.summary["experiment"]["solver_pipeline_seconds"] = time.perf_counter() - started
+        flag_modified(run, "summary")
+        db.commit()
+    return run

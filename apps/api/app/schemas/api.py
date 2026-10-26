@@ -44,7 +44,7 @@ class TemplateMappingUpdate(BaseModel):
 
 class OptimizationRequest(BaseModel):
     time_limit_seconds: int = Field(default=20, ge=1, le=120)
-    confirm_merged_suggestions: bool = True
+    confirm_merged_suggestions: bool = False
 
 
 class MergedDecision(BaseModel):
@@ -156,3 +156,17 @@ class CapabilityUpdateRequest(BaseModel):
     confirmed: bool | None = None
 
 
+
+
+class AssignmentChange(BaseModel):
+    lecturer_id: int = Field(gt=0)
+    lock: bool = False
+    allow_override_lock: bool = False
+    override_reason: str = ""
+
+
+class SemesterUpdate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    head_name: str = Field(min_length=2, max_length=200)
+    start_date: str
+    end_date: str

@@ -1,0 +1,3102 @@
+{
+ "probes": [
+  {
+   "id": "ALG-FORBIDDEN-COURSE",
+   "expected": "A never teaches course C; K2 unassigned",
+   "status": "optimal",
+   "assigned": {
+    "1": 2,
+    "2": 1
+   },
+   "invalid_constraints": [
+    2
+   ],
+   "checker": [
+    [
+     "HARD_FORBIDDEN_VIOLATED",
+     2,
+     1,
+     2
+    ]
+   ],
+   "verdict": "FAIL",
+   "lecturer_A": 1
+  },
+  {
+   "id": "ALG-HALF-MERGE",
+   "expected": "only one of K1/K2 assigned to A (merge not confirmed for K2)",
+   "status": "optimal",
+   "assigned": {
+    "1": 1,
+    "2": 1
+   },
+   "checker": [
+    [
+     "DOUBLE_BOOKING",
+     1,
+     2,
+     1
+    ]
+   ],
+   "verdict": "FAIL"
+  },
+  {
+   "id": "ALG-MIN-NO-CAND",
+   "expected": "blocked/infeasible with explanation (B can never reach 1 class)",
+   "status": "infeasible",
+   "summary_code": null,
+   "verdict": "PASS"
+  },
+  {
+   "id": "ALG-PRIORITY",
+   "expected": "both classes assigned (completeness dominates soft)",
+   "status": "optimal",
+   "assigned": {
+    "1": 1,
+    "2": 1
+   },
+   "components": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 19600
+   },
+   "verdict": "PASS",
+   "note": "gap penalty = weight*100 per empty period per week per day; 13 gaps x 15 weeks x 100 = 19,500 < 1,000,000"
+  },
+  {
+   "id": "ALG-SPREAD-INVERSION",
+   "expected": "BIG assigned to A (only candidate)",
+   "status": "optimal",
+   "assigned": {
+    "2": 2
+   },
+   "components": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 100000,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "verdict": "FAIL",
+   "note": "weighted sum: 150 credits -> spread +1500 units x 1000 = 1.5e6 > 1e6 unassigned weight"
+  },
+  {
+   "id": "ALG-NAME-BRIDGE",
+   "expected": "policy decision: unassigned unless equivalence approved",
+   "status": "optimal",
+   "assigned": {
+    "1": 1
+   },
+   "checker": [
+    [
+     "NO_DIRECT_CAPABILITY",
+     1,
+     1
+    ]
+   ],
+   "verdict": "FAIL"
+  },
+  {
+   "id": "ALG-MAX-DAYS-WEEK",
+   "expected": "both assigned: each calendar week has only one teaching day",
+   "status": "optimal",
+   "assigned": {
+    "2": 1
+   },
+   "verdict": "FAIL"
+  },
+  {
+   "id": "ALG-BOTTLENECK-8x7",
+   "expected": "7 assigned, 1 unassigned (Hall bound: 8 classes, 7 lecturers, one slot)",
+   "status": "optimal",
+   "assigned_count": 7,
+   "checker": [],
+   "verdict": "PASS"
+  },
+  {
+   "id": "ALG-SOLVE-MUTATES-CAPS",
+   "expected": "solve is read-only on capability catalog",
+   "after": [
+    0,
+    0
+   ],
+   "verdict": "FAIL"
+  }
+ ],
+ "metamorphic": [
+  {
+   "id": "META-ORDER",
+   "scores": [
+    20000.0,
+    20000.0
+   ],
+   "verdict": "PASS"
+  },
+  {
+   "id": "META-DISJOINT-WEEKS",
+   "assigned": 2,
+   "verdict": "PASS"
+  },
+  {
+   "id": "META-UNCONFIRMED-MERGE",
+   "assigned": 1,
+   "verdict": "PASS"
+  },
+  {
+   "id": "META-LOCK-RESOLVE",
+   "lecturer_each_run": [
+    1,
+    1
+   ],
+   "verdict": "PASS"
+  },
+  {
+   "id": "META-MONOTONE-CAPABILITY",
+   "runs": [
+    [
+     "optimal",
+     2000000.0
+    ],
+    [
+     "optimal",
+     1000000.0
+    ]
+   ],
+   "verdict": "PASS"
+  }
+ ],
+ "oracle": [
+  {
+   "case": 0,
+   "status": "optimal",
+   "solver_score": 3000060.0,
+   "oracle_score": 3000060,
+   "oracle_parts": {
+    "unassigned": 3,
+    "zero": 0,
+    "spread": 0,
+    "soft": 60
+   },
+   "solver_parts": {
+    "unassigned": 3000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 60
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 1,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 2,
+   "status": "optimal",
+   "solver_score": 30050.0,
+   "oracle_score": 30050,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 30,
+    "soft": 50
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 30000,
+    "soft_preferences": 50
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 3,
+   "status": "optimal",
+   "solver_score": 30000.0,
+   "oracle_score": 30000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 30000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 4,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 5,
+   "status": "optimal",
+   "solver_score": 3000000.0,
+   "oracle_score": 3000000,
+   "oracle_parts": {
+    "unassigned": 3,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 3000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 6,
+   "status": "optimal",
+   "solver_score": 10020.0,
+   "oracle_score": 10020,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 20
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 20
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 7,
+   "status": "optimal",
+   "solver_score": 6000000.0,
+   "oracle_score": 4000000,
+   "oracle_parts": {
+    "unassigned": 4,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 6000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 8,
+   "status": "optimal",
+   "solver_score": 20090.0,
+   "oracle_score": 20090,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 90
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 90
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 9,
+   "status": "optimal",
+   "solver_score": 10020.0,
+   "oracle_score": 10020,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 20
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 20
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 10,
+   "status": "optimal",
+   "solver_score": 1010000.0,
+   "oracle_score": 1010000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 11,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 12,
+   "status": "optimal",
+   "solver_score": 10190.0,
+   "oracle_score": 10190,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 190
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 190
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 13,
+   "status": "optimal",
+   "solver_score": 1000020.0,
+   "oracle_score": 1000020,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 20
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 20
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 14,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 15,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 6000000,
+   "oracle_parts": {
+    "unassigned": 6,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 16,
+   "status": "optimal",
+   "solver_score": 1020050.0,
+   "oracle_score": 10050,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 50
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 50
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 17,
+   "status": "optimal",
+   "solver_score": 2000000.0,
+   "oracle_score": 2130000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 1,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 18,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 19,
+   "status": "optimal",
+   "solver_score": 1020050.0,
+   "oracle_score": 1020050,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 50
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 50
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 20,
+   "status": "optimal",
+   "solver_score": 1020000.0,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 21,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 22,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 6000000,
+   "oracle_parts": {
+    "unassigned": 6,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 23,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 24,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 25,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 26,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 27,
+   "status": "optimal",
+   "solver_score": 5000000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 5000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 28,
+   "status": "optimal",
+   "solver_score": 1080200.0,
+   "oracle_score": 1080200,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 80,
+    "soft": 200
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 80000,
+    "soft_preferences": 200
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 29,
+   "status": "optimal",
+   "solver_score": 50000.0,
+   "oracle_score": 50000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 50,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 50000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 30,
+   "status": "optimal",
+   "solver_score": 30000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 30000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 31,
+   "status": "optimal",
+   "solver_score": 1020000.0,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 32,
+   "status": "optimal",
+   "solver_score": 10100.0,
+   "oracle_score": 10100,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 33,
+   "status": "optimal",
+   "solver_score": 20100.0,
+   "oracle_score": 20100,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 34,
+   "status": "optimal",
+   "solver_score": 4000000.0,
+   "oracle_score": 4000000,
+   "oracle_parts": {
+    "unassigned": 4,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 4000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 35,
+   "status": "optimal",
+   "solver_score": 2000300.0000000002,
+   "oracle_score": 2000300,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 0,
+    "soft": 300
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 300
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 36,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 37,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 38,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 39,
+   "status": "optimal",
+   "solver_score": 1040000.0,
+   "oracle_score": 1040000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 40,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 40000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 40,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 41,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 42,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 43,
+   "status": "optimal",
+   "solver_score": 3020000.0,
+   "oracle_score": 3020000,
+   "oracle_parts": {
+    "unassigned": 3,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 3000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 44,
+   "status": "optimal",
+   "solver_score": 150.0,
+   "oracle_score": 150,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 150
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 150
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 45,
+   "status": "optimal",
+   "solver_score": 20050.0,
+   "oracle_score": 20050,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 50
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 50
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 46,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 47,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 48,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 49,
+   "status": "optimal",
+   "solver_score": 2000000.0,
+   "oracle_score": 2000000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 50,
+   "status": "optimal",
+   "solver_score": 2000000.0,
+   "oracle_score": 2000000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 51,
+   "status": "optimal",
+   "solver_score": 1030000.0,
+   "oracle_score": 1030000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 30000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 52,
+   "status": "optimal",
+   "solver_score": 1000200.0,
+   "oracle_score": 1000200,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 200
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 200
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 53,
+   "status": "optimal",
+   "solver_score": 3130000.0,
+   "oracle_score": 3130000,
+   "oracle_parts": {
+    "unassigned": 3,
+    "zero": 1,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 3000000,
+    "zero_assigned_lecturers": 100000,
+    "workload_disparity": 30000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 54,
+   "status": "optimal",
+   "solver_score": 10040.0,
+   "oracle_score": 10040,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 40
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 40
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 55,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 56,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 57,
+   "status": "optimal",
+   "solver_score": 10020.0,
+   "oracle_score": 10020,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 20
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 20
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 58,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 59,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 60,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 30000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 61,
+   "status": "optimal",
+   "solver_score": 2000000.0,
+   "oracle_score": 2000000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 62,
+   "status": "optimal",
+   "solver_score": 40000.0,
+   "oracle_score": 40000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 40,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 40000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 63,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 64,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 65,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 5000000,
+   "oracle_parts": {
+    "unassigned": 5,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 66,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 67,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 68,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 5000000,
+   "oracle_parts": {
+    "unassigned": 5,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 69,
+   "status": "optimal",
+   "solver_score": 50000.0,
+   "oracle_score": 50000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 50,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 50000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 70,
+   "status": "optimal",
+   "solver_score": 40000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 40000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 71,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 3000000,
+   "oracle_parts": {
+    "unassigned": 3,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 72,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 73,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 74,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 75,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": null,
+   "oracle_parts": null,
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 76,
+   "status": "optimal",
+   "solver_score": 20050.0,
+   "oracle_score": 20050,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 50
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 50
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 77,
+   "status": "optimal",
+   "solver_score": 70000.0,
+   "oracle_score": 70000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 70,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 70000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 78,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 79,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 80,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 81,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 82,
+   "status": "optimal",
+   "solver_score": 1020000.0,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 83,
+   "status": "optimal",
+   "solver_score": 4130000.0,
+   "oracle_score": 4130000,
+   "oracle_parts": {
+    "unassigned": 4,
+    "zero": 1,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 4000000,
+    "zero_assigned_lecturers": 100000,
+    "workload_disparity": 30000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 84,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 85,
+   "status": "optimal",
+   "solver_score": 2020000.0,
+   "oracle_score": 2020000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 86,
+   "status": "optimal",
+   "solver_score": 1020000.0,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 87,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 88,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 89,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 6000000,
+   "oracle_parts": {
+    "unassigned": 6,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 90,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 91,
+   "status": "optimal",
+   "solver_score": 30000.0,
+   "oracle_score": 30000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 30000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 92,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 93,
+   "status": "optimal",
+   "solver_score": 1010100.0,
+   "oracle_score": 1010100,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 10,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 94,
+   "status": "optimal",
+   "solver_score": 2010000.0,
+   "oracle_score": 2010000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 95,
+   "status": "optimal",
+   "solver_score": 100.0,
+   "oracle_score": 100,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 96,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 97,
+   "status": "optimal",
+   "solver_score": 1060060.0,
+   "oracle_score": 20,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 20
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 60000,
+    "soft_preferences": 60
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 98,
+   "status": "optimal",
+   "solver_score": 2030000.0,
+   "oracle_score": 2030000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 30,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 30000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 99,
+   "status": "optimal",
+   "solver_score": 10020.0,
+   "oracle_score": 10020,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 20
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 20
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 100,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 101,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 102,
+   "status": "optimal",
+   "solver_score": 2000000.0,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 103,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 104,
+   "status": "optimal",
+   "solver_score": 150.0,
+   "oracle_score": 150,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 150
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 150
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 105,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 106,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 4000000,
+   "oracle_parts": {
+    "unassigned": 4,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 107,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 108,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 109,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 110,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 111,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 112,
+   "status": "optimal",
+   "solver_score": 2000000.0,
+   "oracle_score": 2000000,
+   "oracle_parts": {
+    "unassigned": 2,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 113,
+   "status": "optimal",
+   "solver_score": 50000.0,
+   "oracle_score": 50000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 50,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 50000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 114,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 115,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 116,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 117,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 118,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 119,
+   "status": "optimal",
+   "solver_score": 10050.0,
+   "oracle_score": 10050,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 50
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 50
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 120,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 121,
+   "status": "optimal",
+   "solver_score": 1010000.0,
+   "oracle_score": 1010000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 122,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 6000000,
+   "oracle_parts": {
+    "unassigned": 6,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 123,
+   "status": "optimal",
+   "solver_score": 10050.0,
+   "oracle_score": 10050,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 50
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 50
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 124,
+   "status": "optimal",
+   "solver_score": 1020099.9999999999,
+   "oracle_score": 1020100,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 125,
+   "status": "blocked",
+   "solver_score": null,
+   "oracle_score": 4000000,
+   "oracle_parts": {
+    "unassigned": 4,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": null,
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 126,
+   "status": "optimal",
+   "solver_score": 1020000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 127,
+   "status": "optimal",
+   "solver_score": 1010000.0,
+   "oracle_score": 1010000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 128,
+   "status": "optimal",
+   "solver_score": 100.0,
+   "oracle_score": 100,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 129,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 130,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 131,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 132,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 133,
+   "status": "optimal",
+   "solver_score": 0.0,
+   "oracle_score": 0,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 134,
+   "status": "optimal",
+   "solver_score": 1000100.0,
+   "oracle_score": 1000100,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 135,
+   "status": "optimal",
+   "solver_score": 2000000.0,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 2000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 136,
+   "status": "optimal",
+   "solver_score": 5000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 5000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 137,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 138,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 139,
+   "status": "optimal",
+   "solver_score": 1000000.0,
+   "oracle_score": 1000000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 140,
+   "status": "optimal",
+   "solver_score": 5000000.0,
+   "oracle_score": 5000000,
+   "oracle_parts": {
+    "unassigned": 5,
+    "zero": 0,
+    "spread": 0,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 5000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 0,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 141,
+   "status": "optimal",
+   "solver_score": 1030100.0,
+   "oracle_score": 1030100,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 30,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 30000,
+    "soft_preferences": 100
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 142,
+   "status": "optimal",
+   "solver_score": 1020000.0,
+   "oracle_score": 1020000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 143,
+   "status": "optimal",
+   "solver_score": 10200.0,
+   "oracle_score": 10100,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 100
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 200
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 144,
+   "status": "optimal",
+   "solver_score": 1160000.0,
+   "oracle_score": 1160000,
+   "oracle_parts": {
+    "unassigned": 1,
+    "zero": 1,
+    "spread": 60,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 1000000,
+    "zero_assigned_lecturers": 100000,
+    "workload_disparity": 60000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 145,
+   "status": "optimal",
+   "solver_score": 40000.0,
+   "oracle_score": 160000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 1,
+    "spread": 60,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 40000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "FAIL"
+  },
+  {
+   "case": 146,
+   "status": "optimal",
+   "solver_score": 20000.0,
+   "oracle_score": 20000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 147,
+   "status": "optimal",
+   "solver_score": 20020.0,
+   "oracle_score": 20020,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 20,
+    "soft": 20
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 20000,
+    "soft_preferences": 20
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 148,
+   "status": "optimal",
+   "solver_score": 10000.0,
+   "oracle_score": 10000,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 0
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 0
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  },
+  {
+   "case": 149,
+   "status": "optimal",
+   "solver_score": 10200.0,
+   "oracle_score": 10200,
+   "oracle_parts": {
+    "unassigned": 0,
+    "zero": 0,
+    "spread": 10,
+    "soft": 200
+   },
+   "solver_parts": {
+    "unassigned": 0,
+    "zero_assigned_lecturers": 0,
+    "workload_disparity": 10000,
+    "soft_preferences": 200
+   },
+   "checker_issues": [],
+   "verdict": "PASS"
+  }
+ ],
+ "determinism": {
+  "id": "DETERMINISM-3RUNS",
+  "scores": [
+   4000000.0,
+   4000000.0,
+   4000000.0
+  ],
+  "distinct_plans": 3,
+  "verdict": "INFO",
+  "note": "same objective expected; different plans = co-optimal reshuffle"
+ },
+ "elapsed_seconds": 7.432888031005859
+}

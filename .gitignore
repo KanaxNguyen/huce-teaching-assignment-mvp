@@ -30,3 +30,6 @@ outputs/
 data/manifests/source-files.json
 .vercel
 .env*
+
+# Downloadable Excel templates served by the web app
+!apps/web/public/templates/*.xlsx

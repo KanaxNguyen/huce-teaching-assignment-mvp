@@ -1,0 +1,1063 @@
+[
+ {
+  "method": "POST",
+  "path": "/semesters",
+  "status": 200,
+  "body": {
+   "id": 1,
+   "created": true
+  }
+ },
+ {
+  "method": "POST",
+  "path": "/sources/upload?semester_id=1&source_type=CURRENT_SCHEDULE",
+  "status": 200,
+  "body": {
+   "id": 1,
+   "source_type": "CURRENT_SCHEDULE",
+   "original_filename": "timetable_input.xlsx",
+   "content_hash": "19455978f7c480411522f53e8eb53d2ca9ced1379831ac8829634bffbe19f8d2",
+   "created_at": "2026-10-26T09:06:17.890005",
+   "provenance_status": "VERIFIED",
+   "parent_version_id": null,
+   "parse_summary": {
+    "rows_read": 2,
+    "rows_accepted": 2,
+    "rows_rejected": 0,
+    "classes": 2,
+    "sessions": 2,
+    "single_classes": 2,
+    "merged_groups_suggested": 0,
+    "merged_pairs_suggested": 0,
+    "partial_merge_candidates": 0,
+    "locked_classes": 0,
+    "assigned_classes": 0,
+    "unassigned_classes": 2,
+    "review_classes": 0,
+    "validation_errors": 0,
+    "issues": []
+   },
+   "active": false
+  }
+ },
+ {
+  "method": "POST",
+  "path": "/sources/1/preview?semester_id=1",
+  "status": 200,
+  "body": {
+   "source_id": 1,
+   "source_type": "CURRENT_SCHEDULE",
+   "filename": "timetable_input.xlsx",
+   "preview_token": "e05475bdfbda10eccfbcf8f90b579399ab1af0d4dded530d4026e769b7af1d35",
+   "base_revision": 0,
+   "can_activate": true,
+   "diff": {
+    "counts": {
+     "UNCHANGED": 0,
+     "ADDED": 2,
+     "REMOVED": 0,
+     "CHANGED": 0
+    },
+    "meetings": [
+     {
+      "status": "ADDED",
+      "before": null,
+      "after": {
+       "course": "391001",
+       "class_code": "71KT1",
+       "day": 2,
+       "period": [
+        1,
+        3
+       ],
+       "room": "406.H1",
+       "week_mask": [
+        1,
+        2,
+        3,
+        4,
+        5
+       ],
+       "date_range": [
+        "2026-09-07",
+        "2027-01-24"
+       ],
+       "source_rows": [
+        2
+       ]
+      },
+      "changed_fields": []
+     },
+     {
+      "status": "ADDED",
+      "before": null,
+      "after": {
+       "course": "391002",
+       "class_code": "71KT2",
+       "day": 2,
+       "period": [
+        1,
+        3
+       ],
+       "room": "408.H1",
+       "week_mask": [
+        1,
+        2,
+        3,
+        4,
+        5
+       ],
+       "date_range": [
+        "2026-09-07",
+        "2027-01-24"
+       ],
+       "source_rows": [
+        3
+       ]
+      },
+      "changed_fields": []
+     }
+    ]
+   },
+   "diagnostics": [],
+   "lock_impact": [],
+   "imported_assignments": 0,
+   "consequences": [
+    "Thay đổi nguồn làm các run cũ trở thành lịch sử.",
+    "Tham chiếu lớp cũ cần xác nhận lại; phân công, khóa và ghép lớp cũ không được chuyển ngầm."
+   ]
+  }
+ },
+ {
+  "method": "POST",
+  "path": "/sources/1/activate?semester_id=1",
+  "status": 200,
+  "body": {
+   "active": true,
+   "source_id": 1,
+   "source_revision": 1,
+   "import": {
+    "batch_id": 1,
+    "files": [
+     "timetable_input.xlsx"
+    ],
+    "summary": {
+     "rows_read": 2,
+     "rows_accepted": 2,
+     "rows_rejected": 0,
+     "classes": 2,
+     "sessions": 2,
+     "single_classes": 2,
+     "merged_groups_suggested": 0,
+     "merged_pairs_suggested": 0,
+     "partial_merge_candidates": 0,
+     "locked_classes": 0,
+     "assigned_classes": 0,
+     "unassigned_classes": 2,
+     "review_classes": 0,
+     "validation_errors": 0,
+     "preferences": {
+      "format": null,
+      "parsed_rules": 0,
+      "shared_seminars": 0,
+      "needs_review": 0,
+      "invalid_rows": 0,
+      "raw_clauses": 0,
+      "dropped_clauses": 0,
+      "warnings": []
+     }
+    },
+    "unmatched_lecturers": [],
+    "serious_errors": 0,
+    "preview": [
+     {
+      "course_code": "391001",
+      "course_name": "Giải tích 1",
+      "class_code": "71KT1",
+      "sessions": 1,
+      "lecturer": null,
+      "locked": false,
+      "merged_group_id": null
+     },
+     {
+      "course_code": "391002",
+      "course_name": "Đại số tuyến tính",
+      "class_code": "71KT2",
+      "sessions": 1,
+      "lecturer": null,
+      "locked": false,
+      "merged_group_id": null
+     }
+    ]
+   }
+  }
+ },
+ {
+  "method": "POST",
+  "path": "/sources/upload?semester_id=1&source_type=PREFERENCE",
+  "status": 200,
+  "body": {
+   "id": 2,
+   "source_type": "PREFERENCE",
+   "original_filename": "preference_input.xlsx",
+   "content_hash": "b1b8cfc61e33b3718c6630c4e44d8c689df43fcba0dac66fd2d77d1e960b9a36",
+   "created_at": "2026-10-26T09:06:17.920030",
+   "provenance_status": "VERIFIED",
+   "parent_version_id": null,
+   "parse_summary": {
+    "format": "STRUCTURED_V2",
+    "drafts": 1,
+    "seminars": 0,
+    "invalid_rows": 0,
+    "warnings": []
+   },
+   "active": false
+  }
+ },
+ {
+  "method": "POST",
+  "path": "/sources/2/preview?semester_id=1",
+  "status": 200,
+  "body": {
+   "source_id": 2,
+   "source_type": "PREFERENCE",
+   "filename": "preference_input.xlsx",
+   "preview_token": "ba1a8249a905df55d144a51437bd03ac2010eda5490f75e853989485338722d7",
+   "base_revision": 1,
+   "can_activate": true,
+   "diff": {
+    "drafts": 1,
+    "seminars": 0,
+    "previous_rules_require_review": true
+   },
+   "diagnostics": [],
+   "lock_impact": [],
+   "imported_assignments": null,
+   "consequences": [
+    "Thay đổi nguồn làm các run cũ trở thành lịch sử.",
+    "Tham chiếu lớp cũ cần xác nhận lại; phân công, khóa và ghép lớp cũ không được chuyển ngầm."
+   ]
+  }
+ },
+ {
+  "method": "POST",
+  "path": "/sources/2/activate?semester_id=1",
+  "status": 200,
+  "body": {
+   "active": true,
+   "source_id": 2,
+   "source_revision": 2,
+   "import": {
+    "batch_id": 3,
+    "files": [
+     "preference_input.xlsx"
+    ],
+    "summary": {
+     "rows_read": 0,
+     "rows_accepted": 0,
+     "rows_rejected": 0,
+     "classes": 0,
+     "sessions": 0,
+     "single_classes": 0,
+     "merged_groups_suggested": 0,
+     "merged_pairs_suggested": 0,
+     "partial_merge_candidates": 0,
+     "locked_classes": 0,
+     "assigned_classes": 0,
+     "unassigned_classes": 0,
+     "review_classes": 0,
+     "validation_errors": 0,
+     "preferences": {
+      "format": "STRUCTURED_V2",
+      "parsed_rules": 1,
+      "shared_seminars": 0,
+      "needs_review": 0,
+      "invalid_rows": 0,
+      "raw_clauses": 1,
+      "dropped_clauses": 0,
+      "warnings": []
+     }
+    },
+    "unmatched_lecturers": [],
+    "serious_errors": 0,
+    "preview": []
+   }
+  }
+ },
+ {
+  "method": "GET",
+  "path": "/lecturers",
+  "status": 200,
+  "body": [
+   {
+    "id": 1,
+    "code": "00187",
+    "name": "Phạm Đức Thoan",
+    "aliases": [
+     "Phạm Đức Thoan"
+    ],
+    "confirmed": true,
+    "status": "ACTIVE",
+    "department": null,
+    "email": null,
+    "note": null,
+    "max_credits": 24.0
+   }
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/classes?semester_id=1",
+  "status": 200,
+  "body": [
+   {
+    "id": 1,
+    "source_version_id": 1,
+    "provenance_status": "VERIFIED",
+    "course_id": 1,
+    "course_code": "391001",
+    "course_name": "Giải tích 1",
+    "class_code": "71KT1",
+    "credits": 3.0,
+    "merged_group_id": null,
+    "merged_confirmed": false,
+    "merge_status": "single",
+    "locked_assignment": false,
+    "assignment_source": null,
+    "lecturer_id": null,
+    "lecturer": null,
+    "sessions": [
+     {
+      "source_version_id": 1,
+      "source_rows": [
+       2
+      ],
+      "weekday": 2,
+      "start_period": 1,
+      "end_period": 3,
+      "room": "406.H1",
+      "start_date": "2026-09-07",
+      "end_date": "2027-01-24",
+      "raw_weeks": "12345",
+      "active_weeks": [
+       1,
+       2,
+       3,
+       4,
+       5
+      ]
+     }
+    ]
+   },
+   {
+    "id": 2,
+    "source_version_id": 1,
+    "provenance_status": "VERIFIED",
+    "course_id": 2,
+    "course_code": "391002",
+    "course_name": "Đại số tuyến tính",
+    "class_code": "71KT2",
+    "credits": 3.0,
+    "merged_group_id": null,
+    "merged_confirmed": false,
+    "merge_status": "single",
+    "locked_assignment": false,
+    "assignment_source": null,
+    "lecturer_id": null,
+    "lecturer": null,
+    "sessions": [
+     {
+      "source_version_id": 1,
+      "source_rows": [
+       3
+      ],
+      "weekday": 2,
+      "start_period": 1,
+      "end_period": 3,
+      "room": "408.H1",
+      "start_date": "2026-09-07",
+      "end_date": "2027-01-24",
+      "raw_weeks": "12345",
+      "active_weeks": [
+       1,
+       2,
+       3,
+       4,
+       5
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "method": "PUT",
+  "path": "/lecturers/1/capabilities",
+  "status": 200,
+  "body": {
+   "saved": true
+  }
+ },
+ {
+  "method": "PUT",
+  "path": "/lecturers/1/capabilities",
+  "status": 200,
+  "body": {
+   "saved": true
+  }
+ },
+ {
+  "method": "GET",
+  "path": "/preference-drafts?semester_id=1",
+  "status": 200,
+  "body": [
+   {
+    "id": 1,
+    "batch_id": 3,
+    "draft_kind": "CONSTRAINT",
+    "lecturer_id": 1,
+    "lecturer": "Phạm Đức Thoan",
+    "lecturer_code": "00187",
+    "lecturer_alias": "Phạm Đức Thoan",
+    "context_type": "TEACHING",
+    "context_confidence": "HIGH",
+    "context_confirmed": false,
+    "constraint_type": "PREFERRED_PERIOD",
+    "day_scope": "ALL_WEEKDAYS",
+    "source_version_id": 2,
+    "periods": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ],
+    "start_date": null,
+    "end_date": null,
+    "hardness": "soft",
+    "weight": 0.5,
+    "numeric_value": null,
+    "target": {
+     "day_scope": "ALL_WEEKDAYS",
+     "periods": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+     ],
+     "slots": [
+      {
+       "weekday": 2,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 3,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 4,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 5,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 6,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      }
+     ],
+     "_provenance": {
+      "lecturer_id": {
+       "origin": "SOURCE_INFERRED_DETERMINISTIC",
+       "resolution": "EXACT_CODE"
+      },
+      "context_type": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "constraint_type": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "day_scope": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "periods": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "start_date": {
+       "origin": "UNKNOWN",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "end_date": {
+       "origin": "UNKNOWN",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "hardness": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "weight": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2
+      },
+      "numeric_value": {
+       "origin": "UNKNOWN",
+       "sheet": "Preferences",
+       "row": 2
+      }
+     },
+     "_source_snapshot": {
+      "raw_text": "",
+      "lecturer_alias": "Phạm Đức Thoan",
+      "lecturer_code": "00187",
+      "target": {
+       "day_scope": "ALL_WEEKDAYS",
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ],
+       "slots": [
+        {
+         "weekday": 2,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 3,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 4,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 5,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 6,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        }
+       ]
+      },
+      "constraint_type": "PREFERRED_PERIOD",
+      "context_type": "TEACHING",
+      "hardness": "soft",
+      "weight": 0.5
+     }
+    },
+    "participant_codes": [],
+    "seminar_link": null,
+    "normalized_text": "Ưu tiên xếp lịch · Thứ 2, tiết 1–6; Thứ 3, tiết 1–6; Thứ 4, tiết 1–6; Thứ 5, tiết 1–6; Thứ 6, tiết 1–6",
+    "source_file": "preference_input.xlsx",
+    "source_sheet": "Preferences",
+    "source_row": 2,
+    "source_cell": "A2:N2",
+    "raw_text": "",
+    "confidence": "HIGH",
+    "needs_review": false,
+    "review_reason": "",
+    "status": "CONFIRMED",
+    "rejected_at": null,
+    "rejected_reason": null,
+    "applied_constraint_id": null,
+    "applied_seminar_id": null,
+    "is_confirmable": true,
+    "validation_errors": [],
+    "validation_warnings": [],
+    "field_provenance": {
+     "periods": {
+      "origin": "SOURCE_EXPLICIT",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "start_date": {
+      "origin": "UNKNOWN",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "context_type": {
+      "origin": "SOURCE_EXPLICIT",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "hardness": {
+      "origin": "SOURCE_EXPLICIT",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "end_date": {
+      "origin": "UNKNOWN",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "seminar_link": {
+      "origin": "UNKNOWN"
+     },
+     "weight": {
+      "origin": "SOURCE_EXPLICIT",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "day_scope": {
+      "origin": "SOURCE_EXPLICIT",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "lecturer_id": {
+      "origin": "SOURCE_INFERRED_DETERMINISTIC",
+      "resolution": "EXACT_CODE"
+     },
+     "numeric_value": {
+      "origin": "UNKNOWN",
+      "sheet": "Preferences",
+      "row": 2
+     },
+     "constraint_type": {
+      "origin": "SOURCE_EXPLICIT",
+      "sheet": "Preferences",
+      "row": 2
+     }
+    }
+   }
+  ]
+ },
+ {
+  "method": "PATCH",
+  "path": "/preference-drafts/1?semester_id=1",
+  "status": 200,
+  "body": "{'id': 1, 'batch_id': 3, 'draft_kind': 'CONSTRAINT', 'lecturer_id': 1, 'lecturer': 'Phạm Đức Thoan', 'lecturer_code': '00187', 'lecturer_alias': 'Phạm Đức Thoan', 'context_type': 'TEACHING', 'context_confidence': 'HIGH', 'context_confirmed': False, 'constraint_type': 'PREFERRED_PERIOD', 'day_scope': 'ALL_WEEKDAYS', 'source_version_id': 2, 'periods': [1, 2, 3, 4, 5, 6], 'start_date': None, 'end_date': None, 'hardness': 'soft', 'weight': 0.5, 'numeric_value': None, 'target': {'day_scope': 'ALL_WEEKDAYS', 'periods': [1, 2, 3, 4, 5, 6], '_provenance': {'lecturer_id': {'origin': 'SOURCE_INFERRED_DETERMINISTIC', 'resolution': 'EXACT_CODE', 'confirmed': True}, 'context_type': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'constraint_type': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'day_scope': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'periods': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'start_date': {'origin': 'UNKNOWN', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'end_date': {'origin': 'UNKNOWN', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'hardness': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'weight': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'numeric_value': {'origin': 'UNKNOWN', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}}, '_source_snapshot': {'raw_text': '', 'lecturer_alias': 'Phạm Đức Thoan', 'lecturer_code': '00187', 'target': {'day_scope': 'ALL_WEEKDAYS', 'periods': [1, 2, 3, 4, 5, 6], 'slots': [{'weekday': 2, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 3, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 4, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 5, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 6, 'periods': [1, 2, 3, 4, 5, 6]}]}, 'constraint_type': 'PREFERRED_PERIOD', 'context_type': 'TEACHING', 'hardness': 'soft', 'weight': 0.5}, 'slots': [{'weekday': 2, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 3, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 4, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 5, 'periods': [1, 2, 3, 4, 5, 6]}, {'weekday': 6, 'periods': [1, 2, 3, 4, 5, 6]}], 'context_type': 'TEACHING'}, 'participant_codes': [], 'seminar_link': None, 'normalized_text': 'Ưu tiên xếp lịch · Thứ 2, tiết 1–6; Thứ 3, tiết 1–6; Thứ 4, tiết 1–6; Thứ 5, tiết 1–6; Thứ 6, tiết 1–6', 'source_file': 'preference_input.xlsx', 'source_sheet': 'Preferences', 'source_row': 2, 'source_cell': 'A2:N2', 'raw_text': '', 'confidence': 'HIGH', 'needs_review': False, 'review_reason': None, 'status': 'CONFIRMED', 'rejected_at': None, 'rejected_reason': None, 'applied_constraint_id': None, 'applied_seminar_id': None, 'is_confirmable': True, 'validation_errors': [], 'validation_warnings': [], 'field_provenance': {'periods': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'start_date': {'origin': 'UNKNOWN', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'context_type': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'hardness': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'end_date': {'origin': 'UNKNOWN', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'seminar_link': {'origin': 'UNKNOWN'}, 'weight': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'day_scope': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'lecturer_id': {'origin': 'SOURCE_INFERRED_DETERMINISTIC', 'resolution': 'EXACT_CODE', 'confirmed': True}, 'numeric_value': {'origin': 'UNKNOWN', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}, 'constraint_type': {'origin': 'SOURCE_EXPLICIT', 'sheet': 'Preferences', 'row': 2, 'confirmed': True}}}"
+ },
+ {
+  "method": "POST",
+  "path": "/preference-drafts/apply?semester_id=1",
+  "status": 200,
+  "body": {
+   "applied": 1,
+   "constraints": 1,
+   "seminars": 0
+  }
+ },
+ {
+  "method": "GET",
+  "path": "/constraints?semester_id=1",
+  "status": 200,
+  "body": [
+   {
+    "id": 1,
+    "name": "Ưu tiên xếp lịch · Thứ 2, tiết 1–6; Thứ 3, tiết 1–6; Thứ 4, tiết 1–6; Thứ 5, tiết 1–6; Thứ 6, tiết 1–6",
+    "constraint_type": "prefer_period",
+    "hardness": "soft",
+    "weight": 0.5,
+    "lecturer_id": 1,
+    "lecturer": "Phạm Đức Thoan",
+    "target": {
+     "day_scope": "ALL_WEEKDAYS",
+     "periods": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+     ],
+     "_provenance": {
+      "lecturer_id": {
+       "origin": "SOURCE_INFERRED_DETERMINISTIC",
+       "resolution": "EXACT_CODE",
+       "confirmed": true
+      },
+      "context_type": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "constraint_type": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "day_scope": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "periods": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "start_date": {
+       "origin": "UNKNOWN",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "end_date": {
+       "origin": "UNKNOWN",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "hardness": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "weight": {
+       "origin": "SOURCE_EXPLICIT",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      },
+      "numeric_value": {
+       "origin": "UNKNOWN",
+       "sheet": "Preferences",
+       "row": 2,
+       "confirmed": true
+      }
+     },
+     "_source_snapshot": {
+      "raw_text": "",
+      "lecturer_alias": "Phạm Đức Thoan",
+      "lecturer_code": "00187",
+      "target": {
+       "day_scope": "ALL_WEEKDAYS",
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ],
+       "slots": [
+        {
+         "weekday": 2,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 3,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 4,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 5,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        },
+        {
+         "weekday": 6,
+         "periods": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        }
+       ]
+      },
+      "constraint_type": "PREFERRED_PERIOD",
+      "context_type": "TEACHING",
+      "hardness": "soft",
+      "weight": 0.5
+     },
+     "slots": [
+      {
+       "weekday": 2,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 3,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 4,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 5,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "weekday": 6,
+       "periods": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      }
+     ],
+     "context_type": "TEACHING",
+     "seminar_link": null
+    },
+    "normalized_text": "Ưu tiên xếp lịch · Thứ 2, tiết 1–6; Thứ 3, tiết 1–6; Thứ 4, tiết 1–6; Thứ 5, tiết 1–6; Thứ 6, tiết 1–6",
+    "raw_text": "",
+    "confirmed": true,
+    "active": true
+   }
+  ]
+ },
+ {
+  "method": "GET",
+  "path": "/lecturers",
+  "status": 200,
+  "body": [
+   {
+    "id": 1,
+    "code": "00187",
+    "name": "Phạm Đức Thoan",
+    "aliases": [
+     "Phạm Đức Thoan"
+    ],
+    "confirmed": true,
+    "status": "ACTIVE",
+    "department": null,
+    "email": null,
+    "note": null,
+    "max_credits": 24.0
+   }
+  ]
+ },
+ {
+  "method": "POST",
+  "path": "/optimization/run?semester_id=1",
+  "status": 200,
+  "body": {
+   "run_id": 1,
+   "status": "optimal",
+   "score": 1000000.0,
+   "summary": {
+    "classes": 2,
+    "department": "Bộ môn Toán học",
+    "department_id": 1,
+    "lecturer_count": 1,
+    "course_count": 2,
+    "teaching_group_count": 2,
+    "confirmed_capability_count": 2,
+    "historical_capability_count": 0,
+    "provisional_capability_count": 0,
+    "groups_with_zero_candidates": 0,
+    "groups_with_one_candidate": 2,
+    "groups_with_multiple_candidates": 0,
+    "unsupported_constraints": [],
+    "invalid_constraints": [],
+    "unassigned": [
+     {
+      "class_id": 1,
+      "course": "391001",
+      "course_code": "391001",
+      "course_name": "Giải tích 1",
+      "capability_coverage": 1,
+      "capability_records": 1,
+      "affected_groups": 1,
+      "recommended_remediation": "Nghẽn tài nguyên khung giờ do nhiều lớp cùng ca. Hãy ghép lớp học phần cùng khung giờ hoặc nới lỏng nguyện vọng giảng viên.",
+      "reasons": [
+       {
+        "reason": "TIMETABLE_CONFLICT"
+       }
+      ]
+     }
+    ],
+    "candidate_reasons": {
+     "1": [
+      {
+       "reason": "TIMETABLE_CONFLICT"
+      }
+     ],
+     "2": []
+    },
+    "seminars": [],
+    "experiment": {
+     "solver_wall_time_seconds": 0.0021720000000000003,
+     "model_build_seconds": 0.000845208007376641,
+     "solve_elapsed_seconds": 0.0022606669808737934,
+     "configuration": {
+      "max_time_in_seconds": 10.0,
+      "num_search_workers": 8,
+      "random_seed": 1,
+      "confirm_merged": false
+     },
+     "environment": {
+      "python_version": "3.12.14",
+      "ortools_version": "9.15.6755",
+      "platform": "Darwin",
+      "machine": "arm64",
+      "processor": "arm",
+      "logical_cpu_count": 10
+     },
+     "best_objective_bound": 1000000.0,
+     "objective_components": {
+      "unassigned": 1000000,
+      "zero_assigned_lecturers": 0,
+      "workload_disparity": 0,
+      "soft_preferences": 0
+     },
+     "solver_pipeline_seconds": 0.0076564999762922525
+    }
+   }
+  }
+ },
+ {
+  "method": "GET",
+  "path": "/exports/latest?semester_id=1&mode=draft",
+  "status": 200,
+  "body": "<6830 bytes application/vnd.openxmlformats-officedocument.spreadsheetml.sheet>"
+ }
+]

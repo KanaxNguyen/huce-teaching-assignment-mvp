@@ -54,3 +54,14 @@ def test_grid_v3_reads_all_forms_and_only_explicit_scheduling_choices(tmp_path: 
     bob_rules = [rule for rule in result.drafts if rule.lecturer_alias == "Bob Tran"]
     assert [rule.constraint_type for rule in bob_rules] == ["PREFERRED_PERIOD"]
     assert bob_rules[0].day_scope == "T3" and not bob_rules[0].needs_review
+
+
+def test_v3_grid_template_reads_shared_seminar_sheet():
+    from pathlib import Path
+    from app.parsers.preferences import parse_preference_workbook, detect_preference_format
+    template = Path(__file__).resolve().parents[3] / "apps/web/public/templates/MAU_NGUYEN_VONG_V3_CO_SEMINAR_NHOM.xlsx"
+    result = parse_preference_workbook(template)
+    assert detect_preference_format(template) == "GRID_V3"
+    assert [(s.seminar_code, s.participant_codes, s.day_scopes) for s in result.seminars] == [
+        ("SEM_GT_01", ["00187", "00173", "00199"], ["T3", "T5"])
+    ]

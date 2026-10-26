@@ -1,0 +1,24 @@
+<testsuites id="" name="" tests="8" failures="0" skipped="0" errors="0" time="24.379956">
+<testsuite name="ui-audit.spec.ts" timestamp="2026-10-26T13:33:53.018Z" hostname="" tests="8" failures="0" skipped="0" time="22.317" errors="0">
+<testcase name="UI audit › U01 step navigation renders and workspace is reachable" classname="ui-audit.spec.ts" time="1.752">
+</testcase>
+<testcase name="UI audit › U02 double click on run creates exactly one run and UI matches API" classname="ui-audit.spec.ts" time="5.101">
+</testcase>
+<testcase name="UI audit › U03 every workspace tab renders without an error banner" classname="ui-audit.spec.ts" time="9.353">
+</testcase>
+<testcase name="UI audit › U04 manual change made through the API is visible after reload" classname="ui-audit.spec.ts" time="1.742">
+</testcase>
+<testcase name="UI audit › U05 draft export downloads a real workbook" classname="ui-audit.spec.ts" time="2.007">
+</testcase>
+<testcase name="UI audit › U06 backend unavailable shows an error, never a success notice" classname="ui-audit.spec.ts" time="0.429">
+</testcase>
+<testcase name="UI audit › U07 switching semester while a run is in flight does not show the old semester&apos;s result" classname="ui-audit.spec.ts" time="1.42">
+<properties>
+<property name="observed" value="semester selector disabled while a run is busy (switch prevented)">
+</property>
+</properties>
+</testcase>
+<testcase name="UI audit › U08 phone width has no horizontal page scroll" classname="ui-audit.spec.ts" time="0.513">
+</testcase>
+</testsuite>
+</testsuites>

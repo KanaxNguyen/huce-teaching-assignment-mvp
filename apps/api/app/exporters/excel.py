@@ -134,10 +134,10 @@ def export_latest(
     ass_by_class = {a.class_id: a for a in assignments}
     for section in sections:
         assignment = ass_by_class.get(section.id)
+        # The run snapshot is the export authority; the lecturer imported from the
+        # source file is not part of the current plan and may collide with it.
         if assignment and assignment.lecturer:
             lec_name = assignment.lecturer.canonical_name
-        elif section.assigned_lecturer:
-            lec_name = section.assigned_lecturer.canonical_name
         else:
             lec_name = "Chưa phân công"
         is_locked = "Có" if ((assignment and assignment.locked) or section.locked_assignment) else "Không"
@@ -310,6 +310,17 @@ def _export_template(
             ws = book.create_sheet(title=xls_sheet.name)
             for r in range(xls_sheet.nrows):
                 ws.append(xls_sheet.row_values(r))
+                for c in range(xls_sheet.ncols):
+                    original = xls_sheet.cell(r, c)
+                    cell = ws.cell(r + 1, c + 1)
+                    if original.ctype == xlrd.XL_CELL_DATE:
+                        cell.value = xlrd.xldate.xldate_as_datetime(original.value, xls_book.datemode)
+                        cell.number_format = "dd/mm/yyyy"
+                    if getattr(xls_book, "formatting_info", False):
+                        xf = xls_book.xf_list[original.xf_index]
+                        fmt = xls_book.format_map.get(xf.format_key)
+                        if fmt and fmt.format_str:
+                            cell.number_format = fmt.format_str
             for rlo, rhi, clo, chi in getattr(xls_sheet, "merged_cells", []):
                 ws.merge_cells(start_row=rlo + 1, end_row=rhi, start_column=clo + 1, end_column=chi)
     elif source.suffix.lower() == ".xlsx":

@@ -32,6 +32,20 @@ it('reference sources have no implicit schedule activation action', async () => 
   expect(screen.queryByRole('button', {name: 'Đối chiếu / Compare'})).not.toBeInTheDocument();
   expect(screen.getByText('Chỉ tham chiếu')).toBeInTheDocument();
 });
+it('lists affected locks and activates fixed imports only after explicit selection and review', async () => {
+  vi.mocked(api.previewSource).mockResolvedValue({source_id:9,source_type:'CURRENT_SCHEDULE',filename:'candidate.xlsx',preview_token:'receipt',can_activate:true,diff:{counts:{ADDED:1}},diagnostics:[],consequences:[],lock_impact:[{class_id:1,class_code:'QA1',course_code:'QA101',lecturer_id:7,effect:'ARCHIVED_NOT_TRANSFERRED'}]} as never);
+  render(<SourceAuthorityPanel semesterId={1} refreshKey={null} />);
+  fireEvent.click(await screen.findByRole('button',{name:'Đối chiếu / Compare'}));
+  expect(await screen.findByRole('status')).toHaveTextContent('QA1 · QA101 · giảng viên #7');
+  const select=screen.getByRole('combobox',{name:/^Phân công có sẵn trong nguồn/});
+  expect(select).toHaveValue('unlocked');
+  fireEvent.change(select,{target:{value:'locked'}});
+  const activate=screen.getByRole('button',{name:'Xác nhận kích hoạt / Activate'});
+  expect(activate).toBeDisabled();
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(activate);
+  await waitFor(()=>expect(api.activateSource).toHaveBeenCalledWith(expect.objectContaining({preview_token:'receipt'}),1,true));
+});
 it('keeps source selection available if the separate lecturer request fails', async () => {
   vi.mocked(api.lecturers).mockRejectedValue(new TypeError('Failed to fetch'));
   render(<SourceAuthorityPanel semesterId={1} refreshKey={null} />);

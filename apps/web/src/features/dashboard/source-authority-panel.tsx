@@ -12,6 +12,7 @@ function describeMeeting(meeting: Record<string, unknown> | null) {
   return `${meeting.course} · ${meeting.class_code} · Thứ ${meeting.day} · Tiết ${periods} · Phòng ${meeting.room || 'chưa rõ'} · Tuần ${weeks} · ${dates}`;
 }
 
+const diffLabels: Record<string, string> = {UNCHANGED: 'Giữ nguyên', ADDED: 'Thêm mới', REMOVED: 'Bị xóa', CHANGED: 'Thay đổi'};
 const roles = {CURRENT_SCHEDULE: 'Lịch học', PREFERENCE: 'Nguyện vọng', HISTORICAL: 'Lịch sử', OUTPUT_TEMPLATE: 'Mẫu đầu ra', REFERENCE_MATRIX: 'Ma trận tham chiếu'};
 
 export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onStateChanged}: {semesterId: number; refreshKey: string | null; onChanged?: () => void; onStateChanged?: (state: SourceState | null) => void}) {
@@ -23,6 +24,7 @@ export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onState
   const [error, setError] = useState<string | null>(null);
   const [uploadRole, setUploadRole] = useState<SourceRole | ''>('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [showAllChanges, setShowAllChanges] = useState(false);
   const load = useCallback(async () => {
     try {
       const sources = await api.sources(semesterId);
@@ -42,13 +44,15 @@ export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onState
     }
   }, [semesterId, onStateChanged]);
   useEffect(() => { if (!refreshKey) void load(); }, [load, refreshKey]);
+  const [lockImported, setLockImported] = useState(false);
   async function activate() {
     if (!preview || !confirmed) return;
     setBusy(true); setError(null);
-    try { await api.activateSource(preview, semesterId); setPreview(null); setConfirmed(false); await load(); onChanged?.(); }
+    try { await (lockImported ? api.activateSource(preview, semesterId, true) : api.activateSource(preview, semesterId)); setPreview(null); setConfirmed(false); await load(); onChanged?.(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Chưa kích hoạt được.'); }
     finally { setBusy(false); }
   }
+  const changedMeetings = preview?.diff.meetings?.filter(m => m.status !== 'UNCHANGED') ?? [];
   return <section className={styles.flatPanel} aria-label="Nguồn đang hoạt động">
     <h3>Nguồn đang hoạt động</h3>
     <p>Tải file chỉ lưu nguồn ứng viên. Xem đối chiếu và xác nhận để thay đổi nguồn đang sử dụng.</p>
@@ -69,12 +73,12 @@ export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onState
         finally {setBusy(false);}
       }}>Lưu nguồn ứng viên</button>
     </details>
-    <div className={styles.tableWrap}><table><thead><tr><th>Nguồn</th><th>Vai trò</th><th>Hash / Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+    <div className={styles.tableWrap}><table className={styles.sourceTable}><thead><tr><th>Nguồn</th><th>Vai trò</th><th>Hash / Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
       {state?.sources.map(source => <tr key={source.id}>
         <td>{source.original_filename}<br /><small>{new Date(source.created_at).toLocaleString('vi-VN')}</small></td>
         <td>{roles[source.source_type]}</td><td>{source.content_hash?.slice(0,12) ?? 'LEGACY / UNVERIFIED'} · {source.active ? 'ACTIVE' : 'Ứng viên'}</td>
         <td>{!source.active && ['CURRENT_SCHEDULE','PREFERENCE'].includes(source.source_type) ? <button className={styles.secondaryButton} disabled={busy} onClick={async () => {
-          setBusy(true); setError(null); setConfirmed(false);
+          setBusy(true); setError(null); setConfirmed(false); setLockImported(false); setShowAllChanges(false);
           try {setPreview(await api.previewSource(source.id, source.source_type, semesterId));}
           catch(e) {setError(e instanceof Error ? e.message : 'Không thể đối chiếu.');}
           finally {setBusy(false);}
@@ -83,9 +87,15 @@ export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onState
     </tbody></table></div>
     {preview ? <div className={styles.flatPanel} aria-label="Đối chiếu nguồn">
       <h4>Đối chiếu: {preview.filename}</h4>
-      {preview.diff.counts ? <p>{Object.entries(preview.diff.counts).map(([key,value]) => `${key}: ${value}`).join(' · ')}</p> : <p>{preview.diff.drafts} nguyện vọng · {preview.diff.seminars} seminar. Quy tắc nguồn cũ cần rà soát.</p>}
-      {preview.diff.meetings?.filter(m => m.status !== 'UNCHANGED').map((m,index) => <details key={index}><summary>{m.status} · {String(m.after?.class_code ?? m.before?.class_code)} · {m.changed_fields.join(', ')}</summary><p>Trước: {describeMeeting(m.before)}</p><p>Sau: {describeMeeting(m.after)}</p></details>)}
+      {preview.diff.counts ? <div className={styles.diffChips}>{Object.entries(preview.diff.counts).map(([key,value]) => <span key={key}>{diffLabels[key] ?? key}<b>{value}</b></span>)}</div> : <p>{preview.diff.drafts} nguyện vọng · {preview.diff.seminars} seminar. Quy tắc nguồn cũ cần rà soát.</p>}
+      {changedMeetings.length ? <details><summary>Xem chi tiết {changedMeetings.length} buổi học thay đổi</summary>
+        {(showAllChanges ? changedMeetings : changedMeetings.slice(0, 20)).map((m,index) => <details key={index}><summary>{diffLabels[m.status] ?? m.status} · {String(m.after?.class_code ?? m.before?.class_code)}{m.changed_fields.length ? ` · ${m.changed_fields.join(', ')}` : ''}</summary><p>Trước: {describeMeeting(m.before)}</p><p>Sau: {describeMeeting(m.after)}</p></details>)}
+        {!showAllChanges && changedMeetings.length > 20 ? <button type="button" className={styles.secondaryButton} onClick={() => setShowAllChanges(true)}>Hiện thêm {changedMeetings.length - 20} buổi</button> : null}
+      </details> : null}
       {preview.diagnostics.map((d,index) => <p key={index}>{d.code}: {d.message}</p>)}
+      {preview.lock_impact?.length ? <div role="status"><strong>{preview.lock_impact.length} phân công đã khóa sẽ được lưu vào lịch sử và không chuyển sang nguồn mới:</strong><ul>{preview.lock_impact.map(lock => <li key={lock.class_id}>{lock.class_code} · {lock.course_code} · giảng viên #{lock.lecturer_id}</li>)}</ul></div> : null}
+      {preview.source_type === 'CURRENT_SCHEDULE' && typeof preview.imported_assignments === 'number' ? <div className={`${styles.callout} ${styles.calloutWarn}`} role="status"><div><strong>{preview.imported_assignments > 0 ? `File này đã ghi sẵn giảng viên cho ${preview.imported_assignments} lớp.` : 'File này chưa ghi giảng viên cho lớp nào.'}</strong>{preview.imported_assignments > 0 ? <span>Mặc định các phân công này được giữ làm gợi ý và <b>chưa khóa</b>, nên solver có thể đổi. Muốn coi chúng là cố định, chọn &ldquo;Khóa phân công có sẵn&rdquo; bên dưới, hoặc khóa sau khi kích hoạt.</span> : null}</div></div> : null}
+      {preview.source_type === 'CURRENT_SCHEDULE' ? <label className={styles.field}><span>Phân công có sẵn trong nguồn</span><select value={lockImported ? 'locked' : 'unlocked'} onChange={e => setLockImported(e.target.value === 'locked')}><option value="unlocked">Giữ phân công, cho phép solver tối ưu lại</option><option value="locked">Khóa phân công có sẵn sau khi kiểm tra</option></select><small>Nguồn có xung đột sẽ bị chặn; lớp chưa có giảng viên không được khóa.</small></label> : null}
       <ul>{preview.consequences.map(c => <li key={c}>{c}</li>)}</ul>
       <label className={styles.switchLabel}><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />Tôi đã rà soát thay đổi và xác nhận sử dụng nguồn này.</label>
       <button className={styles.primaryButton} disabled={busy || !confirmed || !preview.can_activate} onClick={() => void activate()}>Xác nhận kích hoạt / Activate</button>

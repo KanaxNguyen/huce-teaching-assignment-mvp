@@ -1,0 +1,7 @@
+runs [(4, 'optimal'), (3, 'feasible'), (2, 'optimal'), (1, 'optimal')]
+classes 176 assigned (course,class) 115 export rows 316 distinct export classes 176
+lecturer mismatches 0 []
+lock flag mismatches 0 []
+labels on unassigned rows {'Phạm Đức Thoan': 3, 'Bùi Khánh Trình': 4, 'Chưa phân công': 109, 'Nguyễn Bằng Giang': 1}
+EXPORT-LEVEL double bookings (same lecturer, same date, overlapping periods): 7
+[('Bùi Khánh Trình', '70KD3', '70KD4'), ('Bùi Khánh Trình', '70KD3', '71CEQT'), ('Bùi Khánh Trình', '70KD3', '71KD3'), ('Bùi Khánh Trình', '70KD4', '71CEQT'), ('Bùi Khánh Trình', '70KD4', '71KD3'), ('Nguyễn Bằng Giang', '71CEQT', '71CSQT'), ('Phạm Đức Thoan', '69CLC1', '69CLC2')]

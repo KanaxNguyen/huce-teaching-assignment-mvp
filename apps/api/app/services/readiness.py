@@ -3,6 +3,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 from app.models.entities import Assignment, ClassSection, Course, LecturerCourseCapability, OptimizationRun
 from app.optimization.solver import _overlap
+from app.optimization.occurrences import confirmed_merge, meeting_occurrences
 
 def capability_readiness(db: Session, semester_id: int) -> dict:
     from app.services.capability_resolution import CapabilityResolutionService, _plain_text
@@ -146,13 +147,10 @@ def validate_schedule(db: Session, semester_id: int, run_id: int) -> dict:
     # 2. Lecturer overlap & week-mask overlap
     for i, left in enumerate(assignments):
         for right in assignments[i + 1:]:
-            if (
-                left.class_section.merged_group_id
-                and left.class_section.merged_group_id == right.class_section.merged_group_id
-            ):
+            if confirmed_merge(left.class_section, right.class_section):
                 continue
             if left.lecturer_id == right.lecturer_id and any(
-                _overlap(a, b) for a in left.class_section.sessions for b in right.class_section.sessions
+                _overlap(a, b, semester) for a in left.class_section.sessions for b in right.class_section.sessions
             ):
                 errors.append({
                     "code": "TIMETABLE_CONFLICT",
@@ -241,16 +239,17 @@ def validate_schedule(db: Session, semester_id: int, run_id: int) -> dict:
             day_counts = defaultdict(int)
             for a in assigned_by_lecturer.get(lec_id, []):
                 for s in a.class_section.sessions:
-                    day_counts[s.weekday] += 1
+                    if not any(confirmed_merge(a.class_section, old.class_section) for old in assigned_by_lecturer.get(lec_id, []) if old.class_id < a.class_id):
+                        for _, actual in meeting_occurrences(s, semester): day_counts[actual] += 1
             for day, cnt in day_counts.items():
                 if cnt > max_s:
                     errors.append({
                         "code": "MAX_SESSIONS_PER_DAY_EXCEEDED",
                         "lecturer_id": lec_id,
-                        "weekday": day,
+                        "date": day.isoformat() if day else None,
                         "actual": cnt,
                         "limit": max_s,
-                        "message": f"GV {lec_id} dạy {cnt} ca vào thứ {day}, vượt giới hạn {max_s}",
+                        "message": f"GV {lec_id} dạy {cnt} ca vào ngày {day}, vượt giới hạn {max_s}",
                     })
 
         elif kind == "MAX_DAYS_PER_WEEK" and c.hardness == "hard" and lec_id:
@@ -276,6 +275,21 @@ def validate_schedule(db: Session, semester_id: int, run_id: int) -> dict:
                         "lecturer_id": lec_id,
                         "message": f"Lớp {tgt_class_id} bắt buộc phân công cho GV {lec_id}",
                     })
+
+    # Validate hard shared seminars against this snapshot, including manual versions.
+    from app.models.entities import Seminar
+    from app.optimization.solver import _event_slots
+    selected_slots = {s["id"]: s.get("slot") for s in (run.summary or {}).get("seminars", [])}
+    for seminar in db.scalars(select(Seminar).where(Seminar.semester_id == semester_id)):
+        if seminar.hardness != "hard":
+            continue
+        slots = [selected_slots[seminar.id]] if selected_slots.get(seminar.id) else _event_slots(seminar)
+        member_assignments = [a for a in assignments if a.lecturer_id in (seminar.members or [])]
+        if not slots or not any(not any(_slot_match(m, slot, semester)
+                                       for a in member_assignments for m in a.class_section.sessions)
+                                for slot in slots):
+            errors.append({"code": "HARD_SEMINAR_CONFLICT", "seminar_id": seminar.id,
+                           "message": f"Seminar bắt buộc {seminar.name} không có khung giờ khả thi."})
 
     # 5. Assignment coverage
     assigned_class_ids = {a.class_id for a in assignments}

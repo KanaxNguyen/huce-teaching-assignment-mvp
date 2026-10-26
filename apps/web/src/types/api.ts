@@ -13,6 +13,8 @@ export type UnassignedBreakdown = {
 };
 
 export type DashboardMetrics = {
+  assigned_classes?: number;
+  review_classes?: number;
   classes: number;
   locked_classes: number;
   unassigned_classes: number;
@@ -106,7 +108,7 @@ export type UnassignedDiagnosticItem = {
   root_cause_severity: "critical" | "warning" | "info";
   eligible_candidates_count: number;
   total_candidates_count: number;
-  resolution_status: "NEW" | "UNDER_REVIEW" | "WAITING_FOR_DATA" | "MANUALLY_RESOLVED" | "RESOLVED_BY_SOLVER" | "ACCEPTED_UNRESOLVED";
+  resolution_status: "NEW" | "UNDER_REVIEW" | "WAITING_FOR_DATA" | "MANUALLY_RESOLVED" | "RESOLVED_BY_SOLVER" | "ACCEPTED_UNRESOLVED" | "ESCALATED";
   resolution_notes?: string | null;
   recommended_actions: Array<{
     type:
@@ -390,6 +392,8 @@ export type SourcePreview = {
   source_id: number; source_type: SourceRole; filename: string; preview_token: string; can_activate: boolean;
   diff: { counts?: Record<string, number>; meetings?: Array<{status: string; before: Record<string, unknown> | null; after: Record<string, unknown> | null; changed_fields: string[]}>; drafts?: number; seminars?: number };
   diagnostics: Array<{code: string; message: string}>; consequences: string[];
+  imported_assignments?: number | null;
+  lock_impact?: Array<{class_id: number; class_code: string; course_code: string; lecturer_id: number; effect: string}>;
 };
 
 export type CapabilityReadiness = {
@@ -417,3 +421,68 @@ export type CapabilityReadiness = {
   recommendations: string[];
 };
 
+
+export type PrecheckItem = {
+  code: string;
+  severity: "blocking" | "warning" | "info";
+  title: string;
+  detail: string;
+  class_ids: number[];
+  class_codes: string[];
+  suggestion: string | null;
+};
+
+export type PrecheckShortage = {
+  weekday: number;
+  start_period: number;
+  end_period: number;
+  weeks: number[];
+  deficit: number;
+  simultaneous: number;
+  class_ids: number[];
+  class_codes: string[];
+  lecturers: string[];
+};
+
+export type Precheck = {
+  status: "blocking" | "warning" | "ok";
+  can_run: boolean;
+  estimated_min_unassigned: number;
+  items: PrecheckItem[];
+  shortages: PrecheckShortage[];
+  heatmap: Array<{ weekday: number; block: number; demand: number; capable: number; deficit: number }>;
+  stats: { classes?: number; lecturers?: number; zero_candidate_classes?: number; single_candidate_classes?: number; unconfirmed_merge_groups?: number };
+};
+
+export type AuthorityLevel = { level: number; approver: string; label: string; description: string };
+
+export type ScenarioOption = {
+  lecturer_id: number;
+  lecturer_name: string;
+  lecturer_code: string | null;
+  department: string | null;
+  load: { classes: number; credits: number };
+  bends: string[];
+  moves: Array<{ class_id: number; class_code: string; from_lecturer: string; to_lecturer: string; to_lecturer_id: number }>;
+  note: string | null;
+  merge_with_class_id?: number;
+  merge_with_class_code?: string;
+};
+
+export type ResolutionScenario = {
+  key: "direct" | "swap" | "merge" | "consent" | "capability" | "borrow" | "escalate";
+  level: number;
+  authority: Omit<AuthorityLevel, "level">;
+  title: string;
+  summary: string;
+  options: ScenarioOption[];
+  available: boolean;
+};
+
+export type ResolutionScenarios = {
+  class: { id: number; class_code: string; course_code: string; course_name: string; credits: number; current_lecturer_id: number | null; sessions: Array<Pick<Session, "weekday" | "start_period" | "end_period" | "room" | "active_weeks">> };
+  scenarios: ResolutionScenario[];
+  recommended: ResolutionScenario["key"];
+  why_blocked: Array<{ reason: string; lecturers: string[] }>;
+  authority_ladder: AuthorityLevel[];
+};

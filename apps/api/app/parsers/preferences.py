@@ -509,6 +509,47 @@ def _invalid_structured_draft(sheet, row: int, values: list[object], reason: str
     )
 
 
+def _parse_seminar_shared(book, result: PreferenceParseResult) -> None:
+    """Read the explicit shared-seminar sheet; any template (V2 or V3 grid) may carry it."""
+    if "Seminar_Shared" in book.sheetnames:
+        seminar_sheet = book["Seminar_Shared"]
+        for row in range(2, seminar_sheet.max_row + 1):
+            values = [seminar_sheet.cell(row, column).value for column in range(1, 10)]
+            if not any(value not in (None, "") for value in values):
+                continue
+            result.raw_clauses += 1
+            try:
+                code, name = clean_text(values[0]), clean_text(values[1])
+                participants = [item.strip() for item in clean_text(values[2]).split(";") if item.strip()]
+                days = [item.strip().upper() for item in clean_text(values[3]).split(";") if item.strip()]
+                blocks = []
+                for block in clean_text(values[4]).split(";"):
+                    periods = _periods_from_text(f"tiết {block.strip()}")
+                    if not periods:
+                        raise ValueError(f"Khung tiết không hợp lệ: {block}")
+                    blocks.append(periods)
+                hardness = clean_text(values[5]).upper()
+                weight = _as_number(values[6], default=0.8)
+                status = (clean_text(values[8]) or "DRAFT").upper()
+                if not code or not name or not participants:
+                    raise ValueError("Thiếu mã, tên hoặc người tham gia seminar.")
+                if not days or any(day not in DAY_SCOPES for day in days):
+                    raise ValueError("Thứ cho phép của seminar không hợp lệ.")
+                if hardness not in {"SOFT", "HARD"} or status not in {"DRAFT", "CONFIRMED", "NEEDS_REVIEW", "REJECTED"} or weight is None or not 0 <= weight <= 1:
+                    raise ValueError("Hardness, weight hoặc status seminar không hợp lệ.")
+                result.seminars.append(ParsedSharedSeminar(
+                    code, name, participants, days, blocks, hardness.lower(), weight, clean_text(values[7]),
+                    seminar_sheet.title, row, f"A{row}:I{row}", status,
+                    needs_review=status == "NEEDS_REVIEW",
+                ))
+            except (TypeError, ValueError) as error:
+                result.invalid_rows += 1
+                result.seminars.append(ParsedSharedSeminar(
+                    clean_text(values[0]), clean_text(values[1]) or "Seminar cần rà soát", [], [], [], "soft", 0.8,
+                    clean_text(values[7]), seminar_sheet.title, row, f"A{row}:I{row}", "NEEDS_REVIEW", True, str(error),
+                ))
+
+
 def _parse_structured(book) -> PreferenceParseResult:
     result = PreferenceParseResult(format="STRUCTURED_V2")
     sheet,header_row,headers = _structured_layout(book)
@@ -590,43 +631,7 @@ def _parse_structured(book) -> PreferenceParseResult:
         except (TypeError, ValueError) as error:
             result.invalid_rows += 1
             result.drafts.append(_invalid_structured_draft(sheet, row, values, str(error)))
-    if "Seminar_Shared" in book.sheetnames:
-        seminar_sheet = book["Seminar_Shared"]
-        for row in range(2, seminar_sheet.max_row + 1):
-            values = [seminar_sheet.cell(row, column).value for column in range(1, 10)]
-            if not any(value not in (None, "") for value in values):
-                continue
-            result.raw_clauses += 1
-            try:
-                code, name = clean_text(values[0]), clean_text(values[1])
-                participants = [item.strip() for item in clean_text(values[2]).split(";") if item.strip()]
-                days = [item.strip().upper() for item in clean_text(values[3]).split(";") if item.strip()]
-                blocks = []
-                for block in clean_text(values[4]).split(";"):
-                    periods = _periods_from_text(f"tiết {block.strip()}")
-                    if not periods:
-                        raise ValueError(f"Khung tiết không hợp lệ: {block}")
-                    blocks.append(periods)
-                hardness = clean_text(values[5]).upper()
-                weight = _as_number(values[6], default=0.8)
-                status = (clean_text(values[8]) or "DRAFT").upper()
-                if not code or not name or not participants:
-                    raise ValueError("Thiếu mã, tên hoặc người tham gia seminar.")
-                if not days or any(day not in DAY_SCOPES for day in days):
-                    raise ValueError("Thứ cho phép của seminar không hợp lệ.")
-                if hardness not in {"SOFT", "HARD"} or status not in {"DRAFT", "CONFIRMED", "NEEDS_REVIEW", "REJECTED"} or weight is None or not 0 <= weight <= 1:
-                    raise ValueError("Hardness, weight hoặc status seminar không hợp lệ.")
-                result.seminars.append(ParsedSharedSeminar(
-                    code, name, participants, days, blocks, hardness.lower(), weight, clean_text(values[7]),
-                    seminar_sheet.title, row, f"A{row}:I{row}", status,
-                    needs_review=status == "NEEDS_REVIEW",
-                ))
-            except (TypeError, ValueError) as error:
-                result.invalid_rows += 1
-                result.seminars.append(ParsedSharedSeminar(
-                    clean_text(values[0]), clean_text(values[1]) or "Seminar cần rà soát", [], [], [], "soft", 0.8,
-                    clean_text(values[7]), seminar_sheet.title, row, f"A{row}:I{row}", "NEEDS_REVIEW", True, str(error),
-                ))
+    _parse_seminar_shared(book, result)
     return result
 
 
@@ -820,7 +825,13 @@ def parse_preference_workbook(path: Path, *, semester_start=None, semester_end=N
     if fmt == "GRID_V3":
         from app.parsers.grid_preferences import parse_grid_preferences
         drafts = parse_grid_preferences(path, semester_start=semester_start, semester_end=semester_end)
-        return PreferenceParseResult(format="GRID_V3", drafts=drafts, seminars=[], invalid_rows=0)
+        result = PreferenceParseResult(format="GRID_V3", drafts=drafts, seminars=[], invalid_rows=0)
+        book = openpyxl.load_workbook(path, read_only=False, data_only=True)
+        try:
+            _parse_seminar_shared(book, result)
+        finally:
+            book.close()
+        return result
     book = openpyxl.load_workbook(path, read_only=False, data_only=True)
     try:
         result = _parse_structured(book) if fmt == "STRUCTURED_V2" else _parse_legacy(book, semester_start=semester_start, semester_end=semester_end)

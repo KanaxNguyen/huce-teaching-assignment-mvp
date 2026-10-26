@@ -1,10 +1,13 @@
-import type { SourceState, SourcePreview, SourceRole, AssignmentCheck, AssignmentItem, Candidate, CandidateAnalysisItem, CapabilityReadiness, ClassItem, Constraint, DashboardMetrics, Lecturer, LecturerImportPreview, LecturerImportResult, LecturerReviewResponse, MergeCandidate, OptimizationResult, PreferenceDraft, Problem, Readiness, RunDiff, Seminar, Semester, TemplateDetection, UnassignedDiagnosticItem, ValidationIssue, Workload } from "@/src/types/api";
+import type { SourceState, SourcePreview, SourceRole, AssignmentCheck, AssignmentItem, Candidate, CandidateAnalysisItem, CapabilityReadiness, ClassItem, Constraint, DashboardMetrics, Lecturer, LecturerImportPreview, LecturerImportResult, LecturerReviewResponse, MergeCandidate, OptimizationResult, PreferenceDraft, Precheck, Problem, Readiness, ResolutionScenarios, RunDiff, Seminar, Semester, TemplateDetection, UnassignedDiagnosticItem, ValidationIssue, Workload } from "@/src/types/api";
 
 // Keep browser requests on the same origin in every environment. The BFF owns
 // the backend host and credentials, including during local development.
 export const API_URL = "/api/backend";
 
 function requestError(reason: unknown): Error {
+  if (reason instanceof DOMException && ['TimeoutError', 'AbortError'].includes(reason.name)) {
+    return new Error("Yêu cầu đã hết thời gian chờ. Hãy tải lại dữ liệu để kiểm tra trạng thái trước khi thử lại.");
+  }
   if (reason instanceof TypeError) {
     return new Error("Không kết nối được máy chủ HUCE. Kiểm tra backend và thử tải lại dữ liệu.");
   }
@@ -16,6 +19,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${API_URL}/api/v1${path}`, {
       ...init,
+      signal: init?.signal ?? AbortSignal.timeout(path.startsWith("/optimization/run") ? 150000 : 30000),
       headers: init?.body instanceof FormData ? init.headers : { "Content-Type": "application/json", ...init?.headers },
     });
   } catch (reason) {
@@ -29,20 +33,48 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+// Downloads through fetch so a refused export shows its reason instead of a raw JSON page.
+async function download(url: string, fallbackName: string, body?: Record<string, unknown>): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(url, body
+      ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }
+      : { signal: AbortSignal.timeout(60000) });
+  } catch (reason) {
+    throw requestError(reason);
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({ detail: "Máy chủ HUCE từ chối xuất file. Hãy kiểm tra điều kiện xuất rồi thử lại." }));
+    const detail = payload.detail;
+    throw new Error(typeof detail === "string" ? detail : detail?.message ?? "Không xuất được file.");
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const name = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1];
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = name ? decodeURIComponent(name) : fallbackName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
 export const api = {
+  download,
   uploadSource: (file: File, role: SourceRole, semesterId: number) => {
     const body = new FormData(); body.append('file', file);
     return request(`/sources/upload?semester_id=${semesterId}&source_type=${role}`, {method: 'POST', body});
   },
   sources: (semesterId: number) => request<SourceState>(`/sources?semester_id=${semesterId}`),
   previewSource: (id: number, role: SourceRole, semesterId: number) => request<SourcePreview>(`/sources/${id}/preview?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify({source_type: role})}),
-  activateSource: (preview: SourcePreview, semesterId: number) => request(`/sources/${preview.source_id}/activate?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify({source_type: preview.source_type, confirmed: true, preview_token: preview.preview_token})}),
+  activateSource: (preview: SourcePreview, semesterId: number, lockImported = false) => request(`/sources/${preview.source_id}/activate?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify({source_type: preview.source_type, confirmed: true, preview_token: preview.preview_token, lock_imported: lockImported})}),
   resolveSourceIssue: (id: number, payload: Record<string, unknown>, semesterId: number) => request(`/sources/reviews/${id}/resolve?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify(payload)}),
-  dashboard: () => request<DashboardMetrics>("/dashboard"),
-  classes: () => request<ClassItem[]>("/classes"),
-  constraints: () => request<Constraint[]>("/constraints"),
-  lecturers: () => request<Lecturer[]>("/lecturers"),
-  conflicts: () => request<ValidationIssue[]>("/conflicts"),
+  dashboard: (semesterId?: number) => request<DashboardMetrics>(`/dashboard${semesterId ? `?semester_id=${semesterId}` : ""}`),
+  classes: (semesterId?: number) => request<ClassItem[]>(`/classes${semesterId ? `?semester_id=${semesterId}` : ""}`),
+  constraints: (semesterId?: number) => request<Constraint[]>(`/constraints${semesterId ? `?semester_id=${semesterId}` : ""}`),
+  lecturers: (semesterId?: number) => request<Lecturer[]>(`/lecturers${semesterId ? `?semester_id=${semesterId}` : ""}`),
+  conflicts: (semesterId?: number) => request<ValidationIssue[]>(`/conflicts${semesterId ? `?semester_id=${semesterId}` : ""}`),
   readiness: (semesterId: number) => request<Readiness>(`/readiness?semester_id=${semesterId}`),
   workload: (semesterId: number) => request<Workload[]>(`/workload?semester_id=${semesterId}`),
   mergeCandidates: (semesterId: number) => request<MergeCandidate[]>(`/merge-candidates?semester_id=${semesterId}`),
@@ -68,6 +100,8 @@ export const api = {
     }),
   problems: (semesterId: number) => request<Problem[]>(`/problems?semester_id=${semesterId}`),
   assignments: () => request<AssignmentItem[]>("/assignments"),
+  activateSemester: (id: number) => request(`/semesters/${id}/activate`, {method: 'POST'}),
+  updateSemester: (id: number, payload: Pick<Semester, 'name' | 'head_name' | 'start_date' | 'end_date'>) => request(`/semesters/${id}`, {method: 'PATCH', body: JSON.stringify(payload)}),
   semesters: () => request<Semester[]>("/semesters"),
   latestTemplate: (semesterId?: number) =>
     request<TemplateDetection | null>(`/templates/latest${semesterId ? `?semester_id=${semesterId}` : ""}`),
@@ -109,14 +143,18 @@ export const api = {
     request<{ confirmed: number }>(`/preference-drafts/confirm-high?semester_id=${semesterId}`, { method: "POST" }),
   applyPreferenceDrafts: (ids: number[], semesterId: number) =>
     request<{ applied: number; constraints: number; seminars: number }>(`/preference-drafts/apply?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify({ draft_ids: ids }) }),
-  createConstraint: (payload: Record<string, unknown>) =>
-    request<{ id: number }>("/constraints", { method: "POST", body: JSON.stringify(payload) }),
-  updateConstraint: (id: number, payload: Partial<Constraint>) =>
-    request<{ id: number }>(`/constraints/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-  deleteConstraint: (id: number) =>
-    request<{ id: number }>(`/constraints/${id}`, { method: "DELETE" }),
-  optimize: (confirmMerged: boolean) =>
-    request<OptimizationResult>("/optimization/run", {
+  createConstraint: (payload: Record<string, unknown>, semesterId?: number) =>
+    request<{ id: number }>(`/constraints${semesterId ? `?semester_id=${semesterId}` : ""}`, { method: "POST", body: JSON.stringify(payload) }),
+  updateConstraint: (id: number, payload: Partial<Constraint>, semesterId?: number) =>
+    request<{ id: number }>(`/constraints/${id}${semesterId ? `?semester_id=${semesterId}` : ""}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteConstraint: (id: number, semesterId?: number) =>
+    request<{ id: number }>(`/constraints/${id}${semesterId ? `?semester_id=${semesterId}` : ""}`, { method: "DELETE" }),
+  precheck: (semesterId: number) => request<Precheck>(`/optimization/precheck?semester_id=${semesterId}`),
+  scenarios: (classId: number, semesterId: number) => request<ResolutionScenarios>(`/classes/${classId}/scenarios?semester_id=${semesterId}`),
+  applyScenario: (classId: number, semesterId: number, payload: { scenario: string; lecturer_id?: number; reason?: string; approver?: string; lock?: boolean }) =>
+    request<{ applied: boolean }>(`/classes/${classId}/scenarios/apply?semester_id=${semesterId}`, { method: "POST", body: JSON.stringify(payload) }),
+  optimize: (confirmMerged: boolean, semesterId?: number) =>
+    request<OptimizationResult>(`/optimization/run${semesterId ? `?semester_id=${semesterId}` : ""}`, {
       method: "POST",
       body: JSON.stringify({ time_limit_seconds: 30, confirm_merged_suggestions: confirmMerged }),
     }),
@@ -204,9 +242,12 @@ export const api = {
       body: JSON.stringify({ lecturer_id: lecturerId, lock, allow_override_lock: allowOverrideLock, override_reason: overrideReason }),
     }),
   lock: (classId: number, semesterId: number) => request<{ locked: boolean }>(`/classes/${classId}/lock?semester_id=${semesterId}`, { method: "POST" }),
+  lockAssigned: (semesterId: number) => request<{ locked: number; skipped: Array<{ class_id: number; class_code: string; blocking_reasons: string[] }> }>(`/classes/lock-assigned?semester_id=${semesterId}`, { method: "POST" }),
+  deleteSeminar: (id: number, semesterId: number) => request<{ id: number; deleted: boolean }>(`/seminars/${id}?semester_id=${semesterId}`, { method: "DELETE" }),
   unlock: (classId: number, semesterId: number) => request<{ locked: boolean }>(`/classes/${classId}/unlock?semester_id=${semesterId}`, { method: "POST" }),
   exportUrl: (mode: "draft" | "final" = "draft", semesterId?: number, exportType: "detailed" | "matrix" = "detailed", allowOverride: boolean = false, overrideReason: string = "") =>
     `${API_URL}/api/v1/exports/latest?mode=${mode}&export_type=${exportType}${semesterId ? `&semester_id=${semesterId}` : ""}${allowOverride ? `&allow_unassigned_override=true&override_reason=${encodeURIComponent(overrideReason)}` : ""}`,
+  exportPostUrl: (semesterId?: number) => `${API_URL}/api/v1/exports/latest${semesterId ? `?semester_id=${semesterId}` : ""}`,
   matrixExportUrl: (mode: "draft" | "final" = "draft", semesterId?: number, allowOverride: boolean = false, overrideReason: string = "") =>
     `${API_URL}/api/v1/exports/matrix?mode=${mode}${semesterId ? `&semester_id=${semesterId}` : ""}${allowOverride ? `&allow_unassigned_override=true&override_reason=${encodeURIComponent(overrideReason)}` : ""}`,
 };

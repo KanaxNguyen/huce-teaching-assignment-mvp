@@ -560,7 +560,9 @@ def _summary(parsed: ScheduleParseResult) -> dict:
         ),
         "partial_merge_candidates": len(parsed.partial_merge_candidates),
         "locked_classes": sum(1 for item in parsed.classes if item.locked_assignment),
-        "unassigned_classes": sum(1 for item in parsed.classes if not item.locked_assignment),
+        "assigned_classes": sum(bool(item.lecturer_name) for item in parsed.classes),
+        "unassigned_classes": sum(not item.lecturer_name for item in parsed.classes),
+        "review_classes": sum(issue.code == "MULTI_LECTURER_REVIEW" for issue in parsed.issues),
         "validation_errors": sum(1 for issue in parsed.issues if issue.severity == "error"),
     }
 
@@ -597,6 +599,11 @@ def dashboard(db: Session, semester_id: int, run_id: int | None = None) -> dict:
 
     return {
         "classes": len(classes),
+        "assigned_classes": len(classes) - unassigned_classes,
+        "review_classes": len({issue.details.get("class_id") for issue in issues
+                               if issue.resolution_status in {"OPEN", "DEFERRED_SPECIAL_CASE"}
+                               and issue.code in {"MULTI_LECTURER_REVIEW", "SPLIT_ASSIGNMENT_REQUIRES_SEGMENT_SUPPORT"}
+                               and issue.details.get("class_id") is not None}),
         "locked_classes": sum(item.locked_assignment for item in classes),
         "unassigned_classes": unassigned_classes,
         "unassigned_breakdown": breakdown,
@@ -607,4 +614,3 @@ def dashboard(db: Session, semester_id: int, run_id: int | None = None) -> dict:
         "optimization_status": run.status if run else "not_run",
         "optimization_score": run.score if run else None,
     }
-

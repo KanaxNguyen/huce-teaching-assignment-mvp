@@ -9,3 +9,7 @@ it('uses same-origin API and reports a recoverable network failure', async () =>
   await expect(api.sources(2)).rejects.toThrow('Kiểm tra backend và thử tải lại dữ liệu.');
   expect(fetchMock).toHaveBeenCalledWith('/api/backend/api/v1/sources?semester_id=2', expect.any(Object));
 });
+it('reports timeout as an uncertain state requiring reload before retry', async () => {
+  vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new DOMException('Expired','TimeoutError')));
+  await expect(api.sources(2)).rejects.toThrow('tải lại dữ liệu để kiểm tra trạng thái trước khi thử lại');
+});

@@ -1,0 +1,2029 @@
+{
+ "generated": "2026-10-26",
+ "reader": "openpyxl 3.1.5 / xlrd 2.0.2 (harness/manifest.py), no application parser",
+ "originals_unmodified": "SHA-256 of copies equal to originals; originals opened read-only",
+ "files": [
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Nguyen_vong_GV_TEST_.xlsx",
+   "sha256": "129d471e56dc543a5bf45179ca79248b54530ddb8ce049c674a60b92d79c0feb",
+   "bytes": 63637,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Tong_hop",
+     "rows": 21,
+     "non_empty_rows": 21
+    },
+    {
+     "name": "01_Thoan",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "02_Cường",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "03_X Linh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "04_Mai Hồng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "05_Hằng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "06_Hải",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "07_Hương Giang",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "08_Nam",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "09_Nguyệt",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "10_Ngân",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "11_Liễu",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "12_Trình",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "13_Tuyết",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "14_Thuỷ",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "15_Tuyên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "16_KLinh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "17_Hùng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "18_Khiên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "19_Bằng Giang",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "20_Cô Nguyễn Thị Thuần",
+     "rows": 33,
+     "non_empty_rows": 29
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Nguyện vọng TKB 2026-2027.xlsx",
+   "sha256": "aaf1132846649cc91367b31922e3cbefe00ab43307853359486104b34ed036f2",
+   "bytes": 78194,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Trang tính1",
+     "rows": 1000,
+     "non_empty_rows": 22
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 3,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 1,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Output_KY_VONG_TEST.xlsx",
+   "sha256": "34bd4094d640d05e5f3a7b06a5e0e1f9c74696990a2ad1b305cb3130486c3275",
+   "bytes": 46848,
+   "role": "OUTPUT_TEMPLATE/REFERENCE",
+   "sheets": [
+    {
+     "name": "OUTPUT_GOC",
+     "rows": 328,
+     "non_empty_rows": 327
+    },
+    {
+     "name": "TEACHING_GROUPS",
+     "rows": 156,
+     "non_empty_rows": 156
+    },
+    {
+     "name": "TAI_GIANG_DAY",
+     "rows": 22,
+     "non_empty_rows": 22
+    },
+    {
+     "name": "VALIDATION",
+     "rows": 22,
+     "non_empty_rows": 19
+    },
+    {
+     "name": "README_TEST",
+     "rows": 11,
+     "non_empty_rows": 11
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 6,
+    "meeting_rows": 322,
+    "classes": 155,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Phan_Cong_Giang_Day_HK1_2026_2027.xlsx",
+   "sha256": "fa9386f4a4f0f44ed69517e00e303b90e90f1f579a24507df13e94f485157629",
+   "bytes": 24433,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Phân Công Giảng Dạy",
+     "rows": 290,
+     "non_empty_rows": 289
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 4,
+    "meeting_rows": 286,
+    "classes": 158,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 17
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Phieu_Nguyen_Vong_Giang_Vien_2026_2027_Chi_Tiet.xlsx",
+   "sha256": "10606af627ac30d1d1a7e5895acc1e91168244c3150f996c27d0dd5f34e7df6d",
+   "bytes": 59455,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Tong_hop",
+     "rows": 21,
+     "non_empty_rows": 21
+    },
+    {
+     "name": "01_Thoan",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "02_Cuong",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "03_X_Linh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "04_Mai_Hong",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "05_Hang",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "06_Hai",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "07_Huong_Giang",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "08_Nam",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "09_Nguyet",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "10_Ngan",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "11_Lieu",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "12_Trinh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "13_Tuyet",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "14_Thuy",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "15_Tuyen",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "16_K_Linh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "17_Hung",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "18_Khien",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "19_Bang_Giang",
+     "rows": 33,
+     "non_empty_rows": 28
+    },
+    {
+     "name": "20_Thuan",
+     "rows": 33,
+     "non_empty_rows": 28
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Phieu_Nguyen_Vong_Giang_Vien_2026_2027_Chi_Tiet_backup.xlsx",
+   "sha256": "75692807a9c07a6be8875a1951d2b5cb8bc36ab51e3defe362f94f27b125070b",
+   "bytes": 64024,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Tong_hop",
+     "rows": 21,
+     "non_empty_rows": 21
+    },
+    {
+     "name": "01_Thoan",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "02_Cường",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "03_X Linh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "04_Mai Hồng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "05_Hằng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "06_Hải",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "07_Hương Giang",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "08_Nam",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "09_Nguyệt",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "10_Ngân",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "11_Liễu",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "12_Trình",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "13_Tuyết",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "14_Thuỷ",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "15_Tuyên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "16_KLinh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "17_Hùng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "18_Khiên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "19_Bằng Giang",
+     "rows": 33,
+     "non_empty_rows": 28
+    },
+    {
+     "name": "20_Cô Nguyễn Thị Thuần",
+     "rows": 33,
+     "non_empty_rows": 28
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Phieu_Nguyen_Vong_Giang_Vien_2026_2027_Chuan_Hoa.xlsx",
+   "sha256": "71fac6834dc80ede52e298d26d11a69ce7971135dda3bedc4aee64ccd18a23f5",
+   "bytes": 63005,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Tong_hop",
+     "rows": 21,
+     "non_empty_rows": 21
+    },
+    {
+     "name": "01_Thoan",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "02_Cường",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "03_X Linh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "04_Mai Hồng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "05_Hằng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "06_Hải",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "07_Hương Giang",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "08_Nam",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "09_Nguyệt",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "10_Ngân",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "11_Liễu",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "12_Trình",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "13_Tuyết",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "14_Thuỷ",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "15_Tuyên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "16_KLinh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "17_Hùng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "18_Khiên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "19_Bằng Giang",
+     "rows": 33,
+     "non_empty_rows": 28
+    },
+    {
+     "name": "20_Cô Nguyễn Thị Thuần",
+     "rows": 33,
+     "non_empty_rows": 28
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Phieu_Nguyen_Vong_Giang_Vien_2026_2027_Chuan_Hoa_backup.xlsx",
+   "sha256": "71fac6834dc80ede52e298d26d11a69ce7971135dda3bedc4aee64ccd18a23f5",
+   "bytes": 63005,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Tong_hop",
+     "rows": 21,
+     "non_empty_rows": 21
+    },
+    {
+     "name": "01_Thoan",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "02_Cường",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "03_X Linh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "04_Mai Hồng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "05_Hằng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "06_Hải",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "07_Hương Giang",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "08_Nam",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "09_Nguyệt",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "10_Ngân",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "11_Liễu",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "12_Trình",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "13_Tuyết",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "14_Thuỷ",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "15_Tuyên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "16_KLinh",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "17_Hùng",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "18_Khiên",
+     "rows": 33,
+     "non_empty_rows": 29
+    },
+    {
+     "name": "19_Bằng Giang",
+     "rows": 33,
+     "non_empty_rows": 28
+    },
+    {
+     "name": "20_Cô Nguyễn Thị Thuần",
+     "rows": 33,
+     "non_empty_rows": 28
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/TKB-NCM Toan-Ky1-2026-2027.xlsx",
+   "sha256": "5849e92af27d719259d5de3774cc2e449fc380bc9c9413b759b42db98ab0bb81",
+   "bytes": 14325,
+   "role": "REFERENCE_MATRIX",
+   "sheets": [
+    {
+     "name": "TKB_Bo_Mon",
+     "rows": 23,
+     "non_empty_rows": 23
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/Template_Nguyen_vong_Giang_v2.xlsx",
+   "sha256": "7461a1b420b2ea9add87c8e5286df0444c772279a51e216ce7fbaed7f2c96478",
+   "bytes": 23812,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Huong_dan",
+     "rows": 10,
+     "non_empty_rows": 10
+    },
+    {
+     "name": "Nguyen_vong_GV",
+     "rows": 200,
+     "non_empty_rows": 12
+    },
+    {
+     "name": "Seminar_Shared",
+     "rows": 100,
+     "non_empty_rows": 3
+    },
+    {
+     "name": "Danh_muc",
+     "rows": 21,
+     "non_empty_rows": 19
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/phan-cong-giang-day-lich-hoc-to-bo-mon-03-09-2026 (2).xls",
+   "sha256": "dd196b6695031b737b4a3a92b81e6e43bbcb3ad21475bfbb4642fb2d50fdedac",
+   "bytes": 166400,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Sheet1",
+     "rows": 335,
+     "non_empty_rows": 327
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 319,
+    "classes": 180,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 13,
+    "distinct_lecturer_codes": 20
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/phan-cong-giang-day-lich-hoc-to-bo-mon-18-09-2026-14-46-31_TKB00025_3781df7291f5b76652056d069c3f9d3a (1).xls",
+   "sha256": "b1d77d6c50d4de26847dafc728d4e651c7ac197abdc320b3edb4217a26a0a371",
+   "bytes": 161792,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Sheet1",
+     "rows": 338,
+     "non_empty_rows": 330
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 322,
+    "classes": 155,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT Gốc/phan-cong-giang-day-lich-hoc-to-bo-mon-18-09-2026-14-46-31_TKB00025_3781df7291f5b76652056d069c3f9d3a.xls",
+   "sha256": "b1d77d6c50d4de26847dafc728d4e651c7ac197abdc320b3edb4217a26a0a371",
+   "bytes": 161792,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Sheet1",
+     "rows": 338,
+     "non_empty_rows": 330
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 322,
+    "classes": 155,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT TEST/NGUYEN_VONG_GIANG_VIEN_SYNTHESIZED.xlsx",
+   "sha256": "3cf8c11cc0381772dc3d3cdbe824d6e83faa8bb94322cccf38592ab8c0b3a04c",
+   "bytes": 14556,
+   "role": "PREFERENCE",
+   "sheets": [
+    {
+     "name": "Nguyen_vong_GV",
+     "rows": 45,
+     "non_empty_rows": 44
+    },
+    {
+     "name": "Seminar_Shared",
+     "rows": 7,
+     "non_empty_rows": 6
+    },
+    {
+     "name": "Danh_muc",
+     "rows": 22,
+     "non_empty_rows": 22
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 4,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 40,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/INPUT TEST/TKB_CAN_PHAN_CONG_INPUT.xlsx",
+   "sha256": "d9b5d84774bfee633a5c18c5ad47ff65419f31cb154b8ecf1a67a3b09b6b4903",
+   "bytes": 11884,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Lịch học",
+     "rows": 48,
+     "non_empty_rows": 43
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 36,
+    "classes": 32,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 1,
+    "distinct_lecturer_codes": 6
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC01_basic_assignment/expected_assignments.xlsx",
+   "sha256": "18eef79786562808edad202dc74fa35468a5debfdfe5c462481bcb69f8f0d837",
+   "bytes": 5141,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC01_basic_assignment/preference_input.xlsx",
+   "sha256": "0d5594c050ecc323a4b7c29338f03ce04c86ae670abeaf3873fe321c5cdc66f1",
+   "bytes": 5277,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC01_basic_assignment/timetable_input.xlsx",
+   "sha256": "f21a0afff20addcfb7f0560886563aa94ed093d60c6693c9180ed0634ed6fbb7",
+   "bytes": 5210,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 2,
+    "classes": 2,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC02_hard_unavailable/expected_assignments.xlsx",
+   "sha256": "4b524ac13663cb5f1d63120608856ea172160196210e1793f43b8287e289f892",
+   "bytes": 5062,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC02_hard_unavailable/preference_input.xlsx",
+   "sha256": "e43931f627bb1c93ae10867b1a6d18b627b64f08fd354739919c6710dc3c2bf9",
+   "bytes": 5299,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC02_hard_unavailable/timetable_input.xlsx",
+   "sha256": "adfd69558815fef6a886a65567c4e5752016f7beab0668de1afc9e4bffc461d1",
+   "bytes": 5116,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC03_soft_preferred_period/expected_assignments.xlsx",
+   "sha256": "2d6d1029ccd2a867c613168f815fd5854d81058a99d5c17889597f7295ba5401",
+   "bytes": 5082,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC03_soft_preferred_period/preference_input.xlsx",
+   "sha256": "52d101428ead342471443a0bc8e052a7748af87e6485c30a3921665ed1b7d07a",
+   "bytes": 5281,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 1,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC03_soft_preferred_period/timetable_input.xlsx",
+   "sha256": "f714c600a01367bb61d5fe6b77f732b552e893931e61b9a342f6b01abd8082d4",
+   "bytes": 5117,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC04_fallback_weak_preference/expected_assignments.xlsx",
+   "sha256": "4a3df9064170df5d651bddc6c7bfd6288a6a3daf0a2cda021c8656d4ac842b48",
+   "bytes": 5149,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC04_fallback_weak_preference/preference_input.xlsx",
+   "sha256": "b0683f67ed0f037acde088e30dba61903380f5df4ecaba2b862b3efc3fd57cc2",
+   "bytes": 5348,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 4,
+     "non_empty_rows": 4
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC04_fallback_weak_preference/timetable_input.xlsx",
+   "sha256": "8c06274503428a10ffc98f3301a6f1efec8ca8cfb88507adc67e95fe9ab3e8da",
+   "bytes": 5188,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 2,
+    "classes": 2,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC05_avoid_period_soft/expected_assignments.xlsx",
+   "sha256": "3d82d9e57024e241b67d7e07b8559334327f65577f0bc04ac135797172d09deb",
+   "bytes": 5093,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC05_avoid_period_soft/preference_input.xlsx",
+   "sha256": "a9bdbc2ce9d7788c64e378754f1e60e2e92b2df1b7b8830e26fb1bb6ad18d3e0",
+   "bytes": 5185,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC05_avoid_period_soft/timetable_input.xlsx",
+   "sha256": "588115f819564b7bd784fc5f7a96635cda1a09e2889ec7e94ba676f970e72709",
+   "bytes": 5117,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC06_real_timetable_collision/expected_assignments.xlsx",
+   "sha256": "caae829de1e6c8826e1595aee7dcee1efd0adb04a0ff97baede7962cb3cf0b9e",
+   "bytes": 5151,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC06_real_timetable_collision/preference_input.xlsx",
+   "sha256": "b1b8cfc61e33b3718c6630c4e44d8c689df43fcba0dac66fd2d77d1e960b9a36",
+   "bytes": 5181,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 1,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC06_real_timetable_collision/timetable_input.xlsx",
+   "sha256": "19455978f7c480411522f53e8eb53d2ca9ced1379831ac8829634bffbe19f8d2",
+   "bytes": 5208,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 2,
+    "classes": 2,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC07_alternating_weeks_no_collision/expected_assignments.xlsx",
+   "sha256": "6437f8b47b74943dabb1725530e52c47ecfa8d63bd30b2e665d97ff24c0dfff4",
+   "bytes": 5126,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC07_alternating_weeks_no_collision/preference_input.xlsx",
+   "sha256": "b1b8cfc61e33b3718c6630c4e44d8c689df43fcba0dac66fd2d77d1e960b9a36",
+   "bytes": 5181,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 1,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC07_alternating_weeks_no_collision/timetable_input.xlsx",
+   "sha256": "f805b1423446fc6eeed1f71d0bde4a1230843dee74805c985c6d221d4baafc4d",
+   "bytes": 5227,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 2,
+    "classes": 2,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC08_partial_week_overlap/expected_assignments.xlsx",
+   "sha256": "a7d40e4a9b039d1e7f3a33acd96921a8fde2443bfcfadd2992cb55148cf89e3b",
+   "bytes": 5157,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC08_partial_week_overlap/preference_input.xlsx",
+   "sha256": "b1b8cfc61e33b3718c6630c4e44d8c689df43fcba0dac66fd2d77d1e960b9a36",
+   "bytes": 5181,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 1,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC08_partial_week_overlap/timetable_input.xlsx",
+   "sha256": "1fd4020f1a09b7f3a4d0cc3669a391aecdea0b48801a1c0daa3627cb139e2870",
+   "bytes": 5233,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 2,
+    "classes": 2,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC09_multi_meeting_class/expected_assignments.xlsx",
+   "sha256": "c17a7aee133220164aec83374905a67991250a1d963a151aa6ed84c70873ee8a",
+   "bytes": 5060,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC09_multi_meeting_class/preference_input.xlsx",
+   "sha256": "c0622b0ba4c67774ae8bb56eb96b0a9de8a4a0e1c8cecece5d1e3e37a2669574",
+   "bytes": 5281,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 1,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC09_multi_meeting_class/timetable_input.xlsx",
+   "sha256": "aa724003a582a9bed58762aeb0da938108c105a2da5dd57bba5dbcc36ea06e68",
+   "bytes": 5183,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 2,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC10_capability_filter/expected_assignments.xlsx",
+   "sha256": "4648923536d60db36eb54e08e3e4923ea41e6757f36e352cdff7b905e0dfc571",
+   "bytes": 5066,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC10_capability_filter/preference_input.xlsx",
+   "sha256": "f1d5aad87269699449aecb33b23ced6df296bc115465b0143c31b71360682fbb",
+   "bytes": 5273,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC10_capability_filter/timetable_input.xlsx",
+   "sha256": "887266ea51f9cc6aa4a2b597d72a06bc007a69b3337dfe073f1df57a4aef6b01",
+   "bytes": 5126,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC11_locked_assignment/expected_assignments.xlsx",
+   "sha256": "71bb841a2d6bdba00fe51ed78c2289ca57876a8d591e7f90ba730bd8850cd369",
+   "bytes": 5053,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC11_locked_assignment/preference_input.xlsx",
+   "sha256": "484f6c05235edd4f9efe5588bca968b34d91d608b74929ceb5ffefb493d33f9f",
+   "bytes": 5277,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC11_locked_assignment/timetable_input.xlsx",
+   "sha256": "a69138621094aa042e2ae05155aa19dbc711d30f07468e310744bc9a8b63416f",
+   "bytes": 5143,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 1
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC12_required_forbidden/expected_assignments.xlsx",
+   "sha256": "9dbed0c3877401dc4200eb8d88359b74eebab003534b0795723d3f22742e97ba",
+   "bytes": 5132,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC12_required_forbidden/preference_input.xlsx",
+   "sha256": "1c7f2dde0fa3528f22f5ede38983bf05f649e48392146d5185e0c7a8605526a8",
+   "bytes": 5335,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 4,
+     "non_empty_rows": 4
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 3,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC12_required_forbidden/timetable_input.xlsx",
+   "sha256": "ed62b0c2cc8004b47960a721e0309cb6e2c79feada18cf2460e1aae9d02e533b",
+   "bytes": 5189,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 2,
+    "classes": 2,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC13_preferred_days_compact/expected_assignments.xlsx",
+   "sha256": "cb0e7d974b28c437b187afc405d92a92937af4de3a5df1db7710c0d4c5e02d88",
+   "bytes": 5194,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 5,
+     "non_empty_rows": 5
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC13_preferred_days_compact/preference_input.xlsx",
+   "sha256": "9ee3c4787e6c991278e78a7afd92d1367ef6492d38dade4a6edeff4540a6173e",
+   "bytes": 5340,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 4,
+     "non_empty_rows": 4
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 3,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC13_preferred_days_compact/timetable_input.xlsx",
+   "sha256": "ad853c9edca8b4eb2cc9338b73c00a1b86a7d0633b2fb9b4c353acd0a1e3376d",
+   "bytes": 5309,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 5,
+     "non_empty_rows": 5
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 4,
+    "classes": 4,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC14_low_workload_preference/expected_assignments.xlsx",
+   "sha256": "72996386c210b1516c6e56e46c90f3ea7e7bf583a5cef5dbfd5916ffbadeb1d8",
+   "bytes": 5173,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 4,
+     "non_empty_rows": 4
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC14_low_workload_preference/preference_input.xlsx",
+   "sha256": "78aa2a0b5568091e39cbde0457d451a7ad0a095402c5b577ebd8d074c40a2101",
+   "bytes": 5306,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC14_low_workload_preference/timetable_input.xlsx",
+   "sha256": "13a6d67233232e7da2d611af594e9b23166f44bfde8199d31c98e358ececd10a",
+   "bytes": 5267,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 4,
+     "non_empty_rows": 4
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 3,
+    "classes": 3,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC15_full_mixed_mini_semester/expected_assignments.xlsx",
+   "sha256": "71f7281e8384e71ca8e9a4780389308c7fabf3da31eff26f1f25fc9a7b31b276",
+   "bytes": 5387,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 7,
+     "non_empty_rows": 7
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC15_full_mixed_mini_semester/preference_input.xlsx",
+   "sha256": "87b9641f58546e37883801ccc7a637bc77caf2f45d838d7a1654079b3f90f2ff",
+   "bytes": 5422,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 5,
+     "non_empty_rows": 5
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 3,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC15_full_mixed_mini_semester/timetable_input.xlsx",
+   "sha256": "40929036ede8157c8ae548b4d819a7a2d13197ffa0362b459f545d16d91daaac",
+   "bytes": 5510,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 7,
+     "non_empty_rows": 7
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 6,
+    "classes": 6,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 1
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC16_no_eligible_lecturer/expected_assignments.xlsx",
+   "sha256": "3a6c0a8fe4b10a09b83d7a52ea8a0cde7df1ddcc51ef5749e65952425e7e5fb1",
+   "bytes": 5057,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC16_no_eligible_lecturer/preference_input.xlsx",
+   "sha256": "a624bb5ec38388d2862d228bf3521767cba9b0fe119a065f9e1fd22f881c20ab",
+   "bytes": 5253,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC16_no_eligible_lecturer/timetable_input.xlsx",
+   "sha256": "887266ea51f9cc6aa4a2b597d72a06bc007a69b3337dfe073f1df57a4aef6b01",
+   "bytes": 5126,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC17_all_capable_hard_unavailable/expected_assignments.xlsx",
+   "sha256": "6f6a6223bb9f7ffdd7dbb910be5f88d5c09585f63315850b2818fac2b9c60880",
+   "bytes": 5070,
+   "role": "FIXTURE_EXPECTED_OUTPUT (never input)",
+   "sheets": [
+    {
+     "name": "Expected",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": null,
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC17_all_capable_hard_unavailable/preference_input.xlsx",
+   "sha256": "99fab2206a98b7419f9459bd327f085796c35c46e5478f779bc20b7c4b169f6c",
+   "bytes": 5271,
+   "role": "FIXTURE_PREFERENCE",
+   "sheets": [
+    {
+     "name": "Preferences",
+     "rows": 3,
+     "non_empty_rows": 3
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 0,
+    "classes": 0,
+    "invalid_rows": 2,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/AI/Huce_timetable/test_fixtures/TC17_all_capable_hard_unavailable/timetable_input.xlsx",
+   "sha256": "adfd69558815fef6a886a65567c4e5752016f7beab0668de1afc9e4bffc461d1",
+   "bytes": 5116,
+   "role": "FIXTURE_SCHEDULE",
+   "sheets": [
+    {
+     "name": "Schedule",
+     "rows": 2,
+     "non_empty_rows": 2
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 1,
+    "meeting_rows": 1,
+    "classes": 1,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 0
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/Downloads/Copy of phan-cong-giang-day-lich-hoc-to-bo-mon-26-07-2026_TKB.xls",
+   "sha256": "109584bea4bbd665b7f50701988702222c9845abc917a9fcd0549af0bb1426f9",
+   "bytes": 151040,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Sheet1",
+     "rows": 302,
+     "non_empty_rows": 294
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 286,
+    "classes": 158,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 17
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/Downloads/phan-cong-giang-day-lich-hoc-to-bo-mon-03-08-2026.xls",
+   "sha256": "a2f6e9ce963725ff72015054071943de7b3afd5fc6dc6ed2f9d8580c8bd01e69",
+   "bytes": 158720,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Sheet1",
+     "rows": 332,
+     "non_empty_rows": 324
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 316,
+    "classes": 176,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 17
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/Downloads/phan-cong-giang-day-lich-hoc-to-bo-mon-19-07-2026.xls",
+   "sha256": "c930fe67f819ad0f7c5045d975268a99df780645fd4e173fc4fbfca6f1609fb1",
+   "bytes": 147968,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Sheet1",
+     "rows": 270,
+     "non_empty_rows": 262
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 254,
+    "classes": 139,
+    "invalid_rows": 0,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 15
+   },
+   "error": null,
+   "status": "PRESENT"
+  },
+  {
+   "file": "/Users/mac/Downloads/phan-cong-giang-day-lich-hoc-to-bo-mon-ky1-2025-2026.xls",
+   "sha256": "6efb03e5f7a8af50e49eaa6c13f492b360e2d0c70bce179246f0a21eed660e04",
+   "bytes": 203776,
+   "role": "SCHEDULE (CURRENT_SCHEDULE or HISTORICAL)",
+   "sheets": [
+    {
+     "name": "Sheet1",
+     "rows": 492,
+     "non_empty_rows": 484
+    }
+   ],
+   "independent_schedule_counts": {
+    "header_row": 9,
+    "meeting_rows": 475,
+    "classes": 215,
+    "invalid_rows": 1,
+    "rows_with_multiple_lecturers": 0,
+    "distinct_lecturer_codes": 20
+   },
+   "error": null,
+   "status": "PRESENT"
+  }
+ ],
+ "scenario_setup": {
+  "TC01-TC17 (API e2e)": {
+   "semester": "2026-09-07..2027-01-24",
+   "capabilities": "fixture_meta.json via PUT /lecturers/{id}/capabilities (global, confirmed)",
+   "preferences": "lecturer-resolved drafts PATCH status=CONFIRMED then /preference-drafts/apply (simulated reviewer)",
+   "locks": "fixture_meta.locked -> lecturer from expected_result exact_assignments, PATCH lock=true",
+   "merge": "confirm_merged_suggestions=false",
+   "note": "expected_assignments.xlsx never used as input"
+  },
+  "real-03-08 (phan-cong-...-03-08-2026.xls)": {
+   "semester": "2026-08-03..2027-01-31 (Monday of earliest session)",
+   "capabilities": "as created by import (no manual additions)",
+   "preferences": "none (open); then QA-controlled AVOID_PERIOD tiết 1-3 soft weight 1 for every lecturer, confirmed+applied",
+   "locks": "85 classes of the controlled-soft plan locked via POST /classes/{id}/lock",
+   "extra": "all-hard-busy: hard UNAVAILABLE ALL_DAYS 1-15 for every lecturer"
+  },
+  "real-pair (Phan_Cong_Giang_Day_HK1_2026_2027.xlsx + Phieu_Nguyen_Vong_..._Chi_Tiet.xlsx)": {
+   "semester": "2026-08-03..2027-01-31",
+   "capabilities": "as created by import",
+   "preferences": "open = drafts not applied; then 54 drafts already CONFIRMED by the workbook status column + confirmable applied (confirm-high confirmed 0 additional)",
+   "locks": "none"
+  },
+  "synthetic-same-slot": {
+   "generated": "30 classes, one course, Thứ 4 tiết 4-6 weeks 1-9; 10 lecturers all capable"
+  },
+  "synthetic-large": {
+   "generated": "600 classes, 15 courses, random day/block/weeks (seed 42); 40 lecturers, each course capability with p=0.4 (seed 42)"
+  },
+  "oracle random instances": {
+   "generated": "150 instances (seed 20261026): 3-6 classes, 2-3 lecturers, 1-2 courses, random caps p=0.7, optional confirmed twin merge, random hard/soft UNAVAILABLE/PREFERRED, optional valid lock"
+  },
+  "api_audit synthetic workbooks": {
+   "generated": "14-column HUCE layout via openpyxl in /private/tmp/huce-audit-20261026/work/api"
+  }
+ }
+}

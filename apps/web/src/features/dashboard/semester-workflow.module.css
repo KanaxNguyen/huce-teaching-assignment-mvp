@@ -1230,3 +1230,87 @@
 .reSolveDiffBanner { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; color: #166534; font-size: 0.82rem; }
 .reSolveDiffBanner strong { font-weight: 700; }
 
+
+/* Step status, prerequisite gate, solver blockers and stale-result banner */
+.stepDone .stepIcon { color: var(--color-success); background: var(--color-success-soft); }
+.stepWarn .stepIcon { color: var(--color-warning); background: var(--color-warning-soft); }
+.stepWarn small { color: var(--color-warning); }
+.errorBanner { position: sticky; top: 86px; z-index: 30; }
+.gateCard { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: var(--space-5); background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-md); }
+.gateCard p { margin: 0; color: var(--color-text-muted); font-size: .9rem; line-height: 1.5; }
+.callout { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; padding: 12px 14px; font-size: .84rem; line-height: 1.5; border: 1px solid; border-radius: 11px; }
+.callout > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.callout ul { margin: 0; padding-left: 18px; }
+.calloutBlock { color: var(--color-danger); background: var(--color-danger-soft); border-color: color-mix(in srgb, var(--color-danger) 28%, var(--color-border)); }
+.calloutWarn { color: var(--color-warning); background: var(--color-warning-soft); border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-border)); }
+.calloutActions { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
+
+/* ---- UI clarity pass: layout resilience, checklist, coverage bar, source table ---- */
+.eyebrow { display: block; color: var(--color-primary); font-size: .6875rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+.pageHeading { flex-wrap: wrap; }
+.pageHeading > div:first-child { flex: 1 1 420px; }
+.importBar { flex-wrap: wrap; }
+.importBar > div { flex-wrap: wrap; justify-content: flex-end; }
+.contextSegments { flex-wrap: wrap; }
+.contextSegments button { white-space: nowrap; }
+.reviewActions { flex-wrap: wrap; }
+.checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 16px 0; }
+.checkRow { display: flex; align-items: flex-start; gap: 11px; min-width: 0; padding: 13px 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; }
+.checkRow > span:first-child { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; border-radius: 8px; color: var(--color-text-muted); background: var(--color-surface-muted); }
+.checkOk > span:first-child { color: var(--color-success); background: var(--color-success-soft); }
+.checkWarn > span:first-child { color: var(--color-warning); background: var(--color-warning-soft); }
+.checkRow > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.checkRow strong { font-size: .8125rem; }
+.checkRow small { color: var(--color-text-muted); font-size: .72rem; line-height: 1.4; overflow-wrap: anywhere; }
+.capBar { display: flex; height: 12px; margin: 4px 0 10px; overflow: hidden; background: var(--color-surface-muted); border-radius: 99px; }
+.capBar > span { display: block; height: 100%; }
+.capLegend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 12px; padding: 0; list-style: none; color: var(--color-text-muted); font-size: .78rem; }
+.capLegend li { display: inline-flex; align-items: center; gap: 6px; }
+.capLegend i { width: 9px; height: 9px; border-radius: 3px; }
+.capLegend b { color: var(--color-text); }
+.sourceTable { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.sourceTable th { padding: 8px 10px; color: var(--color-text-muted); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+.sourceTable td { padding: 10px; border-top: 1px solid var(--color-border); vertical-align: middle; overflow-wrap: anywhere; }
+.diffChips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.diffChips span { padding: 4px 10px; font-size: .75rem; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 99px; }
+.diffChips b { margin-left: 4px; }
+.calloutList { margin: 4px 0 0; padding-left: 18px; }
+.calloutList li { margin: 2px 0; }
+.calloutList .textButton { min-height: 0; padding: 0 4px; margin-left: 4px; font-size: inherit; text-decoration: underline; }
+.formModeBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.uploadFold { margin-bottom: 8px; }
+.uploadFold > summary { display: flex; align-items: center; min-height: 40px; padding: 0 4px; color: var(--color-primary-strong); font-size: .85rem; font-weight: 650; cursor: pointer; }
+.uploadFold[open] > summary { margin-bottom: 8px; }
+
+/* Preference draft rows: summary first, full editor on demand */
+.preferenceRow { grid-template-columns: 32px minmax(0, 1fr) auto; align-items: start; }
+.preferenceRow > .editorFold { grid-column: 2 / -1; }
+.preferenceRow > .validationErrorInline { grid-column: 2 / -1; }
+.preferenceRow > .rowActions { grid-column: 3; grid-row: 1; }
+.draftSummary { color: var(--color-primary-strong); font-size: .8125rem; font-weight: 650; }
+.editorFold > summary { display: inline-flex; align-items: center; min-height: 32px; padding: 0 2px; color: var(--color-primary-strong); font-size: .78rem; font-weight: 650; cursor: pointer; }
+.editorFold[open] > summary { margin-bottom: 10px; }
+.editorFold .preferenceEditor { padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 10px; }
+@media (max-width: 760px) {
+  .preferenceRow { grid-template-columns: 32px minmax(0, 1fr); }
+  .preferenceRow > .rowActions { grid-column: 2; grid-row: auto; }
+}
+@media (max-width: 580px) {
+  .pageHeading > div:first-child { flex: none; }
+  .stickyContinue { margin-right: 0; padding: 10px 14px; }
+}
+.slotTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .8rem; }
+.slotTable th, .slotTable td { padding: 9px 4px; text-align: center; border-top: 1px solid var(--color-border); }
+.slotTable th:first-child, .slotTable td:first-child { width: 28%; padding-left: 10px; text-align: left; font-weight: 650; }
+.slotTable thead th { border-top: 0; color: var(--color-text-muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; }
+.slotTable input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary); }
+.metricGrid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.metric { min-height: 96px; }
+.metric span:last-child { white-space: normal; }
+.memberGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; max-height: 260px; overflow-y: auto; padding: 4px 2px; }
+.tableFilters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--color-border); }
+.searchBox { display: flex; flex: 1 1 220px; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px; color: var(--color-text-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; }
+.searchBox input { flex: 1; min-width: 0; color: var(--color-text); font: inherit; font-size: .85rem; background: transparent; border: 0; outline: 0; }
+.searchBox:focus-within { border-color: var(--color-primary); }
+.assignmentTableWrap .tableWrap { overflow-x: auto; }
+.runControls { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }

@@ -176,8 +176,10 @@ def preview_activation(db, semester_id, source_id, role):
             raise SourceError("SOURCE_HASH_MISMATCH", "Nội dung nguồn lưu trữ không khớp hash.")
         groups = db.scalars(select(ClassSection).options(selectinload(ClassSection.sessions), selectinload(ClassSection.course)).where(ClassSection.semester_id == semester_id)).all()
         before = [_record(g, m) for g in groups for m in g.sessions]
+        imported_assignments = None
         if role == "CURRENT_SCHEDULE":
             parsed = parse_schedule(path)
+            imported_assignments = sum(bool(item.lecturer_name) for item in parsed.classes)
             diff = meeting_diff(before, _candidate_records(parsed))
             diagnostics = [vars(i) for i in parsed.issues]
             can_activate = bool(parsed.classes) and parsed.rows_rejected == 0 and not any(i.severity == 'error' and i.code != 'MULTI_LECTURER_REVIEW' for i in parsed.issues)
@@ -189,10 +191,17 @@ def preview_activation(db, semester_id, source_id, role):
     base = {"source": source.id, "hash": source.content_hash, "role": role,
             "revision": semester.source_revision, "active_schedule": semester.active_schedule_source_id,
             "active_preference": semester.active_preference_source_id, "meetings": before, "diff": diff}
+    lock_impact = [{"class_id": g.id, "class_code": g.class_code,
+                    "lecturer_id": g.assigned_lecturer_id, "course_code": g.course.code,
+                    "effect": "ARCHIVED_NOT_TRANSFERRED"}
+                   for g in groups if g.locked_assignment and role == "CURRENT_SCHEDULE"
+                   and source.id != semester.active_schedule_source_id]
+    base["lock_impact"] = lock_impact
     token = hashlib.sha256(json.dumps(base, sort_keys=True, default=str).encode()).hexdigest()
     return {"source_id": source.id, "source_type": role, "filename": source.original_filename,
             "preview_token": token, "base_revision": semester.source_revision, "can_activate": can_activate,
-            "diff": diff, "diagnostics": diagnostics,
+            "diff": diff, "diagnostics": diagnostics, "lock_impact": lock_impact,
+            "imported_assignments": imported_assignments,
             "consequences": ["Thay đổi nguồn làm các run cũ trở thành lịch sử.", "Tham chiếu lớp cũ cần xác nhận lại; phân công, khóa và ghép lớp cũ không được chuyển ngầm."]}
 
 
@@ -254,7 +263,7 @@ def invalidate_sources(db, semester, *, schedule_change=False, preference_change
     return changed_drafts
 
 
-def activate_source(db, semester_id, source_id, role, *, confirmed, preview_token):
+def activate_source(db, semester_id, source_id, role, *, confirmed, preview_token, lock_imported=False):
     from app.services.importer import _import_files_impl
     if confirmed is not True:
         raise SourceError("SOURCE_ACTIVATION_CONFIRMATION_REQUIRED", "Cần xem đối chiếu và xác nhận kích hoạt.")
@@ -282,6 +291,18 @@ def activate_source(db, semester_id, source_id, role, *, confirmed, preview_toke
                 preference_source=source if role == 'PREFERENCE' else None,
                 replace_schedule=role == 'CURRENT_SCHEDULE', commit=False)
         setattr(semester, field, source.id); semester.source_revision = revision + 1
+        if lock_imported:
+            if role != 'CURRENT_SCHEDULE':
+                raise SourceError('LOCK_IMPORT_REQUIRES_SCHEDULE', 'Chỉ khóa phân công từ nguồn lịch.')
+            from app.services.manual_assignment import check_assignment_change
+            db.flush()
+            assigned = db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id,
+                ClassSection.assigned_lecturer_id.is_not(None))).all()
+            failures = [{"class_id": g.id, "class_code": g.class_code, **check_assignment_change(db, semester_id, g.id, g.assigned_lecturer_id)} for g in assigned]
+            failures = [r for r in failures if not r['valid']]
+            if failures or source_blockers(db, semester_id):
+                raise SourceError('IMPORTED_LOCKS_REQUIRE_REVIEW', 'Phân công nhập có xung đột hoặc chưa được xác nhận; chưa kích hoạt/khóa.', conflicts=failures)
+            for g in assigned: g.locked_assignment = True
         # Show a durable review record for stale targets; it can be dismissed only
         # after obsolete rules are acknowledged, never silently reactivated.
         if changed or db.scalar(select(Constraint.id).where(Constraint.semester_id == semester_id, Constraint.active.is_(False), Constraint.confirmed.is_(False))):
@@ -290,7 +311,7 @@ def activate_source(db, semester_id, source_id, role, *, confirmed, preview_toke
                 details={'draft_ids': changed, 'source_version_id': source.id}, resolution_status='OPEN'))
         db.add(ImportBatch(semester_id=semester_id, source_files=[source.original_filename], summary={
             'event': 'SOURCE_ACTIVATED', 'source_version_id': source.id, 'source_revision': revision + 1,
-            'preview_token': preview_token, 'diff': preview['diff'], 'confirmed': True}))
+            'preview_token': preview_token, 'diff': preview['diff'], 'confirmed': True, 'lock_imported': lock_imported}))
         db.commit()
         return {"active": True, "source_id": source.id, "source_revision": revision + 1, "import": result}
     except Exception:
