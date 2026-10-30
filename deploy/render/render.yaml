@@ -1,0 +1,22 @@
+# Render Blueprint: backend only. The free instance sleeps after ~15 minutes idle.
+services:
+  - type: web
+    name: huce-timetable-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: false
+    envVars:
+      - { key: ENVIRONMENT, value: production }
+      - { key: STORAGE_BACKEND, value: s3 }
+      - { key: S3_REGION, value: auto }
+      - { key: DATABASE_URL, sync: false }
+      - { key: S3_ENDPOINT_URL, sync: false }
+      - { key: S3_BUCKET, sync: false }
+      - { key: S3_ACCESS_KEY_ID, sync: false }
+      - { key: S3_SECRET_ACCESS_KEY, sync: false }
+      - { key: INTERNAL_API_TOKEN, sync: false }
+      - { key: ALLOWED_ORIGINS, sync: false }

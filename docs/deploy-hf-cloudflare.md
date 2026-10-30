@@ -1,5 +1,7 @@
 # Triển khai miễn phí: Hugging Face + Cloudflare + Neon
 
+> **Cập nhật 30-10-2026:** Hugging Face hiện yêu cầu gói PRO cho Space kiểu Docker (chỉ Space tĩnh còn miễn phí). Nếu cần miễn phí hoàn toàn, chạy backend trên Render thay cho mục 3: xem `docs/deploy-render.md`. Các mục Neon, R2, Pages và keep-warm giữ nguyên.
+
 Dành cho nhóm dưới khoảng 10 người. Ba nền tảng đều có gói miễn phí; **giới hạn và chính sách có thể đổi, hãy đối chiếu trang giá của từng nơi trước khi dùng cho dữ liệu thật.**
 
 ```
