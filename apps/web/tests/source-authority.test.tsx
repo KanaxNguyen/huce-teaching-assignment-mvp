@@ -46,6 +46,17 @@ it('lists affected locks and activates fixed imports only after explicit selecti
   fireEvent.click(activate);
   await waitFor(()=>expect(api.activateSource).toHaveBeenCalledWith(expect.objectContaining({preview_token:'receipt'}),1,true));
 });
+it('reports locked, merged and skipped classes after a fixed import', async () => {
+  vi.mocked(api.previewSource).mockResolvedValue({source_id:9,source_type:'CURRENT_SCHEDULE',filename:'candidate.xlsx',preview_token:'receipt',can_activate:true,diff:{counts:{ADDED:1}},diagnostics:[],consequences:[],imported_assignments:36} as never);
+  vi.mocked(api.activateSource).mockResolvedValue({active:true,lock:{locked:34,confirmed_merges:['MG-001'],review_required:0,skipped:[{class_id:1,class_code:'69CLC1',blocking_reasons:['TIMETABLE_CONFLICT']}]}});
+  render(<SourceAuthorityPanel semesterId={1} refreshKey={null} />);
+  fireEvent.click(await screen.findByRole('button',{name:'Đối chiếu / Compare'}));
+  fireEvent.change(await screen.findByRole('combobox',{name:/^Phân công có sẵn trong nguồn/}),{target:{value:'locked'}});
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('button',{name:'Xác nhận kích hoạt / Activate'}));
+  expect(await screen.findByText(/Đã khóa 34 phân công có sẵn, xác nhận 1 nhóm lớp ghép/)).toBeInTheDocument();
+  expect(screen.getByText(/1 lớp chưa khóa được.*69CLC1 \(trùng lịch/)).toBeInTheDocument();
+});
 it('keeps source selection available if the separate lecturer request fails', async () => {
   vi.mocked(api.lecturers).mockRejectedValue(new TypeError('Failed to fetch'));
   render(<SourceAuthorityPanel semesterId={1} refreshKey={null} />);

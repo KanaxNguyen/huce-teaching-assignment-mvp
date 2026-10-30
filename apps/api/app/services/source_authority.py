@@ -291,18 +291,25 @@ def activate_source(db, semester_id, source_id, role, *, confirmed, preview_toke
                 preference_source=source if role == 'PREFERENCE' else None,
                 replace_schedule=role == 'CURRENT_SCHEDULE', commit=False)
         setattr(semester, field, source.id); semester.source_revision = revision + 1
+        lock_result = None
         if lock_imported:
             if role != 'CURRENT_SCHEDULE':
                 raise SourceError('LOCK_IMPORT_REQUIRES_SCHEDULE', 'Chỉ khóa phân công từ nguồn lịch.')
-            from app.services.manual_assignment import check_assignment_change
+            from app.services.manual_assignment import assignment_check_context, check_assignment_change, confirm_source_merges
             db.flush()
+            merges = confirm_source_merges(db, semester_id)
             assigned = db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id,
                 ClassSection.assigned_lecturer_id.is_not(None))).all()
-            failures = [{"class_id": g.id, "class_code": g.class_code, **check_assignment_change(db, semester_id, g.id, g.assigned_lecturer_id)} for g in assigned]
-            failures = [r for r in failures if not r['valid']]
-            if failures or source_blockers(db, semester_id):
-                raise SourceError('IMPORTED_LOCKS_REQUIRE_REVIEW', 'Phân công nhập có xung đột hoặc chưa được xác nhận; chưa kích hoạt/khóa.', conflicts=failures)
-            for g in assigned: g.locked_assignment = True
+            context = assignment_check_context(db, semester_id)
+            checks = [(g, check_assignment_change(db, semester_id, g.id, g.assigned_lecturer_id, context=context)) for g in assigned]
+            # Valid imported assignments are locked; conflicting ones stay unlocked
+            # and are reported, instead of refusing the whole source.
+            skipped = [{"class_id": g.id, "class_code": g.class_code, "blocking_reasons": r["blocking_reasons"],
+                        "overlapping_details": r.get("overlapping_details", [])} for g, r in checks if not r["valid"]]
+            for g, r in checks:
+                if r["valid"]: g.locked_assignment = True
+            lock_result = {"locked": len(checks) - len(skipped), "skipped": skipped, "confirmed_merges": merges,
+                           "review_required": len(source_blockers(db, semester_id))}
         # Show a durable review record for stale targets; it can be dismissed only
         # after obsolete rules are acknowledged, never silently reactivated.
         if changed or db.scalar(select(Constraint.id).where(Constraint.semester_id == semester_id, Constraint.active.is_(False), Constraint.confirmed.is_(False))):
@@ -313,7 +320,7 @@ def activate_source(db, semester_id, source_id, role, *, confirmed, preview_toke
             'event': 'SOURCE_ACTIVATED', 'source_version_id': source.id, 'source_revision': revision + 1,
             'preview_token': preview_token, 'diff': preview['diff'], 'confirmed': True, 'lock_imported': lock_imported}))
         db.commit()
-        return {"active": True, "source_id": source.id, "source_revision": revision + 1, "import": result}
+        return {"active": True, "source_id": source.id, "source_revision": revision + 1, "import": result, "lock": lock_result}
     except Exception:
         db.rollback()
         raise

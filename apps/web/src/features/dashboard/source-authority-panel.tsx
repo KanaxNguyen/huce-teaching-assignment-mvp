@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/src/services/api';
-import type { Lecturer, SourceIssue, SourcePreview, SourceState, SourceRole } from '@/src/types/api';
+import type { Lecturer, SourceIssue, SourceLockResult, SourcePreview, SourceState, SourceRole } from '@/src/types/api';
 import styles from './semester-workflow.module.css';
 
 function describeMeeting(meeting: Record<string, unknown> | null) {
@@ -13,6 +13,7 @@ function describeMeeting(meeting: Record<string, unknown> | null) {
 }
 
 const diffLabels: Record<string, string> = {UNCHANGED: 'Giữ nguyên', ADDED: 'Thêm mới', REMOVED: 'Bị xóa', CHANGED: 'Thay đổi'};
+const lockReasonLabels: Record<string, string> = {TIMETABLE_CONFLICT: 'trùng lịch, lớp chỉ trùng một phần buổi không tự ghép', COURSE_CAPABILITY_MISSING: 'thiếu năng lực giảng dạy', MULTI_LECTURER_REVIEW: 'nhiều giảng viên', LECTURER_INACTIVE: 'giảng viên không hoạt động', LECTURER_NOT_PARTICIPATING: 'giảng viên không tham gia kỳ'};
 const roles = {CURRENT_SCHEDULE: 'Lịch học', PREFERENCE: 'Nguyện vọng', HISTORICAL: 'Lịch sử', OUTPUT_TEMPLATE: 'Mẫu đầu ra', REFERENCE_MATRIX: 'Ma trận tham chiếu'};
 
 export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onStateChanged}: {semesterId: number; refreshKey: string | null; onChanged?: () => void; onStateChanged?: (state: SourceState | null) => void}) {
@@ -45,10 +46,15 @@ export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onState
   }, [semesterId, onStateChanged]);
   useEffect(() => { if (!refreshKey) void load(); }, [load, refreshKey]);
   const [lockImported, setLockImported] = useState(false);
+  const [lockResult, setLockResult] = useState<SourceLockResult | null>(null);
   async function activate() {
     if (!preview || !confirmed) return;
-    setBusy(true); setError(null);
-    try { await (lockImported ? api.activateSource(preview, semesterId, true) : api.activateSource(preview, semesterId)); setPreview(null); setConfirmed(false); await load(); onChanged?.(); }
+    setBusy(true); setError(null); setLockResult(null);
+    try {
+      const result = await (lockImported ? api.activateSource(preview, semesterId, true) : api.activateSource(preview, semesterId));
+      setLockResult(result?.lock ?? null);
+      setPreview(null); setConfirmed(false); await load(); onChanged?.();
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'Chưa kích hoạt được.'); }
     finally { setBusy(false); }
   }
@@ -56,6 +62,11 @@ export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onState
   return <section className={styles.flatPanel} aria-label="Nguồn đang hoạt động">
     <h3>Nguồn đang hoạt động</h3>
     <p>Tải file chỉ lưu nguồn ứng viên. Xem đối chiếu và xác nhận để thay đổi nguồn đang sử dụng.</p>
+    {lockResult ? <div className={`${styles.callout} ${lockResult.skipped.length ? styles.calloutWarn : ''}`} role="status"><div>
+      <strong>Đã khóa {lockResult.locked} phân công có sẵn{lockResult.confirmed_merges.length ? `, xác nhận ${lockResult.confirmed_merges.length} nhóm lớp ghép (cùng giảng viên, cùng lịch trong file)` : ''}.</strong>
+      {lockResult.skipped.length ? <span> {lockResult.skipped.length} lớp chưa khóa được, cần xử lý ở Bảng phân công: {lockResult.skipped.slice(0, 8).map(row => `${row.class_code} (${row.blocking_reasons.map(reason => lockReasonLabels[reason] ?? reason).join(', ')})`).join('; ')}{lockResult.skipped.length > 8 ? '…' : ''}.</span> : null}
+      {lockResult.review_required ? <span> {lockResult.review_required} lớp có nhiều giảng viên trong file cần chọn giảng viên trước khi khóa.</span> : null}
+    </div></div> : null}
     {error ? <div role="alert"><p>{error}</p><button type="button" className={styles.secondaryButton} onClick={() => void load()}>Thử tải lại nguồn</button></div> : null}
     {(['CURRENT_SCHEDULE', 'PREFERENCE'] as const).map(role => {
       const active = state?.sources.find(s => s.source_type === role && s.active);
@@ -95,7 +106,7 @@ export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onState
       {preview.diagnostics.map((d,index) => <p key={index}>{d.code}: {d.message}</p>)}
       {preview.lock_impact?.length ? <div role="status"><strong>{preview.lock_impact.length} phân công đã khóa sẽ được lưu vào lịch sử và không chuyển sang nguồn mới:</strong><ul>{preview.lock_impact.map(lock => <li key={lock.class_id}>{lock.class_code} · {lock.course_code} · giảng viên #{lock.lecturer_id}</li>)}</ul></div> : null}
       {preview.source_type === 'CURRENT_SCHEDULE' && typeof preview.imported_assignments === 'number' ? <div className={`${styles.callout} ${styles.calloutWarn}`} role="status"><div><strong>{preview.imported_assignments > 0 ? `File này đã ghi sẵn giảng viên cho ${preview.imported_assignments} lớp.` : 'File này chưa ghi giảng viên cho lớp nào.'}</strong>{preview.imported_assignments > 0 ? <span>Mặc định các phân công này được giữ làm gợi ý và <b>chưa khóa</b>, nên solver có thể đổi. Muốn coi chúng là cố định, chọn &ldquo;Khóa phân công có sẵn&rdquo; bên dưới, hoặc khóa sau khi kích hoạt.</span> : null}</div></div> : null}
-      {preview.source_type === 'CURRENT_SCHEDULE' ? <label className={styles.field}><span>Phân công có sẵn trong nguồn</span><select value={lockImported ? 'locked' : 'unlocked'} onChange={e => setLockImported(e.target.value === 'locked')}><option value="unlocked">Giữ phân công, cho phép solver tối ưu lại</option><option value="locked">Khóa phân công có sẵn sau khi kiểm tra</option></select><small>Nguồn có xung đột sẽ bị chặn; lớp chưa có giảng viên không được khóa.</small></label> : null}
+      {preview.source_type === 'CURRENT_SCHEDULE' ? <label className={styles.field}><span>Phân công có sẵn trong nguồn</span><select value={lockImported ? 'locked' : 'unlocked'} onChange={e => setLockImported(e.target.value === 'locked')}><option value="unlocked">Giữ phân công, cho phép solver tối ưu lại</option><option value="locked">Khóa phân công có sẵn sau khi kiểm tra</option></select><small>Lớp hợp lệ được khóa; lớp ghép (cùng giảng viên, cùng lịch trong file) được xác nhận ghép. Lớp còn xung đột hoặc chưa có giảng viên sẽ được liệt kê, không bị khóa.</small></label> : null}
       <ul>{preview.consequences.map(c => <li key={c}>{c}</li>)}</ul>
       <label className={styles.switchLabel}><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />Tôi đã rà soát thay đổi và xác nhận sử dụng nguồn này.</label>
       <button className={styles.primaryButton} disabled={busy || !confirmed || !preview.can_activate} onClick={() => void activate()}>Xác nhận kích hoạt / Activate</button>

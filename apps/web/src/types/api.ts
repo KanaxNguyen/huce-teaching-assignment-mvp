@@ -396,6 +396,12 @@ export type SourcePreview = {
   lock_impact?: Array<{class_id: number; class_code: string; course_code: string; lecturer_id: number; effect: string}>;
 };
 
+export type SourceLockResult = {
+  locked: number; confirmed_merges: string[]; review_required: number;
+  skipped: Array<{class_id: number; class_code: string; blocking_reasons: string[]}>;
+};
+export type SourceActivation = { active: boolean; unchanged?: boolean; lock?: SourceLockResult | null };
+
 export type CapabilityReadiness = {
   department_id?: number | null;
   department_name?: string | null;

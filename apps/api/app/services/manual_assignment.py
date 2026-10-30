@@ -222,6 +222,58 @@ def apply_manual_assignment(
     return {**result, "assignment_source": group.assignment_source, "locked": lock}
 
 
+def confirm_source_merges(db: Session, semester_id: int) -> list[str]:
+    """Confirm suggested merges that the source file itself already teaches as one class.
+
+    A group qualifies only when every member came from the import with the same
+    lecturer and the members share an identical schedule; partial overlaps stay
+    unconfirmed (meeting-level merge is deferred). Called only from an explicit
+    user lock action, never from a solver run.
+    """
+    from app.optimization.occurrences import are_classes_mergeable
+    members: dict[str, list[ClassSection]] = {}
+    for group in db.scalars(select(ClassSection).options(selectinload(ClassSection.sessions)).where(
+            ClassSection.semester_id == semester_id, ClassSection.merged_group_id.is_not(None))):
+        members.setdefault(group.merged_group_id, []).append(group)
+    confirmed = []
+    for group_id, items in sorted(members.items()):
+        if len(items) < 2 or any(item.merge_status != "candidate" for item in items):
+            continue
+        lecturers = {item.assigned_lecturer_id for item in items}
+        if None in lecturers or len(lecturers) != 1 or any(item.assignment_source != "IMPORT" for item in items):
+            continue
+        if not all(are_classes_mergeable(items[0], other) for other in items[1:]):
+            continue
+        for item in items:
+            item.merged_confirmed = True
+            item.merge_status = "confirmed"
+        confirmed.append(group_id)
+    # The parser never suggests a merge when a meeting has a blank room (e.g. a
+    # make-up session or an export without rooms). One lecturer cannot teach two
+    # separate classes at once, so when the source gives the same lecturer,
+    # identical meetings with the same rooms (blank matching blank) are enough.
+    def signature(group):
+        return tuple(sorted((s.weekday, s.start_period, s.end_period, s.room.strip(), tuple(s.active_weeks or []),
+                             s.start_date, s.end_date) for s in group.sessions))
+    singles: dict[tuple, list[ClassSection]] = {}
+    for group in db.scalars(select(ClassSection).options(selectinload(ClassSection.sessions)).where(
+            ClassSection.semester_id == semester_id, ClassSection.merged_group_id.is_(None),
+            ClassSection.assignment_source == "IMPORT", ClassSection.assigned_lecturer_id.is_not(None))):
+        if group.sessions:
+            singles.setdefault((group.course_id, group.assigned_lecturer_id, signature(group)), []).append(group)
+    for items in singles.values():
+        if len(items) < 2 or not all(are_classes_mergeable(items[0], other) for other in items[1:]):
+            continue
+        group_id = f"MG-S{min(item.id for item in items):04d}"
+        for item in items:
+            item.merged_group_id = group_id
+            item.merged_confirmed = True
+            item.merge_status = "confirmed"
+        confirmed.append(group_id)
+    db.flush()
+    return confirmed
+
+
 def lock_assigned_classes(db: Session, semester_id: int) -> dict:
     """Lock every currently assigned, unlocked class that passes the manual checker.
 
@@ -229,6 +281,7 @@ def lock_assigned_classes(db: Session, semester_id: int) -> dict:
     All valid locks are saved as one manual version so run history is not flooded.
     """
     from app.services.assignment_state import assignment_state, save_manual_version
+    merges = confirm_source_merges(db, semester_id)
     state = assignment_state(db, semester_id)
     locked, skipped, changes = [], [], {}
     for class_id, (lecturer_id, source, already_locked) in sorted(state.items()):
@@ -252,4 +305,4 @@ def lock_assigned_classes(db: Session, semester_id: int) -> dict:
     except Exception:
         db.rollback()
         raise
-    return {"locked": len(locked), "skipped": skipped}
+    return {"locked": len(locked), "skipped": skipped, "confirmed_merges": merges}

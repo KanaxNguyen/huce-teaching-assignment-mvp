@@ -84,15 +84,19 @@ def test_confirmed_fixed_import_locks_only_assigned_groups(db,tmp_path):
     run=solve(db,2,False,s.id)
     assert db.scalar(select(Assignment).where(Assignment.run_id==run.id)).lecturer_id==group.assigned_lecturer_id
 
-def test_fixed_import_conflict_rolls_back_activation(db,tmp_path):
+def test_fixed_import_conflict_locks_valid_rows_and_reports_the_rest(db,tmp_path):
+    # Changed 2026-10-30 on request: a conflict no longer refuses the whole source
+    # (users saw "0 phân công đã khóa"); conflicting classes are reported instead.
     from openpyxl import load_workbook
     s,c,ls,gs=setup(db,0,1);path=workbook(tmp_path/'conflict.xlsx','[00000]Lecturer 0')
-    w=load_workbook(path);row=[cell.value for cell in w.active[2]];row[0]=2;row[3]='QA1';w.active.append(row);w.save(path)
+    w=load_workbook(path);row=[cell.value for cell in w.active[2]];row[0]=2;row[3]='QA1';row[7]='OTHER';w.active.append(row);w.save(path)
     src=stage_source(db,path,s.id,'CURRENT_SCHEDULE');db.commit();p=preview_activation(db,s.id,src.id,'CURRENT_SCHEDULE')
-    with pytest.raises(SourceError) as error:activate_source(db,s.id,src.id,'CURRENT_SCHEDULE',confirmed=True,preview_token=p['preview_token'],lock_imported=True)
-    assert error.value.detail['code']=='IMPORTED_LOCKS_REQUIRE_REVIEW'
-    assert not list(db.scalars(select(ClassSection)))
-    db.refresh(s);assert s.active_schedule_source_id is None
+    result=activate_source(db,s.id,src.id,'CURRENT_SCHEDULE',confirmed=True,preview_token=p['preview_token'],lock_imported=True)
+    assert result['lock']['locked']==0 and result['lock']['confirmed_merges']==[]
+    assert sorted(r['class_code'] for r in result['lock']['skipped'])==['QA0','QA1']
+    assert all(r['blocking_reasons']==['TIMETABLE_CONFLICT'] for r in result['lock']['skipped'])
+    assert not any(g.locked_assignment for g in db.scalars(select(ClassSection)))
+    db.refresh(s);assert s.active_schedule_source_id==src.id
 
 def test_semester_switch_edit_and_anchor_guard(db,client):
     a,c,ls,gs=setup(db)

@@ -182,7 +182,8 @@ def parse_periods(value: Any) -> tuple[int, int]:
     if not numbers:
         raise ValueError("Không có tiết học")
     start, end = numbers[0], numbers[-1]
-    if start < 1 or end < start or end > 15:
+    # HUCE exports use periods 1–15, plus period 16 for some online (MS Teams) sessions.
+    if start < 1 or end < start or end > 16:
         raise ValueError("Khoảng tiết không hợp lệ")
     return start, end
 

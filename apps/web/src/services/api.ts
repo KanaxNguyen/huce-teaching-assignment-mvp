@@ -1,4 +1,4 @@
-import type { SourceState, SourcePreview, SourceRole, AssignmentCheck, AssignmentItem, Candidate, CandidateAnalysisItem, CapabilityReadiness, ClassItem, Constraint, DashboardMetrics, Lecturer, LecturerImportPreview, LecturerImportResult, LecturerReviewResponse, MergeCandidate, OptimizationResult, PreferenceDraft, Precheck, Problem, Readiness, ResolutionScenarios, RunDiff, Seminar, Semester, TemplateDetection, UnassignedDiagnosticItem, ValidationIssue, Workload } from "@/src/types/api";
+import type { SourceState, SourcePreview, SourceRole, SourceActivation,AssignmentCheck, AssignmentItem, Candidate, CandidateAnalysisItem, CapabilityReadiness, ClassItem, Constraint, DashboardMetrics, Lecturer, LecturerImportPreview, LecturerImportResult, LecturerReviewResponse, MergeCandidate, OptimizationResult, PreferenceDraft, Precheck, Problem, Readiness, ResolutionScenarios, RunDiff, Seminar, Semester, TemplateDetection, UnassignedDiagnosticItem, ValidationIssue, Workload } from "@/src/types/api";
 
 // Keep browser requests on the same origin in every environment. The BFF owns
 // the backend host and credentials, including during local development.
@@ -68,7 +68,7 @@ export const api = {
   },
   sources: (semesterId: number) => request<SourceState>(`/sources?semester_id=${semesterId}`),
   previewSource: (id: number, role: SourceRole, semesterId: number) => request<SourcePreview>(`/sources/${id}/preview?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify({source_type: role})}),
-  activateSource: (preview: SourcePreview, semesterId: number, lockImported = false) => request(`/sources/${preview.source_id}/activate?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify({source_type: preview.source_type, confirmed: true, preview_token: preview.preview_token, lock_imported: lockImported})}),
+  activateSource: (preview: SourcePreview, semesterId: number, lockImported = false) => request<SourceActivation>(`/sources/${preview.source_id}/activate?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify({source_type: preview.source_type, confirmed: true, preview_token: preview.preview_token, lock_imported: lockImported})}),
   resolveSourceIssue: (id: number, payload: Record<string, unknown>, semesterId: number) => request(`/sources/reviews/${id}/resolve?semester_id=${semesterId}`, {method: 'POST', body: JSON.stringify(payload)}),
   dashboard: (semesterId?: number) => request<DashboardMetrics>(`/dashboard${semesterId ? `?semester_id=${semesterId}` : ""}`),
   classes: (semesterId?: number) => request<ClassItem[]>(`/classes${semesterId ? `?semester_id=${semesterId}` : ""}`),
