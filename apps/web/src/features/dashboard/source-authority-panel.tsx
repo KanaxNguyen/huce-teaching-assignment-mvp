@@ -13,7 +13,7 @@ function describeMeeting(meeting: Record<string, unknown> | null) {
 }
 
 const diffLabels: Record<string, string> = {UNCHANGED: 'Giữ nguyên', ADDED: 'Thêm mới', REMOVED: 'Bị xóa', CHANGED: 'Thay đổi'};
-const lockReasonLabels: Record<string, string> = {TIMETABLE_CONFLICT: 'trùng lịch, lớp chỉ trùng một phần buổi không tự ghép', COURSE_CAPABILITY_MISSING: 'thiếu năng lực giảng dạy', MULTI_LECTURER_REVIEW: 'nhiều giảng viên', LECTURER_INACTIVE: 'giảng viên không hoạt động', LECTURER_NOT_PARTICIPATING: 'giảng viên không tham gia kỳ'};
+const lockReasonLabels: Record<string, string> = {TIMETABLE_CONFLICT: 'cùng giảng viên trùng giờ với lớp khác, không phải lớp ghép trùng toàn bộ lịch', COURSE_CAPABILITY_MISSING: 'thiếu năng lực giảng dạy', MULTI_LECTURER_REVIEW: 'nhiều giảng viên', LECTURER_INACTIVE: 'giảng viên không hoạt động', LECTURER_NOT_PARTICIPATING: 'giảng viên không tham gia kỳ'};
 const roles = {CURRENT_SCHEDULE: 'Lịch học', PREFERENCE: 'Nguyện vọng', HISTORICAL: 'Lịch sử', OUTPUT_TEMPLATE: 'Mẫu đầu ra', REFERENCE_MATRIX: 'Ma trận tham chiếu'};
 
 export function SourceAuthorityPanel({semesterId, refreshKey, onChanged, onStateChanged}: {semesterId: number; refreshKey: string | null; onChanged?: () => void; onStateChanged?: (state: SourceState | null) => void}) {

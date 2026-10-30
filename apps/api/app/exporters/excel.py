@@ -23,7 +23,7 @@ from app.models.entities import (
     Seminar,
 )
 from app.services.readiness import validate_schedule
-from app.services.source_authority import latest_current_run, source_blockers
+from app.services.source_authority import latest_current_run, latest_plan_run, source_blockers
 from app.storage import get_storage_backend
 
 BLUE = "1F5FAA"
@@ -43,7 +43,7 @@ def export_latest(
 ) -> Path:
     if export_type == "matrix":
         return export_matrix(db, output_dir, semester_id, mode=mode, allow_unassigned_override=allow_unassigned_override, override_reason=override_reason)
-    run = latest_current_run(db, semester_id)
+    run = latest_current_run(db, semester_id) if mode == "final" else latest_plan_run(db, semester_id)
     if not run:
         raise ValueError("Chưa có kết quả tối ưu để xuất.")
     validation = validate_schedule(db, semester_id, run.id)
@@ -458,7 +458,7 @@ def export_matrix(
     allow_unassigned_override: bool = False,
     override_reason: str = "",
 ) -> Path:
-    run = latest_current_run(db, semester_id)
+    run = latest_current_run(db, semester_id) if mode == "final" else latest_plan_run(db, semester_id)
     if not run:
         raise ValueError("Chưa có kết quả tối ưu để xuất.")
     validation = validate_schedule(db, semester_id, run.id)

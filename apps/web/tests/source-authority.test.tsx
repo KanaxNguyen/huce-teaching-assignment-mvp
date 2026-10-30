@@ -55,7 +55,7 @@ it('reports locked, merged and skipped classes after a fixed import', async () =
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(screen.getByRole('button',{name:'Xác nhận kích hoạt / Activate'}));
   expect(await screen.findByText(/Đã khóa 34 phân công có sẵn, xác nhận 1 nhóm lớp ghép/)).toBeInTheDocument();
-  expect(screen.getByText(/1 lớp chưa khóa được.*69CLC1 \(trùng lịch/)).toBeInTheDocument();
+  expect(screen.getByText(/1 lớp chưa khóa được.*69CLC1 \(cùng giảng viên trùng giờ/)).toBeInTheDocument();
 });
 it('keeps source selection available if the separate lecturer request fails', async () => {
   vi.mocked(api.lecturers).mockRejectedValue(new TypeError('Failed to fetch'));

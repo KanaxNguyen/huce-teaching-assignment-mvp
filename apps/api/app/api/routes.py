@@ -65,7 +65,7 @@ from app.schemas.api import (
     TemplateMappingUpdate,
 )
 from app.services.importer import dashboard
-from app.services.source_authority import (SourceError, stage_source, register_source, source_payload, latest_current_run, current_run_predicate, source_blockers, active_issues)
+from app.services.source_authority import (SourceError, stage_source, register_source, source_payload, latest_current_run, latest_plan_run, current_run_predicate, source_blockers, active_issues)
 from app.services.manual_assignment import apply_manual_assignment, check_assignment_change
 from app.services.template_detector import detect_output_template
 from app.services.lecturer_master import confirm_alias
@@ -897,7 +897,7 @@ def get_workload(
         if run and run.semester_id != sid:
             run = None
     if not run and run_id is None:
-        run = latest_current_run(db, sid)
+        run = latest_plan_run(db, sid)
 
     if run and run.status in {"optimal", "feasible"}:
         assignments = db.scalars(select(Assignment).where(Assignment.run_id == run.id)).all()
@@ -958,7 +958,7 @@ def get_classes(
         if run and run.semester_id != sid:
             run = None
     if not run and run_id is None:
-        run = latest_current_run(db, sid)
+        run = latest_plan_run(db, sid)
     ass_by_class = {}
     if run and run.status in {"optimal", "feasible"}:
         for a in db.scalars(select(Assignment).options(selectinload(Assignment.lecturer)).where(Assignment.run_id == run.id)):
@@ -1526,7 +1526,7 @@ def get_assignments(
         if run and run.semester_id != sid:
             run = None
     if not run and run_id is None:
-        run = latest_current_run(db, sid)
+        run = latest_plan_run(db, sid)
     latest = run.id if run else None
     if latest is None:
         return []
@@ -1758,11 +1758,7 @@ def import_capability_matrix(
 ):
     from app.services.capability_resolution import CapabilityResolutionService
     sid = _semester_id(db, semester_id)
-    suffix = Path(file.filename or "matrix.xlsx").suffix
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        _copy_upload_limited(file, tmp_path)
-    try:
+    with _temporary_typed_upload(file) as tmp_path:
         return CapabilityResolutionService.import_capability_matrix(
             db=db,
             file_path=tmp_path,
@@ -1770,9 +1766,6 @@ def import_capability_matrix(
             sheet_name=sheet_name,
             confirmed=confirmed,
         )
-    finally:
-        if tmp_path.exists():
-            tmp_path.unlink()
 
 
 @router.post("/semesters/{semester_id}/capabilities/learn-history")
@@ -1786,11 +1779,7 @@ def learn_historical_capabilities(
 ):
     from app.services.capability_resolution import CapabilityResolutionService
     sid = _semester_id(db, semester_id)
-    suffix = Path(file.filename or "history.xlsx").suffix
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-        _copy_upload_limited(file, tmp_path)
-    try:
+    with _temporary_typed_upload(file) as tmp_path:
         return CapabilityResolutionService.learn_from_historical_assignment_file(
             db=db,
             file_path=tmp_path,
@@ -1799,9 +1788,6 @@ def learn_historical_capabilities(
             academic_year=academic_year,
             semester_code=semester_code,
         )
-    finally:
-        if tmp_path.exists():
-            tmp_path.unlink()
 
 
 @router.get("/semesters/{semester_id}/capabilities")

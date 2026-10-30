@@ -6,13 +6,22 @@ from app.optimization.occurrences import confirmed_merge, meeting_occurrences
 from app.services.assignment_state import assignment_state, save_manual_version
 from app.models.entities import LecturerSemesterProfile
 
+# An audited MANUAL_OVERRIDE lock may bend rules about this one class/lecturer
+# pair. It never bends a timetable clash, a lecturer-wide limit, a hard seminar
+# or another lecturer's required assignment: those would make the model infeasible.
+OVERRIDE_BYPASSABLE = frozenset({
+    "COURSE_CAPABILITY_MISSING", "LECTURER_DEPARTMENT_MISMATCH",
+    "HARD_AVAILABILITY_CONFLICT", "HARD_PREFERENCE_CONFLICT", "FORBIDDEN_ASSIGNMENT",
+})
+
+
 def assignment_check_context(db: Session, semester_id: int, run=None) -> dict:
     """Load one request-scoped snapshot for all candidate checks; never cache across edits."""
-    from app.services.source_authority import active_issues, latest_current_run
+    from app.services.source_authority import active_issues, latest_plan_run
     semester = db.get(Semester, semester_id)
     if semester is None:
         return {"groups": {}, "lecturers": {}}
-    run = run or latest_current_run(db, semester_id)
+    run = run or latest_plan_run(db, semester_id)
     groups = db.scalars(select(ClassSection).options(selectinload(ClassSection.sessions),
         selectinload(ClassSection.course)).where(ClassSection.semester_id == semester_id)).all()
     profiles = {p.lecturer_id: p for p in db.scalars(select(LecturerSemesterProfile).where(

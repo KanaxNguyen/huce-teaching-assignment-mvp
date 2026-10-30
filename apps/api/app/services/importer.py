@@ -576,15 +576,17 @@ def dashboard(db: Session, semester_id: int, run_id: int | None = None) -> dict:
     lecturers = db.scalars(select(Lecturer)).all()
     
     from app.models.entities import Assignment, OptimizationRun
-    from app.services.source_authority import latest_current_run
+    from app.services.source_authority import latest_current_run, latest_plan_run
 
     run = None
     if run_id is not None:
         run = db.get(OptimizationRun, run_id)
         if run and run.semester_id != semester_id:
             run = None
+    latest = run
     if not run and run_id is None:
-        run = latest_current_run(db, semester_id)
+        run = latest_plan_run(db, semester_id)
+        latest = latest_current_run(db, semester_id)
 
     if run and run.status in {"optimal", "feasible"}:
         assigned_ids = set(
@@ -611,6 +613,6 @@ def dashboard(db: Session, semester_id: int, run_id: int | None = None) -> dict:
         "lecturers": len(lecturers),
         "validation_errors": sum(issue.severity == "error" for issue in issues),
         "issues_count": len(issues),
-        "optimization_status": run.status if run else "not_run",
-        "optimization_score": run.score if run else None,
+        "optimization_status": latest.status if latest else "not_run",
+        "optimization_score": latest.score if latest else None,
     }

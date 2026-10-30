@@ -92,6 +92,17 @@ def latest_current_run(db, semester_id):
     return db.scalar(select(OptimizationRun).where(current_run_predicate(semester)).order_by(OptimizationRun.id.desc()))
 
 
+def latest_plan_run(db, semester_id):
+    """The current plan: the latest run on the current sources that produced assignments.
+
+    A blocked or infeasible run is a failed attempt, not a new plan; reading the
+    plan from it fell back to the import columns and lost every later edit.
+    """
+    semester = db.get(Semester, semester_id)
+    return db.scalar(select(OptimizationRun).where(current_run_predicate(semester),
+        OptimizationRun.status.in_(["optimal", "feasible"])).order_by(OptimizationRun.id.desc()))
+
+
 def run_context(semester):
     return {"schedule_source_id": semester.active_schedule_source_id,
             "preference_source_id": semester.active_preference_source_id, "source_revision": semester.source_revision}

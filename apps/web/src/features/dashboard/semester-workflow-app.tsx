@@ -410,7 +410,8 @@ export function SemesterWorkflowApp() {
                 return `Đã khóa ${result.locked} phân công. ${result.skipped.length} lớp chưa khóa được do ${reasons.join("; ")}: ${result.skipped.slice(0, 8).map((row) => row.class_code).join(", ")}${result.skipped.length > 8 ? "…" : ""}.`;
               }, "Đã khóa các phân công hợp lệ.")}
               onNext={() => setView("preferences")}
-              onReload={loadAll}
+              // Quiet reload keeps this step mounted, so the source panel can show its lock result.
+              onReload={() => loadAll(true)}
             />
           ) : null}
           {showView("preferences") ? (

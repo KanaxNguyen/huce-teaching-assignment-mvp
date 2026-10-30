@@ -5,8 +5,8 @@ from app.models.entities import Assignment, ClassSection, OptimizationRun, Semes
 
 
 def assignment_state(db, semester_id, run=None):
-    from app.services.source_authority import latest_current_run
-    run = run or latest_current_run(db, semester_id)
+    from app.services.source_authority import latest_plan_run
+    run = run or latest_plan_run(db, semester_id)
     groups = db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id)).all()
     if run and run.semester_id == semester_id and run.status in {"optimal", "feasible"}:
         return {a.class_id: (a.lecturer_id, a.source, a.locked)
@@ -21,8 +21,8 @@ def save_manual_version(db, semester_id, changes):
     `changes`: class_id -> (lecturer_id, source, locked). Caller commits atomically.
     Manual versions are feasible snapshots, not new optimality certificates.
     """
-    from app.services.source_authority import latest_current_run, run_context
-    previous = latest_current_run(db, semester_id)
+    from app.services.source_authority import latest_plan_run, run_context
+    previous = latest_plan_run(db, semester_id)
     state = assignment_state(db, semester_id, previous)
     state.update(changes)
     summary = deepcopy(previous.summary) if previous else {}

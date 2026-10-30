@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.optimization.occurrences import confirmed_merge, meeting_occurrences
 from app.optimization.solver import _event_slots, _normalized_type, _overlap, _slot_match
-from app.services.manual_assignment import assignment_check_context, check_assignment_change
+from app.services.manual_assignment import OVERRIDE_BYPASSABLE, assignment_check_context, check_assignment_change
 
 BLOCKS = ((1, 3), (4, 6), (7, 9), (10, 12), (13, 15))
 
@@ -69,7 +69,7 @@ def static_candidates(db: Session, semester_id: int, context: dict | None = None
             result = check_assignment_change(db, semester_id, class_id, lecturer_id, context=static_context)
             approved_exception = (group.locked_assignment and group.assignment_source == "MANUAL_OVERRIDE"
                                   and group.assigned_lecturer_id == lecturer_id
-                                  and not set(result["blocking_reasons"]) & {"TIMETABLE_CONFLICT", "HARD_SEMINAR_CONFLICT"})
+                                  and not set(result["blocking_reasons"]) - OVERRIDE_BYPASSABLE)
             if result["valid"] or approved_exception:
                 candidates[class_id].add(lecturer_id)
             else:

@@ -399,9 +399,10 @@ def _solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fal
     # An approved, audited exception (MANUAL_OVERRIDE + lock) deliberately bends a
     # capability/availability rule; honour it instead of rejecting the whole run.
     # Physical clashes stay impossible through the no-overlap constraints below.
-    for group in classes:
-        if group.locked_assignment and group.assigned_lecturer_id and group.assignment_source == "MANUAL_OVERRIDE":
-            candidates[group.id].add(group.assigned_lecturer_id)
+    override_pairs = {(group.id, group.assigned_lecturer_id) for group in classes
+                      if group.locked_assignment and group.assigned_lecturer_id and group.assignment_source == "MANUAL_OVERRIDE"}
+    for class_id, lecturer_id in override_pairs:
+        candidates[class_id].add(lecturer_id)
 
     x = {(group.id, lecturer_id): model.new_bool_var(f"x_{group.id}_{lecturer_id}") for group in classes for lecturer_id in candidates[group.id]}
     for group in classes:
@@ -537,6 +538,9 @@ def _solve(db: Session, time_limit_seconds: int = 30, confirm_merged: bool = Fal
             for scoped_class_id in class_ids:
                 # A forbidden pair without a variable is already excluded (not a candidate).
                 if (scoped_class_id, lecturer_id) not in x:
+                    continue
+                # The audited override is the approved exception to this rule.
+                if not wanted and (scoped_class_id, lecturer_id) in override_pairs:
                     continue
                 if constraint.hardness == "hard":
                     model.add(x[scoped_class_id, lecturer_id] == wanted)

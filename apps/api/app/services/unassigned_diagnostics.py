@@ -23,7 +23,7 @@ from app.optimization.solver import _overlap, _slot_match
 from app.optimization.occurrences import are_classes_mergeable, confirmed_merge
 from app.services.manual_assignment import check_assignment_change, assignment_check_context
 from app.services.lecturer_master import participation_reason
-from app.services.source_authority import latest_current_run
+from app.services.source_authority import latest_plan_run
 
 
 def _format_schedule_summary(sessions: list[ClassSession]) -> str:
@@ -45,7 +45,7 @@ def get_unassigned_classes_for_run(db: Session, semester_id: int, run_id: int | 
         if run and run.semester_id != semester_id:
             run = None
     if not run and run_id is None:
-        run = latest_current_run(db, semester_id)
+        run = latest_plan_run(db, semester_id)
 
     query = (
         select(ClassSection)
@@ -75,7 +75,7 @@ def diagnose_unassigned_classes(
         return []
 
     semester = db.get(Semester, semester_id)
-    run = db.get(OptimizationRun, run_id) if run_id else latest_current_run(db, semester_id)
+    run = db.get(OptimizationRun, run_id) if run_id else latest_plan_run(db, semester_id)
     check_context = assignment_check_context(db, semester_id, run)
 
     dept_id = semester.department_id if semester else None
@@ -522,7 +522,7 @@ def get_candidate_analysis(
         return CandidateAnalysisResult([])
 
     semester = db.get(Semester, semester_id)
-    run = db.get(OptimizationRun, run_id) if run_id else latest_current_run(db, semester_id)
+    run = db.get(OptimizationRun, run_id) if run_id else latest_plan_run(db, semester_id)
     check_context = assignment_check_context(db, semester_id, run)
 
     dept_id = semester.department_id if semester else None
@@ -910,6 +910,26 @@ def override_lock_assignment(
     if not reason or not reason.strip():
         raise ValueError("OVERRIDE_REASON_REQUIRED: Cần nhập lý do ghi đè phân công có kiểm soát.")
 
+    # The exception is limited to this class/lecturer pair: a clash, a
+    # lecturer-wide limit or a hard seminar would make every later solve fail.
+    from app.services.manual_assignment import OVERRIDE_BYPASSABLE
+    check = check_assignment_change(db, semester_id, class_id, lecturer_id)
+    reasons = set(check["blocking_reasons"])
+    refused = sorted(reasons - OVERRIDE_BYPASSABLE)
+    if refused:
+        from app.services.feasibility import REASON_LABELS
+        clashes = ", ".join(sorted({d["class_code"] for d in check.get("overlapping_details", [])}))
+        raise ValueError(
+            "OVERRIDE_NOT_ALLOWED: Không thể vượt quyền vì "
+            + "; ".join(REASON_LABELS.get(code, code) for code in refused)
+            + (f" ({clashes})" if clashes else "")
+            + ". Chuyển lớp trùng giờ hoặc sửa ràng buộc của giảng viên trước.")
+    bypassed = sorted(reasons & OVERRIDE_BYPASSABLE)
+    peers = [peer for peer in db.scalars(select(ClassSection).where(ClassSection.semester_id == semester_id))
+             if peer.id != section.id and confirmed_merge(section, peer)]
+    if any(peer.locked_assignment and peer.assigned_lecturer_id not in (None, lecturer_id) for peer in peers):
+        raise ValueError("OVERRIDE_NOT_ALLOWED: Lớp ghép đang khóa cho giảng viên khác; mở khóa nhóm ghép trước.")
+
     previous_lecturer_id = section.assigned_lecturer_id
     was_locked = section.locked_assignment
 
@@ -926,21 +946,26 @@ def override_lock_assignment(
             "was_locked": was_locked,
             "reason": reason.strip(),
             "performed_by": user,
+            "bypassed_rules": bypassed,
+            "merged_peers": [peer.id for peer in peers],
         },
         raw_value=reason.strip(),
         resolution_status="RESOLVED",
     )
     db.add(audit_entry)
 
-    # Update class section
-    section.assigned_lecturer_id = lecturer_id
-    section.assignment_source = "MANUAL_OVERRIDE"
-    section.locked_assignment = lock
-    section.resolution_status = "MANUALLY_RESOLVED"
-    section.resolution_notes = f"Ghi đè phân công: {reason.strip()} (Bởi: {user})"
+    # Update class section and, for a confirmed merge, the classes taught with it.
+    changes = {}
+    for item in [section, *peers]:
+        item.assigned_lecturer_id = lecturer_id
+        item.assignment_source = "MANUAL_OVERRIDE"
+        item.locked_assignment = lock
+        item.resolution_status = "MANUALLY_RESOLVED"
+        item.resolution_notes = f"Ghi đè phân công: {reason.strip()} (Bởi: {user})"
+        changes[item.id] = (lecturer_id, "MANUAL_OVERRIDE", lock)
 
     from app.services.assignment_state import save_manual_version
-    save_manual_version(db, semester_id, {class_id: (lecturer_id, "MANUAL_OVERRIDE", lock)})
+    save_manual_version(db, semester_id, changes)
 
     db.commit()
     return {
@@ -953,5 +978,6 @@ def override_lock_assignment(
         "locked": lock,
         "assignment_source": "MANUAL_OVERRIDE",
         "override_reason": reason.strip(),
+        "bypassed_rules": bypassed,
         "audit_id": audit_entry.id,
     }
